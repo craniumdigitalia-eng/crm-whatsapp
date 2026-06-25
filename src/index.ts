@@ -1,3 +1,4 @@
+// Entrypoint de dev local (Express). Producao usa as funcoes em /api (Vercel serverless).
 import express from "express";
 import path from "path";
 import { config } from "./config";

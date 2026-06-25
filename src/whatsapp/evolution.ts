@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { config } from "../config";
 
 export interface InboundMessage {
@@ -8,8 +9,34 @@ export interface InboundMessage {
   externalId: string; // key.id da Evolution (ou ID repassado pelo Make) — base do dedupe
 }
 
-// Envia uma mensagem de texto via Evolution API (formato v2).
+// Gera um external_id deterministico quando o Make nao fornece o wamid nativo.
+// Janela de 1 segundo (epoch_segundos) protege contra reentregas rapidas do Make.
+// Risco residual: mesma mensagem enviada duas vezes no mesmo segundo → falso positivo de dedupe.
+// Solucao definitiva: mapear message.id (wamid) no cenario Make como campo "id".
+function hashExternalId(phone: string, text: string, epochMs: number): string {
+  return createHash("sha256")
+    .update(`${phone}|${text}|${Math.floor(epochMs / 1000)}`)
+    .digest("hex");
+}
+
+// Envia uma mensagem de texto. Se MAKE_SEND_URL estiver definido, usa o Make como canal;
+// caso contrario, fala direto com a Evolution API (fallback para dev local).
 export async function sendText(phone: string, text: string): Promise<void> {
+  if (config.makeSendUrl) {
+    // Branch Make: POST {MAKE_SEND_URL} com { phone, text }
+    const res = await fetch(config.makeSendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, text }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Make sendText falhou (${res.status}): ${body}`);
+    }
+    return;
+  }
+
+  // Fallback Evolution (dev local / sem MAKE_SEND_URL).
   const url = `${config.evolutionUrl}/message/sendText/${config.evolutionInstance}`;
   const res = await fetch(url, {
     method: "POST",
@@ -55,4 +82,32 @@ export function parseWebhook(body: any): InboundMessage[] {
     out.push({ phone, name: item.pushName, text: text.trim(), fromMe, externalId });
   }
   return out;
+}
+
+// Normaliza o payload entregue pelo Make em POST /api/webhook.
+// Contrato esperado: { phone, name?, text, id? }
+// — phone: somente digitos (ex: "5511999998888")
+// — id: wamid nativo do WhatsApp (configure no cenario Make: module WhatsApp Business Cloud
+//        → campo message.id mapeado como "id"). Preferencia para dedupe exato.
+//        Se ausente, gera hash deterministico como fallback (ver hashExternalId).
+// — fromMe: sempre false — o Make so encaminha mensagens do lead; nossas saem via sendText.
+export function parseMakeWebhook(body: any): InboundMessage[] {
+  const phone = (body?.phone ?? "").toString().trim();
+  const text = (body?.text ?? "").toString().trim();
+
+  // Descarta payload invalido (sem telefone ou sem texto).
+  if (!phone || !text) return [];
+
+  const id: string | undefined = body?.id ? String(body.id) : undefined;
+  const externalId = id ?? hashExternalId(phone, text, Date.now());
+
+  return [
+    {
+      phone,
+      name: body?.name ? String(body.name) : undefined,
+      text,
+      fromMe: false,
+      externalId,
+    },
+  ];
 }

@@ -15,13 +15,13 @@
     <main id="board" class="board"></main>
 
     <!-- Painel lateral de conversa -->
-    <aside id="drawer" class="drawer hidden">
+    <aside id="drawer" class="drawer hidden" role="dialog" aria-modal="true" aria-labelledby="d-name">
       <div class="drawer-head">
         <div>
           <h2 id="d-name">—</h2>
           <div id="d-phone" class="muted"></div>
         </div>
-        <button id="d-close" class="btn ghost">✕</button>
+        <button id="d-close" class="btn ghost" aria-label="Fechar conversa">✕</button>
       </div>
 
       <div class="d-meta">
@@ -31,9 +31,9 @@
       </div>
 
       <div class="d-actions">
-        <button class="btn small" data-act="takeover">🙋 Assumir</button>
-        <button class="btn small ghost" data-act="release">🤖 Devolver p/ IA</button>
-        <select id="d-status-select" class="select"></select>
+        <button class="btn small" data-act="takeover" aria-label="Assumir atendimento">🙋 Assumir</button>
+        <button class="btn small ghost" data-act="release" aria-label="Devolver atendimento para IA">🤖 Devolver p/ IA</button>
+        <select id="d-status-select" class="select" aria-label="Mover lead no funil"></select>
       </div>
 
       <div id="d-notes" class="notes hidden"></div>
@@ -41,6 +41,7 @@
       <div id="d-messages" class="messages"></div>
 
       <form id="d-reply" class="reply">
+        <label class="sr-only" for="d-reply-text">Responder como humano</label>
         <input id="d-reply-text" placeholder="Responder como humano…" autocomplete="off" />
         <button class="btn" type="submit">Enviar</button>
       </form>

@@ -110,9 +110,11 @@ export async function resetFollowUp(leadId: string): Promise<void> {
 
 // Candidatos ao proximo ciclo de follow-up:
 // status em statuses, ultimo envio foi 'out', last_message_at existente e abaixo do limite.
+// limit: maximo de linhas retornadas por ciclo — evita lotes grandes em funcoes serverless.
 export async function listFollowUpCandidates(
   statuses: string[],
-  maxCount: number
+  maxCount: number,
+  limit = 50
 ): Promise<Lead[]> {
   const { data, error } = await supabase
     .from("leads")
@@ -120,7 +122,8 @@ export async function listFollowUpCandidates(
     .in("status", statuses)
     .eq("last_direction", "out")
     .not("last_message_at", "is", null)
-    .lt("follow_up_count", maxCount);
+    .lt("follow_up_count", maxCount)
+    .limit(limit);
   if (error) throw error;
   return (data ?? []) as Lead[];
 }

@@ -72,3 +72,9 @@ Registro de todos os Agent Teams formados neste projeto. Lead (team-os) atualiza
 - **Wave 0 COMPLETA:** 1.1 ✅ (QA CONCERNS) · 1.2 ✅ (QA CONCERNS) · 1.3 ✅ (QA PASS após fix #12 da janela de concorrência) · cleanup db.ts ✅
 - **PR #1:** https://github.com/craniumdigitalia-eng/crm-whatsapp/pull/1 (branch feat/wave0-hardening, aguardando revisão do usuário — sem merge)
 - Próximo: Wave 1 (Supabase) — aguardando definição de credenciais/projeto Supabase.
+
+## 2026-06-25 — Wave 1 fechada + PR #2
+- **Wave 1 COMPLETA:** 2.1 ✅ (schema aplicado no Supabase via pg direto) · 2.2 ✅ (QA PASS, rewrite SQLite→Supabase, 2 nits aplicados)
+- **e2e validado:** crm-data 29/29 assertions + lead via HTTP (dashboard→API→Postgres). App roda 100% no Supabase.
+- **PR #2:** https://github.com/craniumdigitalia-eng/crm-whatsapp/pull/2 (branch feat/wave1-supabase, empilhado sobre feat/wave0-hardening / PR #1). Sem merge.
+- Próximo: Wave 2 (serverless Vercel) — alinhar estratégia do Make (ponte WhatsApp) com o usuário antes.

@@ -23,6 +23,8 @@ MOC raiz. Todo arquivo novo em `docs/smart-memory/` deve ser referenciado aqui.
 
 ## Decisões Arquiteturais
 - `decisions/` — ADRs numerados
+- [[decisions/ADR-001-serverless-vercel]] — abordagem serverless na Vercel (funções `/api` nativas; gate da 3.2)
+- [[decisions/ADR-002-webhook-processing]] — webhook síncrono vs fila (decidido: síncrono, maxDuration 60s; gate da 3.3)
 
 ## Operações
 - [[ops/delegation-log]] — histórico de delegações do lead

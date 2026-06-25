@@ -2,6 +2,7 @@
 const ORDER = ["novo", "em_atendimento", "qualificado", "proposta", "fechado", "perdido", "humano"];
 let STATUS_LABELS = {};
 let currentLeadId = null;
+let lastFocusedCard = null;  // referência ao card que abriu o drawer; restaurada no fechamento
 
 const board = document.getElementById("board");
 const drawer = document.getElementById("drawer");
@@ -40,6 +41,7 @@ async function loadBoard() {
 function card(l) {
   const el = document.createElement("div");
   el.className = "card";
+  el.setAttribute("tabindex", "-1");  // permite foco programático ao retornar do drawer
   const waiting = l.last_direction === "out" && l.follow_up_count > 0;
   el.innerHTML = `
     <div class="name">${l.name || l.phone}</div>
@@ -47,12 +49,26 @@ function card(l) {
     ${l.service_interest ? `<div class="svc">▸ ${escapeHtml(l.service_interest)}</div>` : ""}
     ${waiting ? `<div class="fu">⏳ ${l.follow_up_count} retomada(s) enviada(s)</div>` : ""}
   `;
-  el.onclick = () => openLead(l.id);
+  el.onclick = () => { lastFocusedCard = el; openLead(l.id); };
   return el;
 }
 
 function escapeHtml(s) {
   return (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+// Retorna todos os elementos focáveis dentro de um container.
+function getFocusable(container) {
+  return Array.from(container.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  ));
+}
+
+// Fecha o drawer e devolve o foco ao card que o abriu.
+function closeDrawer() {
+  drawer.classList.add("hidden");
+  currentLeadId = null;
+  if (lastFocusedCard) { lastFocusedCard.focus(); lastFocusedCard = null; }
 }
 
 async function openLead(id) {
@@ -84,12 +100,34 @@ async function openLead(id) {
   });
   box.scrollTop = box.scrollHeight;
 
+  const wasHidden = drawer.classList.contains("hidden");
   drawer.classList.remove("hidden");
+  // Move foco para o botão fechar apenas na abertura inicial (não em reloads de ação).
+  if (wasHidden) document.getElementById("d-close").focus();
 }
 
 // Eventos
 document.getElementById("refresh").onclick = loadBoard;
-document.getElementById("d-close").onclick = () => { drawer.classList.add("hidden"); currentLeadId = null; };
+document.getElementById("d-close").onclick = closeDrawer;
+
+// Esc fecha o drawer; Tab fica contido dentro dele enquanto aberto (focus trap).
+document.addEventListener("keydown", (e) => {
+  if (drawer.classList.contains("hidden")) return;
+
+  if (e.key === "Escape") { closeDrawer(); return; }
+
+  if (e.key === "Tab") {
+    const focusable = getFocusable(drawer);
+    if (!focusable.length) { e.preventDefault(); return; }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+});
 
 document.querySelectorAll("[data-act]").forEach((btn) => {
   btn.onclick = async () => {
