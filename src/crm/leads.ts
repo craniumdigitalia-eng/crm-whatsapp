@@ -1,76 +1,128 @@
-import { randomUUID } from "crypto";
-import { db } from "../db";
+import { supabase } from "../db";
 import { Lead, Message, LeadStatus } from "../types";
 
-export function findLeadByPhone(phone: string): Lead | undefined {
-  return db.prepare("SELECT * FROM leads WHERE phone = ?").get(phone) as Lead | undefined;
+// Colunas explicitas — evita SELECT * e garante paridade com a interface Lead.
+const LEAD_COLS =
+  "id,phone,name,status,service_interest,budget,notes,follow_up_count,last_direction,last_message_at,created_at,updated_at";
+const MSG_COLS = "id,lead_id,direction,body,external_id,created_at";
+
+export async function findLeadByPhone(phone: string): Promise<Lead | undefined> {
+  const { data } = await supabase.from("leads").select(LEAD_COLS).eq("phone", phone).maybeSingle();
+  return (data as Lead) ?? undefined;
 }
 
-export function getLead(id: string): Lead | undefined {
-  return db.prepare("SELECT * FROM leads WHERE id = ?").get(id) as Lead | undefined;
+export async function getLead(id: string): Promise<Lead | undefined> {
+  const { data } = await supabase.from("leads").select(LEAD_COLS).eq("id", id).maybeSingle();
+  return (data as Lead) ?? undefined;
 }
 
-export function getOrCreateLead(phone: string, name?: string): Lead {
-  const existing = findLeadByPhone(phone);
+export async function getOrCreateLead(phone: string, name?: string): Promise<Lead> {
+  // 1) tenta achar pelo telefone
+  const { data: existing } = await supabase
+    .from("leads")
+    .select(LEAD_COLS)
+    .eq("phone", phone)
+    .maybeSingle();
   if (existing) {
     if (name && !existing.name) {
-      db.prepare("UPDATE leads SET name = ?, updated_at = datetime('now') WHERE id = ?").run(
-        name,
-        existing.id
-      );
-      existing.name = name;
+      const { error: nameErr } = await supabase.from("leads").update({ name }).eq("id", existing.id);
+      if (nameErr) {
+        // Nao-critico: lead retornado mesmo sem o update; loga para visibilidade.
+        console.error(`[leads] getOrCreateLead: falha ao atualizar name do lead ${existing.id}:`, nameErr.message);
+      } else {
+        existing.name = name;
+      }
     }
-    return existing;
+    return existing as Lead;
   }
-  const id = randomUUID();
-  db.prepare("INSERT INTO leads (id, phone, name, status) VALUES (?, ?, ?, 'novo')").run(
-    id,
-    phone,
-    name ?? null
-  );
-  return getLead(id)!;
+
+  // 2) cria (id via gen_random_uuid() default — nao passe id)
+  const { data: created, error } = await supabase
+    .from("leads")
+    .insert({ phone, name: name ?? null, status: "novo" })
+    .select(LEAD_COLS)
+    .single();
+
+  // 3) race: outro processo criou o mesmo telefone entre o select e o insert (23505 = unique violation)
+  if (error?.code === "23505") {
+    const { data } = await supabase.from("leads").select(LEAD_COLS).eq("phone", phone).single();
+    return data as Lead;
+  }
+  if (error) throw error;
+  return created as Lead;
 }
 
-export function listLeads(): Lead[] {
-  return db.prepare("SELECT * FROM leads ORDER BY updated_at DESC").all() as Lead[];
+export async function listLeads(): Promise<Lead[]> {
+  const { data, error } = await supabase
+    .from("leads")
+    .select(LEAD_COLS)
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Lead[];
 }
 
-export function getMessages(leadId: string): Message[] {
-  return db
-    .prepare("SELECT * FROM messages WHERE lead_id = ? ORDER BY id ASC")
-    .all(leadId) as Message[];
+export async function getMessages(leadId: string): Promise<Message[]> {
+  const { data, error } = await supabase
+    .from("messages")
+    .select(MSG_COLS)
+    .eq("lead_id", leadId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as Message[];
 }
 
 // Insere uma mensagem e atualiza o lead. Retorna true se inserida, false se duplicata (external_id ja existe).
-// Mensagens sem externalId (ex.: respostas 'out' do agente) inserem normalmente — indice e parcial.
-export function addMessage(
+// Mensagens sem externalId (respostas 'out' do agente) inserem normalmente — o indice e parcial (WHERE external_id IS NOT NULL).
+export async function addMessage(
   leadId: string,
   direction: "in" | "out",
   body: string,
   externalId?: string
-): boolean {
-  const msgId = randomUUID();
-  const result = db
-    .prepare(
-      "INSERT OR IGNORE INTO messages (id, lead_id, direction, body, external_id) VALUES (?, ?, ?, ?, ?)"
-    )
-    .run(msgId, leadId, direction, body, externalId ?? null);
+): Promise<boolean> {
+  const { error } = await supabase.from("messages").insert({
+    lead_id: leadId,
+    direction,
+    body,
+    external_id: externalId ?? null,
+  });
 
-  // changes == 0 significa conflito no indice unico — mensagem ja existia.
-  if (result.changes === 0) return false;
+  // 23505 = duplicate key — external_id ja existe (idempotencia de mensagens recebidas)
+  if (error?.code === "23505") return false;
+  if (error) throw error;
 
-  db.prepare(
-    "UPDATE leads SET last_direction = ?, last_message_at = datetime('now'), updated_at = datetime('now') WHERE id = ?"
-  ).run(direction, leadId);
+  const { error: updErr } = await supabase
+    .from("leads")
+    .update({ last_direction: direction, last_message_at: new Date().toISOString() })
+    .eq("id", leadId);
+  if (updErr) {
+    // Insert confirmado; UPDATE secundario falhou (erro raro). Loga para visibilidade sem reverter.
+    console.error(`[leads] addMessage: falha ao atualizar lead ${leadId} apos insert:`, updErr.message);
+  }
 
   return true;
 }
 
 // Quando o lead responde, zera o contador de follow-up.
-export function resetFollowUp(leadId: string): void {
-  db.prepare("UPDATE leads SET follow_up_count = 0, updated_at = datetime('now') WHERE id = ?").run(
-    leadId
-  );
+export async function resetFollowUp(leadId: string): Promise<void> {
+  const { error } = await supabase.from("leads").update({ follow_up_count: 0 }).eq("id", leadId);
+  if (error) throw error;
+}
+
+// Candidatos ao proximo ciclo de follow-up:
+// status em statuses, ultimo envio foi 'out', last_message_at existente e abaixo do limite.
+export async function listFollowUpCandidates(
+  statuses: string[],
+  maxCount: number
+): Promise<Lead[]> {
+  const { data, error } = await supabase
+    .from("leads")
+    .select(LEAD_COLS)
+    .in("status", statuses)
+    .eq("last_direction", "out")
+    .not("last_message_at", "is", null)
+    .lt("follow_up_count", maxCount);
+  if (error) throw error;
+  return (data ?? []) as Lead[];
 }
 
 // Claim atomico de um slot de follow-up (padrao "claim-then-send").
@@ -79,55 +131,46 @@ export function resetFollowUp(leadId: string): void {
 //   - last_message_at expirou         (intervalo de followupIntervalMs ja passou)
 //   - follow_up_count == expectedCount (optimistic lock — evita duplo-claim em corrida de cron)
 //   - follow_up_count < maxCount      (limite de retomadas ainda nao atingido)
-// Ao vencer, reescreve last_message_at para agora — reinicia o relógio do intervalo,
-// fechando a janela de claims sequenciais rapidos (ex.: 0->1 e 1->2 no mesmo ciclo).
-// O addMessage('out') posterior reescreve last_message_at com timestamp marginalmente
-// posterior, sem efeito colateral.
-// Retorna true se o claim foi bem-sucedido (changes > 0), false caso contrario.
-// Semantica portavel: no Postgres equivale a UPDATE ... WHERE ... RETURNING id.
-export function claimFollowUp(
+// Ao vencer, reescreve last_message_at para agora — reinicia o relogio do intervalo,
+// fechando a janela de claims sequenciais rapidos (fix #12).
+// Retorna true se o claim foi bem-sucedido, false caso contrario.
+export async function claimFollowUp(
   leadId: string,
   expectedCount: number,
   maxCount: number,
   intervalMs: number
-): boolean {
-  const modifier = `-${Math.floor(intervalMs / 1000)} seconds`;
-  const result = db
-    .prepare(
-      `UPDATE leads
-          SET follow_up_count = follow_up_count + 1,
-              last_message_at = datetime('now'),
-              updated_at      = datetime('now')
-        WHERE id              = ?
-          AND last_direction  = 'out'
-          AND last_message_at IS NOT NULL
-          AND last_message_at < datetime('now', ?)
-          AND follow_up_count = ?
-          AND follow_up_count < ?`
-    )
-    .run(leadId, modifier, expectedCount, maxCount);
-  return result.changes > 0;
+): Promise<boolean> {
+  const intervalAgo = new Date(Date.now() - intervalMs).toISOString();
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("leads")
+    .update({ follow_up_count: expectedCount + 1, last_message_at: now })
+    .eq("id", leadId)
+    .eq("last_direction", "out")
+    .not("last_message_at", "is", null)
+    .lt("last_message_at", intervalAgo)
+    .eq("follow_up_count", expectedCount)
+    .lt("follow_up_count", maxCount)
+    .select("id");
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
 }
 
-export function updateLeadFields(
+export async function updateLeadFields(
   leadId: string,
   fields: Partial<Pick<Lead, "name" | "status" | "service_interest" | "budget" | "notes">>
-): void {
+): Promise<void> {
   const allowed = ["name", "status", "service_interest", "budget", "notes"] as const;
-  const sets: string[] = [];
-  const values: unknown[] = [];
+  const patch: Record<string, unknown> = {};
   for (const key of allowed) {
-    if (fields[key] !== undefined) {
-      sets.push(`${key} = ?`);
-      values.push(fields[key]);
-    }
+    if (fields[key] !== undefined) patch[key] = fields[key];
   }
-  if (sets.length === 0) return;
-  sets.push("updated_at = datetime('now')");
-  values.push(leadId);
-  db.prepare(`UPDATE leads SET ${sets.join(", ")} WHERE id = ?`).run(...values);
+  if (Object.keys(patch).length === 0) return;
+  const { error } = await supabase.from("leads").update(patch).eq("id", leadId);
+  if (error) throw error;
 }
 
-export function setStatus(leadId: string, status: LeadStatus): void {
-  updateLeadFields(leadId, { status });
+export async function setStatus(leadId: string, status: LeadStatus): Promise<void> {
+  await updateLeadFields(leadId, { status });
 }

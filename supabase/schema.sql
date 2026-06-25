@@ -2,6 +2,10 @@
 -- CRM WhatsApp — schema Supabase (Postgres)
 -- Base do banco para a versao de producao (Supabase + Vercel).
 -- Rode no SQL Editor do Supabase ou via `supabase db push`.
+--
+-- Incorpora ajustes da Wave 0:
+--   • messages.external_id + indice unico parcial (Story 1.1 — idempotencia de webhook)
+--   • chk_followup CHECK (follow_up_count >= 0)  (gap #7 do schema)
 -- =====================================================================
 
 -- Estagios do funil (espelha src/types.ts do prototipo).
@@ -19,7 +23,7 @@ create table if not exists leads (
   service_interest text,
   budget           text,
   notes            text,
-  follow_up_count  int not null default 0,        -- ate FOLLOWUP_MAX (ex: 30)
+  follow_up_count  int not null default 0 constraint chk_followup check (follow_up_count >= 0),
   last_direction   text check (last_direction in ('in','out')),
   last_message_at  timestamptz,
   created_at       timestamptz not null default now(),
@@ -31,6 +35,7 @@ create table if not exists messages (
   lead_id     uuid not null references leads(id) on delete cascade,
   direction   text not null check (direction in ('in','out')),
   body        text not null,
+  external_id text,                    -- ID externo (Evolution/Make) para deduplicacao de reentregas
   created_at  timestamptz not null default now()
 );
 
@@ -40,6 +45,13 @@ create index if not exists idx_leads_status on leads(status);
 create index if not exists idx_leads_followup
   on leads(status, last_direction, last_message_at)
   where last_direction = 'out';
+
+-- Indice unico parcial para deduplicacao de mensagens recebidas (Story 1.1).
+-- external_id NULL (mensagens 'out' internas) nao participa do constraint.
+-- Uso: INSERT INTO messages (..., external_id) VALUES (..., $n) ON CONFLICT (external_id) DO NOTHING;
+create unique index if not exists idx_messages_external_id
+  on messages(external_id)
+  where external_id is not null;
 
 -- updated_at automatico.
 create or replace function set_updated_at() returns trigger as $$

@@ -1,8 +1,7 @@
 import cron from "node-cron";
 import { config } from "../config";
-import { db } from "../db";
 import { Lead, AUTO_STATUSES } from "../types";
-import { addMessage, claimFollowUp, setStatus } from "../crm/leads";
+import { addMessage, claimFollowUp, listFollowUpCandidates, setStatus } from "../crm/leads";
 import { sendText } from "../whatsapp/evolution";
 
 // Rotacao de mensagens de retomada. Como sao ate 30 follow-ups por lead,
@@ -25,26 +24,13 @@ function followUpText(stage: number, max: number, lead: Lead): string {
   return ROTATION[stage % ROTATION.length](nome);
 }
 
-function parseSqliteDate(s: string): Date {
-  return new Date(s.replace(" ", "T") + "Z");
-}
-
 async function runFollowUpCheck(): Promise<void> {
-  const placeholders = AUTO_STATUSES.map(() => "?").join(",");
-  const leads = db
-    .prepare(
-      `SELECT * FROM leads
-       WHERE status IN (${placeholders})
-         AND last_direction = 'out'
-         AND last_message_at IS NOT NULL
-         AND follow_up_count < ?`
-    )
-    .all(...AUTO_STATUSES, config.followupMax) as Lead[];
+  const leads = await listFollowUpCandidates(AUTO_STATUSES, config.followupMax);
 
   const now = Date.now();
 
   for (const lead of leads) {
-    const last = parseSqliteDate(lead.last_message_at!).getTime();
+    const last = new Date(lead.last_message_at!).getTime();
     if (now - last < config.followupIntervalMs) continue; // otimizacao: evita round-trip desnecessario
 
     // Texto calculado com o contador pre-claim (stage = numero de retomadas ja enviadas).
@@ -53,7 +39,7 @@ async function runFollowUpCheck(): Promise<void> {
     // Claim atomico: incrementa follow_up_count somente se o lead ainda esta elegivel.
     // Protege contra: lead respondeu entre a leitura e o envio (last_direction vira 'in');
     //                 dois processos de cron rodando em paralelo sobre o mesmo lead.
-    const claimed = claimFollowUp(
+    const claimed = await claimFollowUp(
       lead.id,
       lead.follow_up_count,
       config.followupMax,
@@ -71,7 +57,7 @@ async function runFollowUpCheck(): Promise<void> {
 
     try {
       await sendText(lead.phone, text);
-      addMessage(lead.id, "out", text);
+      await addMessage(lead.id, "out", text);
       console.log(`[followup] Retomada #${newCount}/${config.followupMax} para ${lead.phone}`);
     } catch (err) {
       console.error(`[followup] Falha ao enviar retomada para ${lead.phone}:`, err);
@@ -81,7 +67,7 @@ async function runFollowUpCheck(): Promise<void> {
     // Ocorre mesmo em caso de falha de envio: o counter ja foi incrementado e
     // o lead nao sera selecionado em ciclos futuros (follow_up_count < max deixa de ser verdadeiro).
     if (isLast) {
-      setStatus(lead.id, "perdido");
+      await setStatus(lead.id, "perdido");
       console.log(
         `[followup] Lead ${lead.phone} atingiu ${config.followupMax} retomadas → perdido.`
       );

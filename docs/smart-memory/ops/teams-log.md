@@ -67,3 +67,8 @@ Registro de todos os Agent Teams formados neste projeto. Lead (team-os) atualiza
 
 ## 2026-06-25 — delegação
 - Lead → crm-data: dispatch Wave 0 (1.1/1.2/1.3), modo pre-flight, execução sequencial (conflito de god-nodes). Aguardando ordem proposta + dúvidas.
+
+## 2026-06-25 — Wave 0 fechada + PR
+- **Wave 0 COMPLETA:** 1.1 ✅ (QA CONCERNS) · 1.2 ✅ (QA CONCERNS) · 1.3 ✅ (QA PASS após fix #12 da janela de concorrência) · cleanup db.ts ✅
+- **PR #1:** https://github.com/craniumdigitalia-eng/crm-whatsapp/pull/1 (branch feat/wave0-hardening, aguardando revisão do usuário — sem merge)
+- Próximo: Wave 1 (Supabase) — aguardando definição de credenciais/projeto Supabase.

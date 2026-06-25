@@ -14,20 +14,21 @@ import { AUTO_STATUSES } from "./types";
 export async function handleInbound(msg: InboundMessage): Promise<void> {
   if (msg.fromMe) return; // ignora mensagens enviadas por nos
 
-  const lead = getOrCreateLead(msg.phone, msg.name);
+  const lead = await getOrCreateLead(msg.phone, msg.name);
 
   // Guarda de dedupe: se o external_id ja foi processado, encerra sem reprocessar.
   // Protege contra reentregas do Make/Evolution sem disparar multiplas respostas.
-  const inserida = addMessage(lead.id, "in", msg.text, msg.externalId || undefined);
+  const inserida = await addMessage(lead.id, "in", msg.text, msg.externalId || undefined);
   if (!inserida) {
     console.log(`[handler] Mensagem duplicada ignorada (external_id=${msg.externalId})`);
     return;
   }
 
-  resetFollowUp(lead.id); // lead respondeu -> zera follow-up
+  await resetFollowUp(lead.id); // lead respondeu -> zera follow-up
 
   // Recarrega para pegar status atual.
-  const fresh = getLead(lead.id)!;
+  const fresh = await getLead(lead.id);
+  if (!fresh) return; // nunca deve acontecer, mas guarda defensiva
 
   // So responde automaticamente nos estagios do funil cobertos pelo agente.
   if (!AUTO_STATUSES.includes(fresh.status)) {
@@ -37,16 +38,16 @@ export async function handleInbound(msg: InboundMessage): Promise<void> {
 
   // Marca como "em atendimento" se ainda estava "novo".
   if (fresh.status === "novo") {
-    setStatus(fresh.id, "em_atendimento");
+    await setStatus(fresh.id, "em_atendimento");
   }
 
   try {
-    const history = getMessages(fresh.id);
-    const result = await generateReply(getLead(fresh.id)!, history);
+    const history = await getMessages(fresh.id);
+    const result = await generateReply(fresh, history);
 
     if (result.reply) {
       await sendText(fresh.phone, result.reply);
-      addMessage(fresh.id, "out", result.reply);
+      await addMessage(fresh.id, "out", result.reply);
     }
   } catch (err) {
     console.error(`[handler] Erro ao gerar/enviar resposta para ${fresh.phone}:`, err);

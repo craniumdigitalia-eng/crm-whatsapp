@@ -31,6 +31,20 @@ Follow-ups de QA registrados no fim do [[stories/BACKLOG]] (teste de regressão 
 ### Discovery (ENCERRADA ✅) — 2026-06-25
 crm-architect (modules/architecture) · crm-analyst (tech-stack/conventions) · crm-data (schema) · crm-ux (components). 7 docs produzidos, sintetizados em [[project/overview]].
 
+### Wave 1 — Persistência Supabase (EM ANDAMENTO)
+| Story | Task | Owner | Status |
+|---|---|---|---|
+| 2.1 projeto Supabase + schema | #14 | lead/crm-data | ✅ DONE — schema aplicado (via pg direto), tabelas+UUID validados, creds no .env |
+| 2.2 rewrite db.ts/leads.ts → Supabase | #15/#16 | crm-data | ✅ DONE — QA PASS; 2 nits de error-handling aplicados (#18) |
+
+**Wave 1 COMPLETA.** PR empilhado (`feat/wave1-supabase` sobre `feat/wave0-hardening`) em criação pelo crm-devops.
+Supabase vivo e validado e2e (29/29 + HTTP). App agora roda 100% no Postgres.
+
+Supabase: projeto `iiahpfvhrfuznszytbod` · URL+service_role no `.env` (gitignored). Schema = `supabase/schema.sql`.
+⚠️ Senha do banco foi compartilhada no chat — usuário pode resetar após a migração concluir.
+
+---
+
 ## Objetivo do 1º ciclo (DEFINIDO pelo usuário em 2026-06-25)
 **Migração protótipo → produção.** Escopo derivado do roadmap do CLAUDE.md:
 1. Criar projeto Supabase + rodar `supabase/schema.sql`.
