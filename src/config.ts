@@ -34,4 +34,15 @@ export const config = {
   followupCron: process.env.FOLLOWUP_CRON ?? "*/5 * * * *",
 
   companyName: process.env.COMPANY_NAME ?? "nossa agencia",
+
+  // Make como ponte de canal WhatsApp (producao).
+  // Se MAKE_SEND_URL nao estiver definido, sendText cai no fallback Evolution (dev local).
+  makeSendUrl: process.env.MAKE_SEND_URL ?? "",
+  // Token enviado pelo Make em cada POST /api/webhook — validado pela Story 3.3.
+  makeWebhookSecret: process.env.MAKE_WEBHOOK_SECRET ?? "",
+
+  // Vercel Cron: segredo exigido no header Authorization: Bearer {CRON_SECRET}.
+  cronSecret: process.env.CRON_SECRET ?? "",
+  // Numero maximo de leads processados por ciclo de cron — evita estourar timeout da funcao.
+  followupBatch: parseInt(process.env.FOLLOWUP_BATCH ?? "50", 10),
 };

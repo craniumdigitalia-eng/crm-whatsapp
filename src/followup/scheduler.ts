@@ -24,14 +24,28 @@ function followUpText(stage: number, max: number, lead: Lead): string {
   return ROTATION[stage % ROTATION.length](nome);
 }
 
-async function runFollowUpCheck(): Promise<void> {
-  const leads = await listFollowUpCandidates(AUTO_STATUSES, config.followupMax);
+export interface FollowUpResult {
+  sent: number;
+  skipped: number;
+  errors: number;
+}
+
+// Executa um ciclo de retomadas: busca candidatos, aplica claim atomico e envia via canal.
+// batchLimit: maximo de leads avaliados por ciclo (padrao: config.followupBatch).
+// Exportada para uso direto pela funcao serverless /api/cron/followup (Story 3.4).
+export async function runFollowUpCheck(batchLimit = config.followupBatch): Promise<FollowUpResult> {
+  const leads = await listFollowUpCandidates(AUTO_STATUSES, config.followupMax, batchLimit);
 
   const now = Date.now();
+  const result: FollowUpResult = { sent: 0, skipped: 0, errors: 0 };
 
   for (const lead of leads) {
     const last = new Date(lead.last_message_at!).getTime();
-    if (now - last < config.followupIntervalMs) continue; // otimizacao: evita round-trip desnecessario
+    if (now - last < config.followupIntervalMs) {
+      // Otimizacao: evita round-trip de claim desnecessario para leads ainda dentro do intervalo.
+      result.skipped++;
+      continue;
+    }
 
     // Texto calculado com o contador pre-claim (stage = numero de retomadas ja enviadas).
     const text = followUpText(lead.follow_up_count, config.followupMax, lead);
@@ -49,6 +63,7 @@ async function runFollowUpCheck(): Promise<void> {
       console.log(
         `[followup] Claim falhou para ${lead.phone} — lead respondeu ou concorrencia detectada.`
       );
+      result.skipped++;
       continue;
     }
 
@@ -59,11 +74,13 @@ async function runFollowUpCheck(): Promise<void> {
       await sendText(lead.phone, text);
       await addMessage(lead.id, "out", text);
       console.log(`[followup] Retomada #${newCount}/${config.followupMax} para ${lead.phone}`);
+      result.sent++;
     } catch (err) {
       console.error(`[followup] Falha ao enviar retomada para ${lead.phone}:`, err);
+      result.errors++;
     }
 
-    // AC4: ao atingir o limite de retomadas, transita para perdido.
+    // Ao atingir o limite de retomadas, transita para perdido.
     // Ocorre mesmo em caso de falha de envio: o counter ja foi incrementado e
     // o lead nao sera selecionado em ciclos futuros (follow_up_count < max deixa de ser verdadeiro).
     if (isLast) {
@@ -73,8 +90,12 @@ async function runFollowUpCheck(): Promise<void> {
       );
     }
   }
+
+  return result;
 }
 
+// startFollowUpEngine: usado apenas em dev local (src/index.ts).
+// Producao usa a funcao serverless /api/cron/followup (Story 3.4).
 export function startFollowUpEngine(): void {
   cron.schedule(config.followupCron, () => {
     runFollowUpCheck().catch((e) => console.error("[followup] erro no ciclo:", e));

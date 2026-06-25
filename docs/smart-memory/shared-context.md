@@ -31,7 +31,30 @@ Follow-ups de QA registrados no fim do [[stories/BACKLOG]] (teste de regressão 
 ### Discovery (ENCERRADA ✅) — 2026-06-25
 crm-architect (modules/architecture) · crm-analyst (tech-stack/conventions) · crm-data (schema) · crm-ux (components). 7 docs produzidos, sintetizados em [[project/overview]].
 
-### Wave 1 — Persistência Supabase (EM ANDAMENTO)
+## 🔭 NOVA DIREÇÃO (usuário, 2026-06-25): CRM → PORTAL interno
+Transformar de CRM/kanban em **portal multi-módulo para a equipe interna** da Cranium. Backend atual = fundação; CRM vira um módulo.
+**Módulos:** 1) CRM/kanban (existe) · 2) Métricas & BI · 3) Agendamento de reuniões · 4) Conectar WhatsApp via **QR code** · 5) Aba rica de visualização de leads. Público: **equipe interna**.
+**Planejamento em curso (crm-architect):** ADR-003 (Next.js para o portal?) · ADR-004 (QR/Evolution vs Make — o QR reabre a decisão de canal) · Epic de stories.
+**Pendência usuário:** enviar o **KV / identidade visual** (design system branded) — ver story [[stories/backlog/4.6-redesign-visual-dashboard]] (será absorvida no epic do portal).
+
+### Wave 2 — Serverless Vercel + Make (CONCLUÍDA ✅ — QA PASS, hardened)
+3.1✅ 3.2✅ 3.3✅(+ fail-closed) 3.4✅. PR `feat/wave2-serverless` em consolidação (crm-devops). Go-live pendente: envs Vercel + setup Vercel + mapear wamid no Make.
+
+### Wave 2 — detalhe
+| Item | Task | Owner | Status |
+|---|---|---|---|
+| ADR abordagem serverless (gate da 3.2) | #20 | crm-architect | 🟡 decidindo (A funções /api · B Express-fn · C Next.js) |
+| 3.1 adapter canal Evolution→Make | #21 | crm-integrations | ✅ DONE — QA PASS |
+| 3.2 scaffold serverless | #22 | crm-backend | ◐ in-review — QA rodando (#26) |
+| 4.4 a11y do drawer | #23 | crm-frontend | ✅ DONE (lead verify) |
+| 3.3 webhook idempotente | #27 | crm-integrations | 🟡 implementando (ADR-002 síncrono 60s) |
+| 3.4 cron Vercel | #28 | crm-backend | 🟡 implementando |
+
+Canal: **Make.com**. ADRs 001/002 accepted.
+🚨 **REQUISITO p/ usuário (escalado pelo QA da 3.1):** mapear `message.id` (wamid) como `id` no cenário do Make — sem isso o dedupe de webhook é fraco (hash por segundo não pega retry tardio). Tratar como requisito, não opcional.
+Pendência runtime: `MAKE_SEND_URL`, `MAKE_WEBHOOK_SECRET`, `CRON_SECRET` + setup Vercel (deploy).
+
+### Wave 1 — Persistência Supabase (CONCLUÍDA ✅)
 | Story | Task | Owner | Status |
 |---|---|---|---|
 | 2.1 projeto Supabase + schema | #14 | lead/crm-data | ✅ DONE — schema aplicado (via pg direto), tabelas+UUID validados, creds no .env |

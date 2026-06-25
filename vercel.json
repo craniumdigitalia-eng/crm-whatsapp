@@ -1,8 +1,20 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node@5"
+    },
+    "api/webhook.ts": {
+      "runtime": "@vercel/node@5",
+      "maxDuration": 60
+    },
+    "api/cron/followup.ts": {
+      "runtime": "@vercel/node@5",
+      "maxDuration": 60
+    }
+  },
   "crons": [
     {
-      "comment": "Motor de follow-up: dispara as retomadas pendentes. Rota a implementar em /api/cron/followup (protegida por CRON_SECRET).",
       "path": "/api/cron/followup",
       "schedule": "0 * * * *"
     }

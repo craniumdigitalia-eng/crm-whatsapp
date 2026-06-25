@@ -16,6 +16,131 @@ related: ["[[project/architecture]]", "[[project/conventions]]"]
 | 1.2 | 2026-06-25 | ⚠️ CONCERNS | DROP+recreate destrutivo sem backup; NIT catch amplo (1.1) não resolvido; sem teste automatizado AC5 | tessera (crm-qa) |
 | 1.3 | 2026-06-25 | ✅ PASS | janela de concorrência fechada na origem (task #12: `last_message_at` no claim); `incrementFollowUp` removido. Gap de teste automatizado AC5 → backlog cross-story | tessera (crm-qa) |
 | 2.2 | 2026-06-25 | ✅ PASS | rewrite SQLite→Supabase; AC1–AC6 ok, e2e 29/29 + HTTP. 2 nits não-bloqueantes (UPDATEs secundários sem checagem de erro) | tessera (crm-qa) |
+| 3.1 | 2026-06-25 | ✅ PASS | adapter Make: AC1–AC5 ok, AC4 (zero churn nos callers) e fronteira 3.3 confirmados, tsc EXIT=0. Concern p/ 3.3: hash de fallback dedupa só no mesmo segundo (depende de wamid `id` p/ dedup confiável) | tessera (crm-qa) |
+| 3.2 | 2026-06-25 | ✅ PASS | scaffold serverless: 7 rotas fiéis ao Express + method guards (405)/id (400), stateless-safe, fronteira 3.3/3.4 ok, tsc EXIT=0. Concern: `comment` em `crons[]` do vercel.json pode falhar validação no deploy (AC5) [RESOLVIDO pelo lead]; 2 nits | tessera (crm-qa) |
+| 3.3 | 2026-06-25 | ✅ PASS | webhook idempotente: síncrono (ADR-002), dedupe 1.1 preservado, WARN sem wamid, maxDuration 60, 22/22. **Concern de segurança: auth fail-open quando `MAKE_WEBHOOK_SECRET` ausente** (cron é fail-closed) → endurecer antes do go-live | tessera (crm-qa) |
+| 3.4 | 2026-06-25 | ✅ PASS | cron followup: auth fail-closed (401 mesmo sem secret), batch limit 50 via `.limit()` + maxDuration 60, GET+POST exigem secret, node-cron dev-only. Jest 6/6 cobrindo AC6. tsc EXIT=0 | tessera (crm-qa) |
+
+---
+
+## Story 3.3 — /api/webhook idempotente (god-node)
+
+**Veredicto: ✅ PASS** (1 concern de segurança a endurecer antes do go-live; 1 nota de contrato) — Tessera (crm-qa) — 2026-06-25
+
+### Checklist & gate
+| Critério | Resultado |
+|---|---|
+| `npx tsc --noEmit` | ✅ EXIT=0 |
+| Validação empírica (dev) | ✅ 22/22 |
+| Sem regressão | ✅ `handleInbound` não alterado — herda dedupe (1.1), funil/AUTO_STATUSES, IA, reset follow-up |
+
+### Respostas aos pontos do gate
+- **(a) Síncrono antes do 200 (ADR-002):** ✅ `await handleInbound(messages[0])` e só então `ok(res)` (200). Sem fire-and-forget — correto para serverless (a função congela ao retornar).
+- **(b) Dedupe real (1.1):** ✅ `handleInbound` → `addMessage(externalId)` → 23505 → `false` → encerra sem reprocessar nem responder. O webhook devolve **200 idempotente** na reentrega (handleInbound retorna sem throw). AC2 atendido.
+- **(c) WARN sem `id` nativo:** ✅ `if (!req.body?.id) console.warn("[webhook] WARN: ... dedupe degradado; mapeie message.id ...")`. Endereça o concern do QA da 3.1.
+- **(d) Header secret — segurança em prod:** ⚠️ **fail-open.** Quando `MAKE_WEBHOOK_SECRET` está vazio, o endpoint **aceita sem autenticação**. Documentado como conveniência de dev, mas é o ingress de produção (escreve leads/mensagens e dispara o agente Claude → custo). Se o secret for esquecido em prod, o webhook fica **aberto**. Inconsistente com o cron (3.4), que é **fail-closed**. Ver concern abaixo.
+- **(e) Só processa `messages[0]`:** `parseMakeWebhook` sempre retorna **exatamente 1** item (constrói `[{...}]` a partir de `body.phone/text/id` de nível superior). Para o contrato definido (1 mensagem por POST) está correto. _Nota de contrato:_ se o cenário Make for configurado para enviar **batch** (>1 msg/POST), `parseMakeWebhook` + webhook precisariam iterar — hoje seria mal-interpretado. Documentar a premissa "1 mensagem por requisição".
+- **(f) `maxDuration: 60`:** ✅ presente em `vercel.json` para `api/webhook.ts` (e cron).
+
+### Observações
+- **[CONCERN — segurança, endurecer antes do go-live] Auth do webhook é fail-open.** _Recomendação:_ em produção, exigir `MAKE_WEBHOOK_SECRET` (fail-closed) — ex.: se `NODE_ENV==='production'` e secret ausente → 401 (ou recusar boot com erro claro). Alinha com o padrão seguro já adotado no cron (3.4). Não-bloqueante para os ACs da story (que pedem só 405/400), mas é postura de segurança de um god-node de ingress. Pendência runtime `MAKE_WEBHOOK_SECRET` já rastreada na shared-context.
+- **[NOTA] Contrato single-message** (item e) — documentar/forçar premissa de 1 msg/POST.
+
+**Próximo passo:** @devops push (Wave 2). Endurecer auth fail-open antes do go-live de produção.
+
+---
+
+## Story 3.4 — /api/cron/followup + Vercel Cron
+
+**Veredicto: ✅ PASS** — Tessera (crm-qa) — 2026-06-25
+
+### Checklist & gate
+| Critério | Resultado |
+|---|---|
+| `npx tsc --noEmit` | ✅ EXIT=0 |
+| Jest (`src/followup/scheduler.test.ts`) | ✅ **6/6** (rodado por QA) |
+| AC1–AC6 | ✅ cobertos |
+
+### Respostas aos pontos do gate
+- **(a) Auth sem bypass:** ✅ **fail-closed** — `if (!expected || authorization !== 'Bearer '+expected) return 401`. CRON_SECRET ausente → `!expected` → 401. Sem bypass. (Padrão seguro — o webhook 3.3 deveria seguir o mesmo.)
+- **(b) Batch limit evita timeout:** ✅ `runFollowUpCheck(config.followupBatch=50)` → `listFollowUpCandidates(..., limit=50)` aplica `.limit(50)` no Supabase; `maxDuration: 60`. Limite documentado e configurável via `FOLLOWUP_BATCH`. _Nit:_ envios são sequenciais (`await` no laço) — 50 sends podem se aproximar do teto de 60s se o Make estiver lento; reduzir `FOLLOWUP_BATCH` ou aumentar a frequência se aparecer timeout.
+- **(c) 6 testes cobrem os casos certos:** ✅ (1) intervalo vencido → 1 retomada; (2) claim falso (respondeu) → não envia, skip; (3) `count=2/max=3` → `perdido`; (4) dentro do intervalo → pulado sem claim; (5) falha de envio na última → `errors++` mas ainda `perdido`; (6) 2 leads → 2 retomadas independentes. Cobre AC6 + resiliência da 1.3.
+- **(d) GET+POST exigem secret:** ✅ o gate de auth roda após o filtro de método, para ambos GET e POST — sem caminho method-specific que escape.
+- **AC4:** `node-cron`/`startFollowUpEngine` marcados dev-only (só `src/index.ts`); nenhum handler `api/` os importa. ✅
+
+### Observações
+- **[NIT]** Envios sequenciais no lote (ver item b) — monitorar latência vs `maxDuration`.
+
+**Próximo passo:** @devops push (Wave 2). **Fecha a Wave 2.**
+
+---
+
+## Story 3.2 — Scaffold serverless (Express → funções /api)
+
+**Veredicto: ✅ PASS** (1 concern a verificar antes do deploy; 2 nits) — Tessera (crm-qa) — 2026-06-25
+
+### 8-Point Checklist
+| # | Critério | Resultado |
+|---|---|---|
+| 1 | Code review | ✅ helpers `_lib` enxutos, handlers uniformes, PT-BR |
+| 2 | Unit tests | ⚠️ sem testes automatizados (AC5 = deploy preview, fora do gate → pendente) |
+| 3 | Acceptance criteria | ✅ AC1–AC4 cobertos; AC5 (deploy) pendente (setup Vercel do usuário) |
+| 4 | Sem regressões | ✅ 7 rotas fiéis ao `routes/api.ts`; frontend `public/app.js` casa com os paths |
+| 5 | Performance | ✅ client Supabase reusado stateless-safe; sem node-cron no caminho serverless |
+| 6 | Security | ✅ `serverError` loga server-side e devolve só `message` (sem stack) |
+| 7 | Documentação | ✅ placeholders 501 documentados com a story-alvo |
+| 8 | Contratos de API | ✅ paths e payloads preservados |
+
+### `npx tsc --noEmit`: ✅ EXIT=0 (confirmado por QA)
+
+### Respostas aos pontos do gate
+1. **Fidelidade das 7 rotas:** comparadas 1:1 com `routes/api.ts` — `leads` (`{leads,statusLabels}`), `leads/:id` (`{lead,messages}`+404), `reply` (sendText+addMessage+humano, 400 texto vazio), `status` (`validateStatus`+404), `takeover`/`release` (setStatus+404), `edit` (updateLeadFields+404). Lógica idêntica, delegando ao `src/`. **Sem regressão** — e ainda endurecidas com `guardMethod` (405) e `requireId` (400), necessários no modelo serverless (Vercel roteia todos os métodos ao mesmo handler). ✅
+2. **`requireId(req.query.id: string|string[])`:** `typeof id === "string" && id.length > 0 ? id : null` — narrowing correto; caso `string[]` (query duplicada) → `null` → 400 (rejeita defensivamente em vez de mal-interpretar). Para path param `[id]`, o Vercel entrega string. ✅
+3. **guardMethod + try/catch:** todos os 7 handlers chamam `guardMethod` primeiro e envolvem a lógica em try/catch → `serverError`, que **loga `console.error` server-side e devolve só `e.message`** (sem stack trace vazado). ✅
+4. **`_lib/supabase.ts` stateless-safe:** re-exporta o singleton de `src/db.ts` (`createClient` com `persistSession:false, autoRefreshToken:false`) — sem pool mutável, reusável entre invocações warm. Nenhum handler importa `followup/scheduler`/node-cron (grep confirma). ✅ AC4.
+5. **vercel.json:** `functions` runtime `@vercel/node@5` válido; `_lib/` excluído do roteamento pela convenção de prefixo `_` (não vira endpoint); cron `path:/api/cron/followup` casa com `api/cron/followup.ts`. `public/` servido por static zero-config. ✅ — _exceto o item de concern abaixo._
+6. **Placeholders 501:** `webhook.ts` e `cron/followup.ts` retornam 501 com mensagem clara apontando a story-alvo; não importam nada pesado, não quebram. ✅
+7. AC5 (deploy preview) — **pendente** (setup Vercel do usuário, fora do gate). 501s não penalizados (3.3/3.4 em implementação).
+8. `tsc` EXIT=0. ✅
+
+### Observações
+- **[CONCERN — verificar antes do deploy] `comment` em `crons[]` do `vercel.json`.** O schema de cron do Vercel aceita oficialmente apenas `path` e `schedule`; propriedade extra (`comment`) pode disparar erro de validação no deploy ("should NOT have additional properties") e **quebrar o AC5**. _Ação:_ mover a nota para um comentário fora do array `crons` (ou remover) antes do primeiro deploy. Falha barulhenta e trivial de corrigir — não-bloqueante para o scaffold, mas precisa ser resolvida antes de validar o deploy.
+- **[NIT] Doc do placeholder `webhook.ts` desalinhada com a 3.1:** o comentário diz contrato `{ phone, name, text, external_id }`, mas a 3.1 definiu o contrato de entrada como `{ phone, name?, text, id? }` (campo `id`, não `external_id`). A 3.3 deve consumir `parseMakeWebhook` (que lê `id`). Alinhar para evitar divergência de campo.
+- **[NIT] `health.ts` sem `guardMethod`:** responde a qualquer método. Trivial (liveness), severidade mínima; opcionalmente restringir a GET por consistência.
+
+**Próximo passo:** @devops push (quando a Wave 2 fechar). Resolver o `comment` do `vercel.json` antes do deploy de preview (AC5).
+
+---
+
+## Story 3.1 — Adapter de canal: Evolution → Make
+
+**Veredicto: ✅ PASS** (1 concern encaminhado p/ 3.3; 1 nit) — Tessera (crm-qa) — 2026-06-25
+
+### 8-Point Checklist
+| # | Critério | Resultado |
+|---|---|---|
+| 1 | Code review | ✅ branch claro, PT-BR, refactor in-place (zero churn de imports) |
+| 2 | Unit tests | ✅ 27/27 assertions empíricas (dev); sem framework (decisão de equipe → backlog) |
+| 3 | Acceptance criteria | ✅ AC1–AC5 cobertos |
+| 4 | Sem regressões | ✅ AC4: assinatura/import de `sendText` inalterados nos 3 callers |
+| 5 | Performance | ✅ N/A (1 fetch por envio) |
+| 6 | Security | ✅ `makeWebhookSecret` só declarado (validação fica na 3.3); sem segredo no front |
+| 7 | Documentação | ✅ contrato do Make + riscos do hash documentados no código |
+| 8 | Contratos de API | ✅ contrato de entrada do Make definido sem implementar a rota (fronteira 3.3) |
+
+### `npx tsc --noEmit`: ✅ EXIT=0 (confirmado por QA)
+
+### Respostas aos pontos do gate
+1. **AC4 (zero mudança nos callers):** `grep` confirma — `handler.ts`, `followup/scheduler.ts`, `routes/api.ts` mantêm `import { sendText } from ".../whatsapp/evolution"` e a chamada `sendText(phone, text)`. Assinatura `sendText(phone: string, text: string): Promise<void>` inalterada. ✅
+2. **sendText branch Make:** payload exatamente `{ phone, text }` (`evolution.ts:30`). **D1:** o branch é *gated* por `if (config.makeSendUrl)` — não há como entrar no branch Make com `makeSendUrl` vazio (vazio → fallback Evolution). Logo, sem falha silenciosa *dentro* do branch. `makeSendUrl` truthy mas inválido → `fetch` rejeita → `throw` propagado ao caller (que trata). ✅ _Nit de observabilidade:_ em produção, se `MAKE_SEND_URL` for esquecido, `sendText` cai no Evolution silenciosamente (que então falha na conexão com mensagem "Evolution", não "Make") — confuso, mas não silencioso. Baixa severidade.
+3. **parseMakeWebhook hash:** determinístico ✅ — `sha256(phone|text|floor(epochMs/1000))`: mesmo phone+text no **mesmo segundo** → mesmo `externalId`. Risco de falso-positivo (mensagem idêntica 2x no mesmo segundo → 2ª dropada) **documentado** no código. `fromMe:false` é seguro — Make só encaminha mensagens do lead; saídas vão por `sendText` (documentado). ✅ Payload inválido (sem phone/text) → `[]`. ✅
+4. **Fronteira 3.3:** `parseMakeWebhook` só **exportada** (nenhum caller); `makeWebhookSecret` só **declarado** no config (sem lógica de validação); `routes/webhook.ts` **não** foi tocado (sem rota `/api/webhook`). 3.1 deixou o contrato pronto sem invadir a 3.3. ✅
+5. `tsc` EXIT=0. ✅
+
+### Observações
+- **[CONCERN → encaminhar p/ Story 3.3] Dedup do fallback por hash é best-effort (só mesmo-segundo).** O hash quantiza por `epoch_segundos`, então um **retry do Make que chegue >1s depois** (cenário comum de retry) cai em outro bucket → `externalId` diferente → **não deduplica** → mensagem duplicada. A idempotência confiável depende do **wamid `id`** (caminho recomendado). A story documenta o falso-positivo, mas o **falso-negativo** (retry >1s não-deduplicado) é o risco prático. _Mitigação já rastreada:_ mapear `message.id` (wamid) como `id` no cenário Make (pendência do usuário na shared-context). **A Story 3.3 (webhook idempotente) deve assumir que `id` está presente; sem ele, o dedup é fraco.** Não-bloqueante para a 3.1 (que é só o adapter/contrato e cumpre seus ACs).
+
+**Próximo passo:** @devops push (quando a Wave 2 fechar). Concern do dedup roteado para a 3.3.
 
 ---
 
