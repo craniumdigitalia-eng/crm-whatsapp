@@ -22,6 +22,9 @@ export const config = {
   anthropicApiKey: required("ANTHROPIC_API_KEY"),
   agentModel: process.env.AGENT_MODEL ?? "claude-opus-4-8",
 
+  supabaseUrl: required("SUPABASE_URL"),
+  supabaseServiceRoleKey: required("SUPABASE_SERVICE_ROLE_KEY"),
+
   evolutionUrl: (process.env.EVOLUTION_URL ?? "http://localhost:8080").replace(/\/$/, ""),
   evolutionInstance: required("EVOLUTION_INSTANCE"),
   evolutionApiKey: required("EVOLUTION_API_KEY"),

@@ -28,12 +28,18 @@ As migrações do protótipo são incrementais e aplicadas automaticamente no st
 
 > Schema base em `supabase/schema.sql`. Rodar no SQL Editor do Supabase ou via `supabase db push` na criação do projeto de produção.
 
+## Wave 1 — aplicadas (2026-06-25)
+
+| Story | Mudança | Arquivo | Status |
+|-------|---------|---------|--------|
+| 2.2 | `external_id TEXT` em `messages` + índice único parcial | `supabase/schema.sql` | pendente credenciais (2.1) |
+| 2.2 | `constraint chk_followup CHECK (follow_up_count >= 0)` em `leads` | `supabase/schema.sql` | pendente credenciais (2.1) |
+
+> Schema base em `supabase/schema.sql` inclui Wave 0 + Wave 1. Rodar no SQL Editor do Supabase assim que credenciais forem configuradas.
+
 ## Próximas migrations Supabase planejadas
 
 | Prioridade | Descrição | Motivo | Story |
 |------------|-----------|--------|-------|
-| Alta | Adicionar `external_id TEXT` em `messages` + `UNIQUE INDEX` parcial + `ON CONFLICT DO NOTHING` | Idempotência de webhooks (Make pode reenviar) | 2.1 |
 | Média | Habilitar RLS em `leads` e `messages` + policies iniciais | Segurança do dashboard com Supabase Auth | 4.2 |
 | Baixa | Adicionar `model`, `input_tokens`, `output_tokens` em `messages` | Observabilidade de custo por conversa | 4.5 |
-
-> `Lead.id`/`Message.id` → UUID: já resolvido no `supabase/schema.sql` (usa `uuid` PK com `gen_random_uuid()`). Não requer migration adicional.

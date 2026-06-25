@@ -15,6 +15,47 @@ related: ["[[project/architecture]]", "[[project/conventions]]"]
 | 1.1 | 2026-06-25 | ⚠️ CONCERNS | 1 concern (falta teste automatizado AC4); 1 nit (catch amplo na migração) | tessera (crm-qa) |
 | 1.2 | 2026-06-25 | ⚠️ CONCERNS | DROP+recreate destrutivo sem backup; NIT catch amplo (1.1) não resolvido; sem teste automatizado AC5 | tessera (crm-qa) |
 | 1.3 | 2026-06-25 | ✅ PASS | janela de concorrência fechada na origem (task #12: `last_message_at` no claim); `incrementFollowUp` removido. Gap de teste automatizado AC5 → backlog cross-story | tessera (crm-qa) |
+| 2.2 | 2026-06-25 | ✅ PASS | rewrite SQLite→Supabase; AC1–AC6 ok, e2e 29/29 + HTTP. 2 nits não-bloqueantes (UPDATEs secundários sem checagem de erro) | tessera (crm-qa) |
+
+---
+
+## Story 2.2 — Rewrite da persistência para Supabase
+
+**Veredicto: ✅ PASS** (aprovado para push, 2 nits não-bloqueantes) — Tessera (crm-qa) — 2026-06-25
+
+### 8-Point Checklist
+| # | Critério | Resultado |
+|---|---|---|
+| 1 | Code review | ✅ async/await consistente, colunas explícitas, semântica preservada |
+| 2 | Unit tests | ✅ e2e contra Supabase real: 29/29 assertions (crm-data) + caminho HTTP confirmado pelo lead |
+| 3 | Acceptance criteria | ✅ AC1–AC6 cobertos |
+| 4 | Sem regressões | ✅ idempotência (1.1) e claim atômico+fix #12 (1.3) preservados no client JS |
+| 5 | Performance | ✅ sem N+1; `listFollowUpCandidates` filtra no servidor; índices no schema (`idx_leads_followup`, `idx_messages_lead`) |
+| 6 | Security | ✅ service_role só em `db.ts` (server); ausente em `public/`; `.env` gitignored (só `.env.example` rastreado) |
+| 7 | Documentação | ✅ story documenta decisões D1–D4 e equivalências |
+| 8 | Contratos de API | ✅ assinaturas públicas preservadas (sync→async); 7 rotas com try/catch |
+
+### `npx tsc --noEmit`: ✅ EXIT=0 (confirmado por QA)
+
+### Respostas aos pontos do gate
+1. **Async:** todos os `await` presentes; nenhuma promise flutuante — entrypoints (`webhook`→`handleInbound`, cron→`runFollowUpCheck`) têm `.catch`. As 7 rotas em `api.ts` são `async` com `try/catch` repassando `500 {error}`. `handler.ts` ganhou guarda `if (!fresh) return`. _Sem `Promise.all` necessário_: não há query de "counts" (listLeads retorna só leads); em `/leads/:id` os dois reads são sequenciais (getLead serve de guard 404) — correto, oportunidade menor de paralelizar (não-bloqueante).
+2. **D1 `claimFollowUp`:** `last_message_at: now` **presente** no SET (fix #12 não regrediu); optimistic lock completo (`.eq('follow_up_count', expectedCount)` + `.lt(..., maxCount)` + `last_direction='out'` + `last_message_at < intervalAgo`). Sob Postgres READ COMMITTED o lock é **robusto**: UPDATE concorrente bloqueado re-avalia o qual `follow_up_count = expectedCount` (EvalPlanQual) e atualiza 0 linhas → `data.length===0` → false. ✅
+3. **D2 `getOrCreateLead`:** select→insert→fallback `23505` re-seleciona por `phone` com `.single()` (linha existe após violação de unique → exatamente 1). Erro não-23505 → `throw`. ✅
+4. **D3 `addMessage`:** dedup por `error.code === '23505'` → `return false`; **qualquer outro erro → `throw error`** (relança). ✅
+5. **Sem resquícios:** `grep` em `src/` não encontra `node:sqlite`/`DatabaseSync`/`parseSqliteDate`/`randomUUID`/`crm.db`/`prepare(`/`INSERT OR IGNORE` (apenas 1 comentário descritivo em `db.ts`). ✅
+6. **Segurança:** service_role só server-side; `public/` sem referência a supabase/service_role; `.gitignore` cobre `.env` e `data/*.db`; só `.env.example` rastreado. ✅
+7. **Colunas explícitas:** `LEAD_COLS`/`MSG_COLS` em todos os SELECTs; nenhum `select('*')`. ✅ (AC4)
+8. `tsc --noEmit` EXIT=0. ✅
+
+### Observações (nits não-bloqueantes — hardening de robustez)
+- **[NIT] UPDATE secundário de `addMessage` sem checagem de erro** (`leads.ts:88-91`): após inserir a mensagem, o `update({last_direction,last_message_at})` não captura erro e a função retorna `true` de qualquer forma. Num cenário raro de erro nesse UPDATE, a mensagem é persistida mas `last_message_at` não avança — afeta a cadência de follow-up, sem corromper dados. Sugestão: checar `error` e logar/propagar.
+- **[NIT] UPDATE de `name` em lead existente sem checagem de erro** (`leads.ts:28`): `existing.name` é atualizado em memória e retornado mesmo se o UPDATE falhar (divergência cosmética memória×DB). Baixa severidade.
+- _Ambos são caminhos de erro raros; não impedem o PASS. Candidatos a hardening num follow-up._
+
+### Validação de concorrência (revisão de código + modelo Postgres)
+Não reexecutei teste empírico local (camada agora é Supabase remoto; e2e do crm-data já cobriu happy path + dedup `23505` + optimistic lock). A análise de corretude do claim sob READ COMMITTED confirma a semântica de claim único.
+
+**Próximo passo:** @devops push. **Fecha a Wave 1.**
 
 ---
 

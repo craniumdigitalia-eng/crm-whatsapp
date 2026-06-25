@@ -53,9 +53,9 @@ function historyToMessages(history: Message[]): Anthropic.MessageParam[] {
   }));
 }
 
-function applyTool(lead: Lead, name: string, input: any): { handoff: boolean } {
+async function applyTool(lead: Lead, name: string, input: any): Promise<{ handoff: boolean }> {
   if (name === "atualizar_lead") {
-    updateLeadFields(lead.id, {
+    await updateLeadFields(lead.id, {
       service_interest: input.service_interest,
       budget: input.budget,
       notes: input.notes,
@@ -65,7 +65,7 @@ function applyTool(lead: Lead, name: string, input: any): { handoff: boolean } {
   }
   if (name === "transferir_para_humano") {
     const note = input.resumo ? `[Transferido p/ humano] ${input.resumo}` : "[Transferido p/ humano]";
-    updateLeadFields(lead.id, { status: "humano", notes: note });
+    await updateLeadFields(lead.id, { status: "humano", notes: note });
     return { handoff: true };
   }
   return { handoff: false };
@@ -102,7 +102,7 @@ export async function generateReply(lead: Lead, history: Message[]): Promise<Age
       const toolResults: Anthropic.ToolResultBlockParam[] = [];
       for (const block of response.content) {
         if (block.type === "tool_use") {
-          const result = applyTool(lead, block.name, block.input);
+          const result = await applyTool(lead, block.name, block.input);
           handoff = handoff || result.handoff;
           toolResults.push({
             type: "tool_result",
