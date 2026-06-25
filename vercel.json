@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "comment": "Motor de follow-up: dispara as retomadas pendentes. Rota a implementar em /api/cron/followup (protegida por CRON_SECRET).",
+      "path": "/api/cron/followup",
+      "schedule": "0 * * * *"
+    }
+  ]
+}

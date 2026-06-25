@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CRM WhatsApp — Cranium Digital</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>CRM WhatsApp <span class="muted">· primeiro atendimento por IA</span></h1>
+      <button id="refresh" class="btn">↻ Atualizar</button>
+    </header>
+
+    <main id="board" class="board"></main>
+
+    <!-- Painel lateral de conversa -->
+    <aside id="drawer" class="drawer hidden">
+      <div class="drawer-head">
+        <div>
+          <h2 id="d-name">—</h2>
+          <div id="d-phone" class="muted"></div>
+        </div>
+        <button id="d-close" class="btn ghost">✕</button>
+      </div>
+
+      <div class="d-meta">
+        <span id="d-status" class="chip"></span>
+        <span id="d-service" class="chip light"></span>
+        <span id="d-budget" class="chip light"></span>
+      </div>
+
+      <div class="d-actions">
+        <button class="btn small" data-act="takeover">🙋 Assumir</button>
+        <button class="btn small ghost" data-act="release">🤖 Devolver p/ IA</button>
+        <select id="d-status-select" class="select"></select>
+      </div>
+
+      <div id="d-notes" class="notes hidden"></div>
+
+      <div id="d-messages" class="messages"></div>
+
+      <form id="d-reply" class="reply">
+        <input id="d-reply-text" placeholder="Responder como humano…" autocomplete="off" />
+        <button class="btn" type="submit">Enviar</button>
+      </form>
+    </aside>
+
+    <script src="app.js"></script>
+  </body>
+</html>
