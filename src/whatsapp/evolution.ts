@@ -5,6 +5,7 @@ export interface InboundMessage {
   name?: string;
   text: string;
   fromMe: boolean;
+  externalId: string; // key.id da Evolution (ou ID repassado pelo Make) — base do dedupe
 }
 
 // Envia uma mensagem de texto via Evolution API (formato v2).
@@ -39,6 +40,7 @@ export function parseWebhook(body: any): InboundMessage[] {
 
     const phone = remoteJid.split("@")[0];
     const fromMe: boolean = !!key.fromMe;
+    const externalId: string = key.id ?? "";
 
     const msg = item.message ?? {};
     const text: string =
@@ -50,7 +52,7 @@ export function parseWebhook(body: any): InboundMessage[] {
 
     if (!text.trim()) continue;
 
-    out.push({ phone, name: item.pushName, text: text.trim(), fromMe });
+    out.push({ phone, name: item.pushName, text: text.trim(), fromMe, externalId });
   }
   return out;
 }

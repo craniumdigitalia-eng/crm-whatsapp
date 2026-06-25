@@ -2,7 +2,7 @@ import cron from "node-cron";
 import { config } from "../config";
 import { db } from "../db";
 import { Lead, AUTO_STATUSES } from "../types";
-import { addMessage, incrementFollowUp } from "../crm/leads";
+import { addMessage, claimFollowUp, setStatus } from "../crm/leads";
 import { sendText } from "../whatsapp/evolution";
 
 // Rotacao de mensagens de retomada. Como sao ate 30 follow-ups por lead,
@@ -45,18 +45,46 @@ async function runFollowUpCheck(): Promise<void> {
 
   for (const lead of leads) {
     const last = parseSqliteDate(lead.last_message_at!).getTime();
-    if (now - last < config.followupIntervalMs) continue; // ainda nao deu o intervalo
+    if (now - last < config.followupIntervalMs) continue; // otimizacao: evita round-trip desnecessario
+
+    // Texto calculado com o contador pre-claim (stage = numero de retomadas ja enviadas).
+    const text = followUpText(lead.follow_up_count, config.followupMax, lead);
+
+    // Claim atomico: incrementa follow_up_count somente se o lead ainda esta elegivel.
+    // Protege contra: lead respondeu entre a leitura e o envio (last_direction vira 'in');
+    //                 dois processos de cron rodando em paralelo sobre o mesmo lead.
+    const claimed = claimFollowUp(
+      lead.id,
+      lead.follow_up_count,
+      config.followupMax,
+      config.followupIntervalMs
+    );
+    if (!claimed) {
+      console.log(
+        `[followup] Claim falhou para ${lead.phone} — lead respondeu ou concorrencia detectada.`
+      );
+      continue;
+    }
+
+    const newCount = lead.follow_up_count + 1;
+    const isLast = newCount >= config.followupMax;
 
     try {
-      const text = followUpText(lead.follow_up_count, config.followupMax, lead);
       await sendText(lead.phone, text);
       addMessage(lead.id, "out", text);
-      incrementFollowUp(lead.id);
-      console.log(
-        `[followup] Retomada #${lead.follow_up_count + 1}/${config.followupMax} para ${lead.phone}`
-      );
+      console.log(`[followup] Retomada #${newCount}/${config.followupMax} para ${lead.phone}`);
     } catch (err) {
       console.error(`[followup] Falha ao enviar retomada para ${lead.phone}:`, err);
+    }
+
+    // AC4: ao atingir o limite de retomadas, transita para perdido.
+    // Ocorre mesmo em caso de falha de envio: o counter ja foi incrementado e
+    // o lead nao sera selecionado em ciclos futuros (follow_up_count < max deixa de ser verdadeiro).
+    if (isLast) {
+      setStatus(lead.id, "perdido");
+      console.log(
+        `[followup] Lead ${lead.phone} atingiu ${config.followupMax} retomadas → perdido.`
+      );
     }
   }
 }
