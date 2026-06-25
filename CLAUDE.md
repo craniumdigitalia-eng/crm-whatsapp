@@ -46,16 +46,24 @@ A Vercel (serverless) não hospeda a Evolution, então o **Make** é a ponte com
 
 Assim a Vercel não fala com a Evolution diretamente — o Make abstrai o canal. (Alternativa descartada: Evolution num VPS/Railway com a Vercel chamando direto.)
 
-## Roadmap de migração (protótipo → produção)
+## Camada serverless (esqueleto JÁ criado em `/api` e `/lib`)
 
-- [ ] Criar projeto Supabase, rodar [supabase/schema.sql](supabase/schema.sql).
-- [ ] `db.ts`/`leads.ts` → Supabase (`@supabase/supabase-js`, service_role no server).
-- [ ] Reestruturar rotas Express → funções serverless em `/api` (ou migrar para Next.js App Router).
-- [ ] `/api/webhook` (entrada de mensagens, idempotente) → chama o agente → responde via Make.
-- [ ] `/api/cron/followup` + **Vercel Cron** (config em `vercel.json`), protegido por `CRON_SECRET`.
+A versão de produção já tem o esqueleto, type-checado (`npx tsc -p tsconfig.vercel.json`):
+- [lib/supabase.ts](lib/supabase.ts), [lib/leads.ts](lib/leads.ts) — CRM no Supabase (service_role).
+- [lib/agent.ts](lib/agent.ts) + [lib/prompt.ts](lib/prompt.ts) — agente Claude.
+- [lib/whatsapp.ts](lib/whatsapp.ts) — envio via webhook do Make (`MAKE_SEND_URL`).
+- [api/webhook.ts](api/webhook.ts) — entrada: Make faz `POST` aqui → agente responde.
+- [api/cron/followup.ts](api/cron/followup.ts) — retomadas, protegida por `CRON_SECRET` (Vercel Cron em [vercel.json](vercel.json)).
+
+## Roadmap (o que falta para produção)
+
+- [ ] Criar projeto Supabase e rodar [supabase/schema.sql](supabase/schema.sql).
+- [ ] Configurar env vars na Vercel (`ANTHROPIC_API_KEY`, `SUPABASE_*`, `MAKE_SEND_URL`, `CRON_SECRET`, `FOLLOWUP_*`).
+- [ ] Montar os cenários no Make: entrada (WhatsApp → `POST /api/webhook`) e saída (`MAKE_SEND_URL` → WhatsApp).
+- [ ] Idempotência no `/api/webhook` (deduplicar reenvios do Make por id da mensagem).
 - [ ] Dashboard na Vercel (estático ou Next.js); opcional **Supabase Auth** + RLS.
-- [ ] **Substituir o SDR de fato:** quando o lead qualifica, agendar reunião (Cal.com/Google Calendar via Make) e notificar a equipe.
-- [ ] Observabilidade (logs, métricas de conversão por estágio) e rate limiting.
+- [ ] **Substituir o SDR de fato:** ao qualificar, agendar reunião (Cal.com/Google via Make) e notificar a equipe.
+- [ ] Observabilidade (logs, conversão por estágio) e rate limiting.
 
 ## Variáveis de ambiente (produção)
 
