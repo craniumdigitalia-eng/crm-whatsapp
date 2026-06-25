@@ -19,7 +19,7 @@ apiRouter.get("/leads", (_req, res) => {
 
 // Detalhe do lead + conversa.
 apiRouter.get("/leads/:id", (req, res) => {
-  const id = parseInt(req.params.id, 10);
+  const id = req.params.id;
   const lead = getLead(id);
   if (!lead) return res.status(404).json({ error: "lead nao encontrado" });
   res.json({ lead, messages: getMessages(id) });
@@ -27,7 +27,7 @@ apiRouter.get("/leads/:id", (req, res) => {
 
 // Envia mensagem manual (humano respondendo). Coloca o lead em atendimento humano.
 apiRouter.post("/leads/:id/reply", async (req, res) => {
-  const id = parseInt(req.params.id, 10);
+  const id = req.params.id;
   const lead = getLead(id);
   if (!lead) return res.status(404).json({ error: "lead nao encontrado" });
   const text = (req.body?.text ?? "").toString().trim();
@@ -45,7 +45,7 @@ apiRouter.post("/leads/:id/reply", async (req, res) => {
 
 // Altera o estagio do lead no funil.
 apiRouter.post("/leads/:id/status", (req, res) => {
-  const id = parseInt(req.params.id, 10);
+  const id = req.params.id;
   const lead = getLead(id);
   if (!lead) return res.status(404).json({ error: "lead nao encontrado" });
   const status = req.body?.status as LeadStatus;
@@ -58,7 +58,7 @@ apiRouter.post("/leads/:id/status", (req, res) => {
 
 // Assume o atendimento (pausa o agente).
 apiRouter.post("/leads/:id/takeover", (req, res) => {
-  const id = parseInt(req.params.id, 10);
+  const id = req.params.id;
   if (!getLead(id)) return res.status(404).json({ error: "lead nao encontrado" });
   setStatus(id, "humano");
   res.json({ ok: true });
@@ -66,7 +66,7 @@ apiRouter.post("/leads/:id/takeover", (req, res) => {
 
 // Devolve o atendimento para o agente de IA.
 apiRouter.post("/leads/:id/release", (req, res) => {
-  const id = parseInt(req.params.id, 10);
+  const id = req.params.id;
   if (!getLead(id)) return res.status(404).json({ error: "lead nao encontrado" });
   setStatus(id, "em_atendimento");
   res.json({ ok: true });
@@ -74,7 +74,7 @@ apiRouter.post("/leads/:id/release", (req, res) => {
 
 // Edita campos de qualificacao manualmente.
 apiRouter.post("/leads/:id/edit", (req, res) => {
-  const id = parseInt(req.params.id, 10);
+  const id = req.params.id;
   if (!getLead(id)) return res.status(404).json({ error: "lead nao encontrado" });
   const { name, service_interest, budget, notes } = req.body ?? {};
   updateLeadFields(id, { name, service_interest, budget, notes });

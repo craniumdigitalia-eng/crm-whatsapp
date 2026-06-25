@@ -15,7 +15,15 @@ export async function handleInbound(msg: InboundMessage): Promise<void> {
   if (msg.fromMe) return; // ignora mensagens enviadas por nos
 
   const lead = getOrCreateLead(msg.phone, msg.name);
-  addMessage(lead.id, "in", msg.text);
+
+  // Guarda de dedupe: se o external_id ja foi processado, encerra sem reprocessar.
+  // Protege contra reentregas do Make/Evolution sem disparar multiplas respostas.
+  const inserida = addMessage(lead.id, "in", msg.text, msg.externalId || undefined);
+  if (!inserida) {
+    console.log(`[handler] Mensagem duplicada ignorada (external_id=${msg.externalId})`);
+    return;
+  }
+
   resetFollowUp(lead.id); // lead respondeu -> zera follow-up
 
   // Recarrega para pegar status atual.

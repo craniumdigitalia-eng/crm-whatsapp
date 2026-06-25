@@ -22,7 +22,7 @@ export const STATUS_LABELS: Record<LeadStatus, string> = {
 export const AUTO_STATUSES: LeadStatus[] = ["novo", "em_atendimento", "qualificado"];
 
 export interface Lead {
-  id: number;
+  id: string; // UUID (TEXT no SQLite, uuid no Supabase/Postgres)
   phone: string;
   name: string | null;
   status: LeadStatus;
@@ -37,9 +37,10 @@ export interface Lead {
 }
 
 export interface Message {
-  id: number;
-  lead_id: number;
+  id: string; // UUID
+  lead_id: string; // UUID — FK para leads.id
   direction: "in" | "out";
   body: string;
+  external_id: string | null; // ID externo (Evolution/Make) para deduplicacao de reentregas
   created_at: string;
 }
