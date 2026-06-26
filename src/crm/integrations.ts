@@ -14,11 +14,18 @@ export type IntegrationKey =
   | "meta_app_secret"
   | "meta_verify_token"
   | "meta_form_id"
+  // Secret do POST do Make (conector Facebook Lead Ads -> /api/leadgen).
+  | "meta_make_secret"
   // ===== WhatsApp / Evolution (ADR-004) =====
   | "evolution_url"
   | "evolution_api_key"
   | "evolution_instance"
-  | "evolution_webhook_token";
+  | "evolution_webhook_token"
+  // ===== Google Calendar OAuth (Parte B) =====
+  | "google_client_id"
+  | "google_client_secret"
+  | "google_refresh_token"
+  | "google_calendar_id";
 
 // Le um valor da tabela integrations_config. Tolerante: se a tabela ainda
 // nao existe (migration 003 nao aplicada), retorna undefined sem quebrar.
@@ -75,6 +82,12 @@ export async function getMetaConfig(): Promise<MetaConfig> {
   };
 }
 
+// Secret compartilhado com o cenario do Make (conector Facebook Lead Ads -> /api/leadgen).
+// Env como base; a aba Integracoes sobrescreve via integrations_config (meta_make_secret).
+export async function getMakeSecret(): Promise<string> {
+  return (await getConfigValue("meta_make_secret")) ?? config.metaMakeSecret;
+}
+
 // =====================================================================
 // WhatsApp / Evolution (ADR-004 — Evolution e o canal de WhatsApp).
 // Mesma estrategia do Meta: env como base, integrations_config como override
@@ -124,19 +137,70 @@ export async function getEvolutionConnectionStatus(): Promise<{
 }
 
 // Status "seguro" para a UI: diz SE cada credencial existe, sem revelar o valor.
+// Fluxo Make (principal): a conexao esta "conectada" quando o secret do Make existe
+// (o Make posta os leads em /api/leadgen validando esse secret). Os has* do Page Access
+// Token / App Secret continuam expostos para o caminho de importacao direta (legado).
 export async function getMetaConnectionStatus(): Promise<{
   connected: boolean;
+  hasMakeSecret: boolean;
   hasPageAccessToken: boolean;
   hasAppSecret: boolean;
   hasVerifyToken: boolean;
   formId: string; // form id nao e segredo — pode aparecer na UI
 }> {
   const cfg = await getMetaConfig();
+  const makeSecret = await getMakeSecret();
   return {
-    connected: Boolean(cfg.pageAccessToken && cfg.formId),
+    connected: Boolean(makeSecret),
+    hasMakeSecret: Boolean(makeSecret),
     hasPageAccessToken: Boolean(cfg.pageAccessToken),
     hasAppSecret: Boolean(cfg.appSecret),
     hasVerifyToken: Boolean(cfg.verifyToken),
     formId: cfg.formId,
+  };
+}
+
+// =====================================================================
+// Google Calendar (Parte B). Mesma estrategia: env como base, integrations_config
+// como override. O refresh_token NASCE do fluxo OAuth (callback) e vive so na tabela
+// (nunca no env). client_id/secret podem vir do env OU da aba Integracoes.
+// =====================================================================
+
+export interface GoogleConfig {
+  clientId: string;
+  clientSecret: string;
+  refreshToken: string; // obtido no OAuth; vazio = nao conectado
+  redirectUri: string; // vazio = derivar do request ({origin}/.../callback)
+  calendarId: string;
+}
+
+export async function getGoogleConfig(): Promise<GoogleConfig> {
+  const [id, secret, refresh, cal] = await Promise.all([
+    getConfigValue("google_client_id"),
+    getConfigValue("google_client_secret"),
+    getConfigValue("google_refresh_token"),
+    getConfigValue("google_calendar_id"),
+  ]);
+  return {
+    clientId: id ?? config.googleClientId,
+    clientSecret: secret ?? config.googleClientSecret,
+    refreshToken: refresh ?? "",
+    redirectUri: config.googleRedirectUri,
+    calendarId: cal ?? config.googleCalendarId,
+  };
+}
+
+// Status "seguro" para a UI: configured = ha client_id/secret (da pra iniciar o OAuth);
+// connected = ha refresh_token salvo (da pra criar eventos).
+export async function getGoogleConnectionStatus(): Promise<{
+  configured: boolean;
+  connected: boolean;
+  calendarId: string;
+}> {
+  const cfg = await getGoogleConfig();
+  return {
+    configured: Boolean(cfg.clientId && cfg.clientSecret),
+    connected: Boolean(cfg.refreshToken),
+    calendarId: cfg.calendarId,
   };
 }

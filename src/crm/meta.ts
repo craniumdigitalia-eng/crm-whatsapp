@@ -91,6 +91,124 @@ export function parseFieldData(
   return { name: name || undefined, phone: phone || undefined, formData };
 }
 
+// --- Payload do Make (caminho principal) ----------------------------
+//
+// O lead chega pelo formulario instantaneo do Meta, capturado pelo conector
+// "Facebook Lead Ads" do Make, que faz POST /api/leadgen. O Make pode mandar:
+//   a) o lead cru do Meta com `field_data` (array {name, values}); ou
+//   b) um objeto plano onde cada resposta vira um campo do JSON (mapeado no cenario).
+// Suportamos os dois. Extraimos nome, telefone, atribuicao e TODAS as respostas (form_data).
+
+export interface ParsedMakeLead {
+  name?: string;
+  phone?: string;
+  leadgenId?: string;
+  formId?: string;
+  adId?: string;
+  campaignId?: string;
+  formData: Record<string, string>;
+}
+
+// Chaves de atribuicao/metadados — NAO entram em form_data (nao sao respostas do lead).
+const ATTR_KEYS = new Set([
+  "id",
+  "leadgen_id",
+  "lead_id",
+  "created_time",
+  "form_id",
+  "formid",
+  "form_name",
+  "ad_id",
+  "adid",
+  "ad_name",
+  "adset_id",
+  "adset_name",
+  "campaign_id",
+  "campaignid",
+  "campaign_name",
+  "page_id",
+  "platform",
+  "is_organic",
+  "source",
+  "secret",
+  "token",
+]);
+
+function asString(v: unknown): string | undefined {
+  if (v === null || v === undefined) return undefined;
+  const s = String(v).trim();
+  return s || undefined;
+}
+
+export function parseMakeLead(body: unknown): ParsedMakeLead {
+  const b = (body ?? {}) as Record<string, unknown>;
+  const leadgenId = asString(b.leadgen_id ?? b.lead_id ?? b.id);
+  const formId = asString(b.form_id ?? (b as Record<string, unknown>).formId);
+  const adId = asString(b.ad_id ?? (b as Record<string, unknown>).adId);
+  const campaignId = asString(b.campaign_id ?? (b as Record<string, unknown>).campaignId);
+
+  // (a) Make enviou o lead cru do Meta (field_data array) — reusa o parser do Meta.
+  if (Array.isArray((b as { field_data?: unknown }).field_data)) {
+    const parsed = parseFieldData((b as { field_data: Array<{ name: string; values: string[] }> }).field_data);
+    return { name: parsed.name, phone: parsed.phone, leadgenId, formId, adId, campaignId, formData: parsed.formData };
+  }
+
+  // (b) Objeto plano: cada campo escalar (exceto metadados) e uma resposta do formulario.
+  const formData: Record<string, string> = {};
+  let name: string | undefined;
+  let phone: string | undefined;
+  let first: string | undefined;
+  let last: string | undefined;
+
+  for (const [rawKey, rawVal] of Object.entries(b)) {
+    if (rawVal === null || rawVal === undefined) continue;
+    if (typeof rawVal === "object") continue; // ignora arrays/objetos aninhados de metadados
+    const value = String(rawVal).trim();
+    if (!value) continue;
+    if (ATTR_KEYS.has(rawKey.toLowerCase())) continue;
+    formData[rawKey] = value; // preserva o rotulo original
+    const key = norm(rawKey);
+    if (!phone && PHONE_KEYS.includes(key)) phone = cleanPhone(value);
+    else if (!name && NAME_KEYS.includes(key)) name = value;
+    else if (FIRST_KEYS.includes(key)) first = value;
+    else if (LAST_KEYS.includes(key)) last = value;
+  }
+
+  if (!name) {
+    const combined = [first, last].filter(Boolean).join(" ").trim();
+    if (combined) name = combined;
+  }
+
+  return { name, phone, leadgenId, formId, adId, campaignId, formData };
+}
+
+// Cria/atualiza um lead a partir do payload do Make. Idempotente por leadgen_id
+// (quando houver) e, em seguida, por telefone (mesmo contato que ja conversou).
+export async function upsertMakeLead(parsed: ParsedMakeLead): Promise<UpsertResult> {
+  if (parsed.leadgenId) {
+    const existing = await findLeadByLeadgenId(parsed.leadgenId);
+    if (existing) return { lead: existing, created: false };
+  }
+
+  // Sem telefone, usa marcador sintetico (phone e NOT NULL/unique); o dedupe real e o leadgen_id.
+  const phone =
+    parsed.phone || (parsed.leadgenId ? `meta:${parsed.leadgenId}` : `meta:${crypto.randomUUID()}`);
+
+  const existingByPhone = await findLeadByPhone(phone);
+  const lead = await getOrCreateLead(phone, parsed.name);
+
+  await setLeadAttribution(lead.id, {
+    source: "meta_lead_ads",
+    form_id: parsed.formId ?? null,
+    leadgen_id: parsed.leadgenId ?? null,
+    ad_id: parsed.adId ?? null,
+    campaign_id: parsed.campaignId ?? null,
+    form_data: parsed.formData,
+  });
+
+  return { lead, created: !existingByPhone };
+}
+
 // --- Chamadas a Graph API -------------------------------------------
 
 // Erro tipado para o route handler distinguir credencial ausente de falha da API.

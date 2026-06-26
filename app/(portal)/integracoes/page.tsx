@@ -3,38 +3,20 @@
 import { useCallback, useEffect, useState } from 'react';
 
 /* ============================================================
-   Integrações (Story 5.14)
-   Cards de conexão na identidade Cranium: Google Calendar,
-   Facebook Ads (Meta Lead Ads) e WhatsApp (Evolution).
+   Integrações
+   Cards de conexão na identidade Cranium:
+   - Google Calendar (OAuth real → /api/integrations/google/*)
+   - Facebook Ads · Meta Lead Ads VIA MAKE (webhook /api/leadgen + secret)
+   - WhatsApp · Evolution (QR)
    ============================================================ */
 
 interface MetaStatus {
   connected: boolean;
+  hasMakeSecret: boolean;
   hasPageAccessToken: boolean;
   hasAppSecret: boolean;
   hasVerifyToken: boolean;
   formId: string;
-}
-
-// Gera um Verify Token aleatório (sugestão para o handshake do webhook).
-function genVerifyToken(): string {
-  const bytes = new Uint8Array(18);
-  crypto.getRandomValues(bytes);
-  return 'cranium_' + Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function apiCall<T = unknown>(url: string, opts?: RequestInit): Promise<T> {
-  const res = await fetch(url, opts);
-  if (res.status === 401) {
-    // Sessao expirou — volta para o login (Story 5.2).
-    window.location.href = '/login';
-    throw new Error('nao autenticado');
-  }
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({})) as { error?: string };
-    throw new Error(body.error ?? res.statusText);
-  }
-  return res.json() as Promise<T>;
 }
 
 interface EvoStatus {
@@ -43,65 +25,125 @@ interface EvoStatus {
   number?: string;
 }
 
+interface GoogleStatus {
+  configured: boolean;
+  connected: boolean;
+  calendarId: string;
+}
+
+// Gera um secret aleatório (sugestão para o módulo HTTP do Make).
+function genSecret(): string {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return 'make_' + Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function apiCall<T = unknown>(url: string, opts?: RequestInit): Promise<T> {
+  const res = await fetch(url, opts);
+  if (res.status === 401) {
+    window.location.href = '/login';
+    throw new Error('nao autenticado');
+  }
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? res.statusText);
+  }
+  return res.json() as Promise<T>;
+}
+
+// Traduz o ?google=... do callback OAuth em uma mensagem amigável.
+const GOOGLE_MSGS: Record<string, { kind: 'ok' | 'err'; text: string }> = {
+  conectado: { kind: 'ok', text: 'Google Calendar conectado com sucesso.' },
+  nao_configurado: {
+    kind: 'err',
+    text: 'Google não configurado: defina GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET.',
+  },
+  cancelado: { kind: 'err', text: 'Conexão com o Google cancelada.' },
+  state_invalido: { kind: 'err', text: 'Falha de segurança (state). Tente conectar novamente.' },
+  sem_code: { kind: 'err', text: 'O Google não retornou o código de autorização.' },
+  sem_refresh: {
+    kind: 'err',
+    text: 'O Google não devolveu refresh_token. Revogue o acesso do app e reconecte.',
+  },
+  erro: { kind: 'err', text: 'Erro ao conectar com o Google. Veja os logs do servidor.' },
+};
+
 export default function IntegracoesPage() {
   const [meta, setMeta] = useState<MetaStatus | null>(null);
   const [evo, setEvo] = useState<EvoStatus | null>(null);
+  const [google, setGoogle] = useState<GoogleStatus | null>(null);
 
-  // Form de conexão Meta.
-  const [pageToken, setPageToken] = useState('');
-  const [appSecret, setAppSecret] = useState('');
-  const [verifyToken, setVerifyToken] = useState('');
-  const [formId, setFormId] = useState('');
+  const [makeSecret, setMakeSecret] = useState('');
+  const [webhookUrl, setWebhookUrl] = useState('/api/leadgen');
 
   const [saving, setSaving] = useState(false);
-  const [importing, setImporting] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
-  const loadStatus = useCallback(async () => {
+  const loadMeta = useCallback(async () => {
     try {
-      const status = await apiCall<MetaStatus>('/api/integrations/meta/config');
-      setMeta(status);
-      setFormId((prev) => prev || status.formId || '');
+      setMeta(await apiCall<MetaStatus>('/api/integrations/meta/config'));
     } catch (e) {
-      setMsg({ kind: 'err', text: `Falha ao carregar status: ${(e as Error).message}` });
+      setMsg({ kind: 'err', text: `Falha ao carregar status do Facebook: ${(e as Error).message}` });
     }
   }, []);
 
   const loadEvo = useCallback(async () => {
     try {
-      const status = await apiCall<EvoStatus>('/api/integrations/evolution/status');
-      setEvo(status);
+      setEvo(await apiCall<EvoStatus>('/api/integrations/evolution/status'));
     } catch {
-      // Evolution opcional — silencia falha de status no painel de integracoes.
+      // Evolution opcional — silencia falha de status.
+    }
+  }, []);
+
+  const loadGoogle = useCallback(async () => {
+    try {
+      setGoogle(await apiCall<GoogleStatus>('/api/integrations/google/status'));
+    } catch {
+      // silencia — card mostra "Não conectado".
     }
   }, []);
 
   useEffect(() => {
-    void loadStatus();
+    void loadMeta();
     void loadEvo();
-    setVerifyToken((prev) => prev || genVerifyToken());
-  }, [loadStatus, loadEvo]);
+    void loadGoogle();
+    // URL pública do webhook que o Make vai chamar.
+    setWebhookUrl(`${window.location.origin}/api/leadgen`);
+    // Banner do retorno do OAuth Google (?google=...).
+    const params = new URLSearchParams(window.location.search);
+    const g = params.get('google');
+    if (g && GOOGLE_MSGS[g]) {
+      setMsg(GOOGLE_MSGS[g]);
+      window.history.replaceState({}, '', '/integracoes');
+    }
+  }, [loadMeta, loadEvo, loadGoogle]);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setMsg({ kind: 'ok', text: 'Copiado para a área de transferência.' });
+    } catch {
+      setMsg({ kind: 'err', text: 'Não consegui copiar — selecione e copie manualmente.' });
+    }
+  };
+
+  const handleSaveMake = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!makeSecret.trim()) {
+      setMsg({ kind: 'err', text: 'Gere um secret antes de salvar.' });
+      return;
+    }
     setSaving(true);
     setMsg(null);
     try {
       await apiCall('/api/integrations/meta/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          page_access_token: pageToken,
-          app_secret: appSecret,
-          verify_token: verifyToken,
-          form_id: formId,
-        }),
+        body: JSON.stringify({ make_secret: makeSecret.trim() }),
       });
-      // Limpa os campos de segredo após salvar (não permanecem no client).
-      setPageToken('');
-      setAppSecret('');
-      setMsg({ kind: 'ok', text: 'Conexão salva com sucesso.' });
-      await loadStatus();
+      // Mantém o secret visível para o usuário copiar no Make.
+      setMsg({ kind: 'ok', text: 'Secret salvo. Cole-o no módulo HTTP do Make.' });
+      await loadMeta();
     } catch (e) {
       setMsg({ kind: 'err', text: `Erro ao salvar: ${(e as Error).message}` });
     } finally {
@@ -109,26 +151,8 @@ export default function IntegracoesPage() {
     }
   };
 
-  const handleImport = async () => {
-    setImporting(true);
-    setMsg(null);
-    try {
-      const res = await apiCall<{ imported: number; skipped: number; errors: number; fetched: number }>(
-        '/api/integrations/meta/import',
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ form_id: formId }) }
-      );
-      setMsg({
-        kind: 'ok',
-        text: `Importação concluída: ${res.imported} novos, ${res.skipped} já existentes, ${res.errors} erros (de ${res.fetched} no formulário).`,
-      });
-    } catch (e) {
-      setMsg({ kind: 'err', text: `Erro na importação: ${(e as Error).message}` });
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const metaConnected = meta?.connected ?? false;
+  const metaConnected = meta?.hasMakeSecret ?? false;
+  const googleConnected = google?.connected ?? false;
 
   return (
     <section className="integ-page">
@@ -161,14 +185,28 @@ export default function IntegracoesPage() {
             </div>
             <div className="integ-card-titles">
               <h2 className="integ-card-name">Google Calendar</h2>
-              <span className="integ-badge integ-badge--off">Não conectado</span>
+              <span className={`integ-badge ${googleConnected ? 'integ-badge--on' : 'integ-badge--off'}`}>
+                {googleConnected ? 'Conectado' : 'Não conectado'}
+              </span>
             </div>
           </div>
           <p className="integ-card-desc">
             Sincronize reuniões e follow-ups agendados com sua agenda do Google.
           </p>
+          {google && !google.configured && (
+            <p className="integ-hint">
+              Google não configurado. Defina <code>GOOGLE_CLIENT_ID</code> e{' '}
+              <code>GOOGLE_CLIENT_SECRET</code> no <code>.env</code> (veja{' '}
+              <code>docs/integracoes-google.md</code>).
+            </p>
+          )}
           <div className="integ-card-actions">
-            <a className="btn btn-primary" href="/api/integrations/google">Conectar</a>
+            <a
+              className={`btn ${google?.configured ? 'btn-primary' : 'btn-ghost'}`}
+              href="/api/integrations/google/auth"
+            >
+              {googleConnected ? 'Reconectar' : 'Conectar'}
+            </a>
           </div>
         </article>
 
@@ -200,7 +238,7 @@ export default function IntegracoesPage() {
           </div>
         </article>
 
-        {/* ---- Facebook Ads / Meta Lead Ads ---- */}
+        {/* ---- Facebook Ads / Meta Lead Ads VIA MAKE ---- */}
         <article className="integ-card integ-card--wide">
           <div className="integ-card-head">
             <div className="integ-icon integ-icon--meta" aria-hidden="true">
@@ -216,84 +254,71 @@ export default function IntegracoesPage() {
             </div>
           </div>
           <p className="integ-card-desc">
-            Importe automaticamente os leads dos formulários instantâneos das suas campanhas no Facebook/Instagram.
+            Os leads dos formulários instantâneos chegam via <strong>Make</strong>: o cenário captura o
+            lead no Facebook e faz um POST nesta URL. Gere um secret, cole no Make e pronto — cada lead
+            novo entra no CRM e recebe a mensagem de abertura automaticamente.
           </p>
 
-          <form className="integ-form" onSubmit={(e) => void handleSave(e)}>
-            <div className="integ-field">
-              <label htmlFor="meta-token">
-                Page Access Token
-                {meta?.hasPageAccessToken && <span className="integ-saved">• salvo</span>}
+          {/* URL do webhook que o Make deve chamar */}
+          <div className="integ-webhook">
+            <span className="integ-webhook-label">URL do webhook (cole no Make):</span>
+            <code className="integ-webhook-url">{webhookUrl}</code>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => void copy(webhookUrl)}>
+              Copiar
+            </button>
+          </div>
+
+          {/* Secret compartilhado com o Make */}
+          <form className="integ-form" onSubmit={(e) => void handleSaveMake(e)}>
+            <div className="integ-field integ-field--full">
+              <label htmlFor="make-secret">
+                Secret do Make
+                {meta?.hasMakeSecret && <span className="integ-saved">• salvo</span>}
               </label>
               <input
-                id="meta-token"
-                type="password"
-                value={pageToken}
-                onChange={(e) => setPageToken(e.target.value)}
-                placeholder={meta?.hasPageAccessToken ? '•••••••• (deixe em branco p/ manter)' : 'EAAB...'}
-                autoComplete="off"
-              />
-            </div>
-
-            <div className="integ-field">
-              <label htmlFor="meta-form">Form ID</label>
-              <input
-                id="meta-form"
+                id="make-secret"
                 type="text"
-                value={formId}
-                onChange={(e) => setFormId(e.target.value)}
-                placeholder="ID do formulário instantâneo"
-              />
-            </div>
-
-            <div className="integ-field">
-              <label htmlFor="meta-secret">
-                App Secret
-                {meta?.hasAppSecret && <span className="integ-saved">• salvo</span>}
-              </label>
-              <input
-                id="meta-secret"
-                type="password"
-                value={appSecret}
-                onChange={(e) => setAppSecret(e.target.value)}
-                placeholder={meta?.hasAppSecret ? '•••••••• (deixe em branco p/ manter)' : 'usado p/ validar o webhook'}
+                value={makeSecret}
+                onChange={(e) => setMakeSecret(e.target.value)}
+                placeholder={
+                  meta?.hasMakeSecret
+                    ? '•••••••• (um secret já está salvo — gere outro p/ trocar)'
+                    : 'Clique em “Gerar secret”'
+                }
                 autoComplete="off"
-              />
-            </div>
-
-            <div className="integ-field">
-              <label htmlFor="meta-verify">Verify Token (webhook)</label>
-              <input
-                id="meta-verify"
-                type="text"
-                value={verifyToken}
-                onChange={(e) => setVerifyToken(e.target.value)}
-                placeholder="token de verificação do webhook"
               />
               <span className="integ-hint">
-                Use este mesmo valor no painel do app Meta ao configurar o webhook leadgen.
+                O Make envia este valor no header <code>x-make-secret</code> (ou <code>?token=</code>).
+                Guarde-o: ele não é exibido novamente depois de salvo.
               </span>
             </div>
 
             <div className="integ-card-actions">
-              <button type="submit" className="btn btn-primary" disabled={saving}>
-                {saving ? 'Salvando…' : 'Salvar conexão'}
+              <button type="button" className="btn btn-ghost" onClick={() => setMakeSecret(genSecret())}>
+                Gerar secret
               </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => void handleImport()}
-                disabled={importing || !metaConnected}
-                title={metaConnected ? 'Importar leads do formulário agora' : 'Salve o token e o Form ID primeiro'}
-              >
-                {importing ? 'Importando…' : 'Importar leads agora'}
+              {makeSecret && (
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => void copy(makeSecret)}>
+                  Copiar secret
+                </button>
+              )}
+              <button type="submit" className="btn btn-primary" disabled={saving || !makeSecret.trim()}>
+                {saving ? 'Salvando…' : 'Salvar secret'}
               </button>
             </div>
           </form>
 
-          <div className="integ-webhook">
-            <span className="integ-webhook-label">URL do webhook (leadgen):</span>
-            <code className="integ-webhook-url">/api/leadgen</code>
+          {/* Mini-guia do cenário Make */}
+          <div className="integ-guide">
+            <h3 className="integ-guide-title">Como configurar no Make</h3>
+            <ol className="integ-steps">
+              <li>Crie um cenário e adicione o módulo <strong>Facebook Lead Ads → Watch Leads</strong> (conecte a Página e o formulário).</li>
+              <li>Adicione o módulo <strong>HTTP → Make a request</strong>.</li>
+              <li>Method <strong>POST</strong>, a URL acima, Body type <strong>Raw / JSON (application/json)</strong>.</li>
+              <li>Header: <code>x-make-secret</code> = o secret salvo aqui.</li>
+              <li>No corpo, mapeie os campos do lead (nome, telefone e cada resposta do formulário) + <code>leadgen_id</code>, <code>form_id</code>, <code>ad_id</code>, <code>campaign_id</code>.</li>
+              <li>Ative o cenário. Cada novo lead cria o contato no CRM e dispara a mensagem de abertura.</li>
+            </ol>
           </div>
         </article>
 

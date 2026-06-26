@@ -2015,6 +2015,53 @@ body {
   border-radius: var(--radius-sm);
   padding: 3px 8px;
   color: var(--brand-purple);
+  word-break: break-all;
+}
+.integ-webhook-label { font-weight: 600; color: var(--fg); }
+
+/* Faz um campo do grid ocupar a linha inteira (ex.: secret do Make). */
+.integ-field--full { grid-column: 1 / -1; }
+
+/* Botão compacto (Copiar). */
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+/* Mini-guia do cenário Make. */
+.integ-guide {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--neutral-mid);
+}
+.integ-guide-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fg);
+  margin: 0 0 8px;
+}
+.integ-steps {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--fg-muted);
+  line-height: 1.5;
+}
+.integ-steps code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  background: var(--surface-light);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+  color: var(--brand-purple);
+}
+.integ-hint code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--surface-light);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+  color: var(--brand-purple);
 }
 
 /* ============================================================

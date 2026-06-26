@@ -38,5 +38,10 @@ related: ["[[../project/visao-e-requisitos]]", "[[../shared-context]]"]
 - ⏳ **Inbound real depende de DEPLOY na Vercel** (a Evolution precisa de URL pública pra mandar o webhook de volta — `localhost` não recebe).
 - ⏳ **Facebook (Make)** + **Google Calendar**: a configurar.
 
+## 🔧 Manutenção do Railway (Evolution) — quase zero
+- **Automático:** ligado 24/7, reinicia sozinho, dados persistem (volume).
+- **Atenção 1 — cobrança:** Hobby ~US$5/mês + uso. Manter cartão válido; se estourar crédito, pausa (religar = upgrade/resume).
+- **Atenção 2 — conexão WhatsApp:** pode cair (logout do aparelho, inatividade) → **reescanear o QR** em `/whatsapp` (10s). Dados NÃO se perdem (ficam no Supabase). O portal mostra o status da conexão (rede de segurança).
+
 ## ⚠️ Recuperação de segredos (não perder)
 Os segredos NÃO estão no GitHub (proposital). Fontes de recuperação: `.env` local + os painéis (Railway, Supabase, Anthropic console). **Recomendado:** guardar as chaves também num gerenciador de senhas (1Password/Bitwarden).

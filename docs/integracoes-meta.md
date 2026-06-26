@@ -1,102 +1,114 @@
-# Integrações — Facebook Ads / Meta Lead Ads (Story 5.14)
+# Integrações — Facebook Lead Ads VIA MAKE
 
-Importação de leads dos **formulários instantâneos** (Lead Ads) do Facebook/Instagram
-para o CRM. Dois caminhos: **importação sob demanda** (botão na aba Integrações) e
-**webhook leadgen** (em tempo real, quando um lead preenche o formulário).
+Os leads dos **formulários instantâneos** (Lead Ads) do Facebook/Instagram entram no CRM
+através do **Make**: o conector nativo *Facebook Lead Ads* do Make captura cada lead e faz
+um **POST** no nosso endpoint `/api/leadgen`. **Não** usamos o app de desenvolvedor do Meta
+neste fluxo — quem fala com a Graph API é o Make.
 
-## O que foi criado
+Ao receber o lead, o portal:
+1. cria o contato (idempotente por `leadgen_id`, senão por telefone) com `source = meta_lead_ads`
+   e `form_data` = todas as respostas do formulário;
+2. **dispara a mensagem de abertura** (opener) automaticamente — o agente de IA inicia a
+   conversa no WhatsApp via `sendText` (Make/Evolution).
+
+> Caminho legado (webhook direto do Meta com assinatura `X-Hub-Signature-256`) continua
+> suportado pelo mesmo endpoint, mas o caminho recomendado é o Make.
+
+## O que foi criado / alterado
 
 | Arquivo | Função |
 |---|---|
-| `app/integracoes/page.tsx` | Aba "Integrações" com os 3 cards (Google, Meta, WhatsApp) |
-| `app/api/integrations/meta/config/route.ts` | GET status / POST salvar credenciais (sem expor segredos) |
-| `app/api/integrations/meta/import/route.ts` | POST — importa leads via `GET /{form_id}/leads` |
-| `app/api/leadgen/route.ts` | GET handshake + POST webhook (valida `X-Hub-Signature-256`) |
-| `app/api/integrations/google/route.ts` | Stub OAuth do Google Calendar |
-| `src/crm/meta.ts` | Graph API, parsing de `field_data`, upsert idempotente, assinatura |
-| `src/crm/integrations.ts` | Config key/value (env primeiro, tabela como override) |
-| `src/crm/leads.ts` | `getLeadAttribution`, `findLeadByLeadgenId`, `setLeadAttribution` |
-| `supabase/migrations/003-lead-attribution.sql` | **APLICAR NO BANCO** (colunas + `integrations_config`) |
+| `app/api/leadgen/route.ts` | POST do Make (valida secret) + webhook direto do Meta (HMAC) + GET handshake |
+| `src/crm/meta.ts` | `parseMakeLead` (objeto plano ou `field_data`) + `upsertMakeLead` idempotente |
+| `src/handler.ts` | `iniciarAtendimento(lead, formData)` — opener outbound via agente |
+| `src/crm/integrations.ts` | `getMakeSecret()` + `meta_make_secret` em `integrations_config` |
+| `app/api/integrations/meta/config/route.ts` | POST aceita `make_secret` (requireAdmin) |
+| `app/(portal)/integracoes/page.tsx` | Card "Facebook Ads" no fluxo Make (URL + secret + guia) |
 
-## Passo 1 — Aplicar a migration 003
+Sem mudança de schema: o secret é uma linha em `integrations_config` (migration 003 já existe).
 
-Sem isso a importação grava nos leads mas os campos de atribuição ficam nulos.
-No **SQL Editor do Supabase**, rode o conteúdo de
-`supabase/migrations/003-lead-attribution.sql`. Ele adiciona em `leads`:
-`source, form_id, leadgen_id (unique), ad_id, campaign_id, form_data (jsonb)` e
-cria a tabela `integrations_config`.
+## Passo a passo
 
-## Passo 2 — Credenciais do Meta (onde tirar cada uma)
+### 1. No portal (aba Integrações)
+1. Abra **Integrações** → card **Facebook Ads · Meta Lead Ads**.
+2. **Copie a URL do webhook** exibida (ex.: `https://SEU_PORTAL/api/leadgen`).
+3. Clique em **Gerar secret** → **Copiar secret** → **Salvar secret** (requer admin).
+   - O secret é salvo em `integrations_config` (`meta_make_secret`). Ele **não** é exibido
+     de novo depois — guarde o valor copiado para colar no Make.
+   - Alternativa: definir `META_MAKE_SECRET` no `.env`.
 
-As credenciais podem ir no **`.env`** OU serem salvas pela aba Integrações
-(o backend lê o env primeiro; a tabela `integrations_config` sobrescreve).
+### 2. No Make (cenário)
+1. **Module 1 — Facebook Lead Ads → Watch Leads**: conecte sua conta, escolha a Página e o
+   formulário instantâneo. (O Make pede a conexão OAuth com o Facebook — feita uma vez.)
+2. **Module 2 — HTTP → Make a request**:
+   - **URL**: a URL do webhook copiada do portal.
+   - **Method**: `POST`.
+   - **Headers**: `x-make-secret` = o secret gerado no portal.
+     *(alternativa: anexar `?token=SECRET` na URL).*
+   - **Body type**: `Raw` → Content type `JSON (application/json)`.
+   - **Request content**: mapeie os campos do lead (veja o payload abaixo).
+3. **Salve e ative** o cenário. Cada novo lead dispara o POST.
 
-1. **App Meta** — em <https://developers.facebook.com/apps> crie/abra um app do tipo
-   *Business*. Adicione o produto **Webhooks** e **Facebook Login** (ou use um
-   *System User* no Business Manager para o token).
+### 3. Payload que o Make deve enviar
 
-2. **`META_PAGE_ACCESS_TOKEN`** (Page Access Token) — token **da Página** que roda os
-   anúncios, com as permissões `leads_retrieval`, `pages_show_list`,
-   `pages_read_engagement`, `pages_manage_metadata`.
-   - Rápido (teste): **Graph API Explorer** → selecione o app → "Get Page Access Token"
-     → escolha a Página → conceda as permissões → copie o token.
-   - Produção: gere um **token de longa duração** (System User no Business Settings →
-     Users → System Users → Generate Token), que não expira.
+Aceitamos **dois formatos** (use o que for mais simples de mapear no Make):
 
-3. **`META_FORM_ID`** (Form ID) — ID do formulário instantâneo.
-   - **Meta Business Suite** → *All Tools* → **Instant Forms** (Formulários
-     Instantâneos), abra o formulário e copie o ID; ou
-   - via Graph API: `GET /{page_id}/leadgen_forms` (com o Page Access Token) lista os
-     formulários e seus `id`.
+**a) Objeto plano** (recomendado — mapeie cada campo do módulo Watch Leads):
 
-4. **`META_APP_SECRET`** (App Secret) — em **App Settings → Basic** do seu app.
-   Usado só para validar a assinatura do webhook (`X-Hub-Signature-256`).
+```json
+{
+  "name": "Maria Souza",
+  "phone": "5511998765432",
+  "Qual serviço você procura?": "Tráfego pago",
+  "Orçamento": "5 mil",
+  "leadgen_id": "{{1.id}}",
+  "form_id": "{{1.form_id}}",
+  "ad_id": "{{1.ad_id}}",
+  "campaign_id": "{{1.campaign_id}}"
+}
+```
 
-5. **`META_VERIFY_TOKEN`** (Verify Token) — **você inventa** uma string secreta. A aba
-   Integrações sugere uma (`cranium_...`). Use o **mesmo valor** no painel do Meta ao
-   configurar o webhook.
+- `name` / `phone`: também reconhecemos `full_name`, `first_name`+`last_name`,
+  `phone_number`, `telefone`, `whatsapp`, etc. O telefone é normalizado para dígitos (+DDI).
+- Qualquer **outra chave** vira uma resposta em `form_data` (preserva o rótulo original).
+- `leadgen_id`, `form_id`, `ad_id`, `campaign_id`: atribuição (não entram em `form_data`).
+  `leadgen_id` garante a idempotência (o mesmo lead não entra duas vezes).
 
-## Passo 3 — Importação sob demanda (mais simples; sem domínio público)
+**b) Lead cru do Meta** (se o Make repassar `field_data`):
 
-1. Abra **Integrações** no portal.
-2. No card *Facebook Ads · Meta Lead Ads*, preencha **Page Access Token** e **Form ID**
-   (App Secret e Verify Token só são necessários para o webhook).
-3. **Salvar conexão** → o badge vira *Conectado*.
-4. **Importar leads agora** → chama `GET /{form_id}/leads` e cria/atualiza os leads.
-   Idempotente: rodar de novo só traz os novos (dedupe por `leadgen_id`).
+```json
+{
+  "id": "1234567890",
+  "form_id": "F1",
+  "field_data": [
+    { "name": "full_name", "values": ["Maria Souza"] },
+    { "name": "phone_number", "values": ["+5511998765432"] },
+    { "name": "qual_servico", "values": ["Tráfego pago"] }
+  ]
+}
+```
 
-Resultado: cada lead aparece no Kanban com `source = meta_lead_ads`, telefone e nome
-extraídos do `field_data`, e todas as respostas em `form_data`. Abra o lead no drawer
-para ver a seção **📋 Origem / Formulário**.
-
-## Passo 4 — Webhook leadgen (tempo real; requer URL pública)
-
-1. Faça deploy (Vercel) para ter uma URL pública.
-2. No app Meta → **Webhooks** → objeto **Page** → *Callback URL*:
-   `https://SEU_DOMINIO/api/leadgen` e *Verify Token*: o mesmo `META_VERIFY_TOKEN`.
-   O Meta chama o GET de handshake; respondemos o `hub.challenge`.
-3. Assine o campo **`leadgen`** e conecte a Página.
-4. Cada novo lead dispara um POST; validamos a assinatura com o App Secret, buscamos o
-   lead na Graph API e gravamos no CRM (idempotente por `leadgen_id`).
+### Importante sobre o telefone
+Para o opener ser enviado, o telefone precisa ser um número real (8–15 dígitos, com DDI/DDD).
+Sem telefone, o lead ainda é criado (com marcador sintético `meta:<leadgen_id>`), mas a
+mensagem de abertura **não** é enviada (logamos um aviso).
 
 ## Teste local
 
 ```bash
 npm run dev
-# Status (env vazio -> connected:false):
-curl localhost:3000/api/integrations/meta/config
-# Importação sem token -> 400 com mensagem clara:
-curl -X POST localhost:3000/api/integrations/meta/import
-# Webhook sem assinatura -> 401:
-curl -X POST localhost:3000/api/leadgen -d '{"entry":[]}'
+# Sem secret configurado -> 401:
+curl -i -X POST localhost:3000/api/leadgen -H 'Content-Type: application/json' \
+  -d '{"phone":"5511999998888","name":"Teste"}'
+
+# Com secret (defina META_MAKE_SECRET=abc no .env e reinicie):
+curl -i -X POST localhost:3000/api/leadgen \
+  -H 'Content-Type: application/json' -H 'x-make-secret: abc' \
+  -d '{"name":"Maria","phone":"5511999998888","Servico":"Site","leadgen_id":"LG1"}'
+# -> 201/200 { ok:true, lead_id, created:true } e dispara o opener no WhatsApp.
 ```
 
-Para uma importação real, exporte `META_PAGE_ACCESS_TOKEN` e `META_FORM_ID` válidos
-no `.env` (ou salve pela UI) e clique em *Importar leads agora*.
-
-## Google Calendar (Parte 3)
-
-`app/api/integrations/google/route.ts` é um stub: com `GOOGLE_CLIENT_ID` +
-`GOOGLE_REDIRECT_URI` no `.env` ele redireciona para o consentimento OAuth do Google;
-sem isso retorna *Não configurado*. Falta implementar o handler de callback
-(`/api/integrations/google/callback`) para trocar o `code` por tokens e persisti-los.
+## Segurança
+- `/api/leadgen` é endpoint de **máquina**: não exige sessão (o middleware já exclui `/api/*`).
+  A proteção é o **secret** (comparação em tempo constante) ou a **assinatura HMAC** do Meta.
+- Os endpoints de **configuração** (`/api/integrations/meta/config` POST) exigem **admin**.

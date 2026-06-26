@@ -49,11 +49,19 @@ export const config = {
   metaFormId: process.env.META_FORM_ID ?? "",
   // Versao da Graph API usada nas chamadas (GET /{form_id}/leads etc.).
   metaGraphVersion: process.env.META_GRAPH_VERSION ?? "v21.0",
+  // Secret compartilhado com o cenario do Make (conector Facebook Lead Ads -> HTTP POST
+  // /api/leadgen). O Make envia no header "x-make-secret" (ou ?token=). Lido do env
+  // PRIMEIRO; a aba Integracoes pode sobrescrever via integrations_config (meta_make_secret).
+  metaMakeSecret: process.env.META_MAKE_SECRET ?? "",
 
-  // ===== Google Calendar OAuth (stub — Parte 3) =====
+  // ===== Google Calendar OAuth (Parte B) =====
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+  // Opcional: se vazio, os handlers derivam {origin}/api/integrations/google/callback
+  // do request (funciona em localhost e na URL da Vercel sem configurar nada).
   googleRedirectUri: process.env.GOOGLE_REDIRECT_URI ?? "",
+  // Calendario alvo dos eventos. "primary" = agenda principal da conta conectada.
+  googleCalendarId: process.env.GOOGLE_CALENDAR_ID ?? "primary",
 
   // Make como ponte de canal WhatsApp (producao).
   // Se MAKE_SEND_URL nao estiver definido, sendText cai no fallback Evolution (dev local).

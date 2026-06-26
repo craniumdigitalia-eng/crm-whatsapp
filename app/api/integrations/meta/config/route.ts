@@ -33,12 +33,14 @@ export async function POST(req: Request) {
       app_secret?: string;
       verify_token?: string;
       form_id?: string;
+      make_secret?: string; // fluxo Make (principal): secret colado no modulo HTTP do Make
     };
     await setConfigValues({
       meta_page_access_token: body.page_access_token,
       meta_app_secret: body.app_secret,
       meta_verify_token: body.verify_token,
       meta_form_id: body.form_id,
+      meta_make_secret: body.make_secret,
     });
     const status = await getMetaConnectionStatus();
     return NextResponse.json({ ok: true, status });
