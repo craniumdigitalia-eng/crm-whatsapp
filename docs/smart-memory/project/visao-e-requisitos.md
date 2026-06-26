@@ -24,8 +24,9 @@ Era um **CRM de WhatsApp que substitui o SDR** → virou um **PORTAL interno mul
 4. **Agenda** (Google Calendar direto) — a fazer
 5. **WhatsApp** (Evolution + QR) — a fazer
 6. **Integrações** (aba dedicada: Google Calendar, Facebook Ads, WhatsApp) ✅
-7. **Email Marketing** (NOVO, pedido 2026-06-26) — enviar campanhas/sequências de email. A definir: público (leads/clientes), provedor (ESP), escopo. Precisa de provedor de envio + domínio verificado (SPF/DKIM) p/ entregabilidade.
-8. **Config**
+7. **Email Marketing** (NOVO, pedido 2026-06-26) — enviar campanhas/sequências de email. Provedor (ESP) a definir.
+8. **Conversas / Inbox** (NOVO, pedido 2026-06-26) — tela estilo **WhatsApp Web** (lista de conversas + chat aberto com balões), mas **DARK com as cores da Cranium** (roxo/violeta). Responder, assumir/devolver IA, mudar estágio. Reusa os endpoints de leads/mensagens.
+9. **Config**
 
 ## Requisitos explícitos do usuário (NÃO esquecer)
 - **Layout bonito, com a marca Cranium** (roxo/violeta #7C3AED, off-white, Geist, pill, glow). KV completo em `docs/design/kv/`. ✅
