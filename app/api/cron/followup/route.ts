@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { config } from '@/src/config';
-import { runFollowUpCheck } from '@/src/followup/scheduler';
+import { runFollowUpCheck, runScheduledFollowUps } from '@/src/followup/scheduler';
 
 // GET /api/cron/followup — motor de follow-up disparado pelo Vercel Cron (vercel.json).
 // Tambem aceita POST para disparo manual (testes/depuracao).
@@ -22,19 +22,46 @@ async function runCron(req: Request) {
     return NextResponse.json({ error: 'nao autorizado' }, { status: 401 });
   }
 
+  // Dois ciclos independentes na mesma rodada de cron:
+  //  1) follow-up AUTOMATICO generico (leads.follow_up_count / FOLLOWUP_*).
+  //  2) follow-ups AGENDADOS por lead (migration 008).
+  // Isolados em try/catch separados: a falha de um NAO impede o outro de rodar.
+  let auto = { sent: 0, skipped: 0, errors: 0 };
+  let agendado = { sent: 0, errors: 0 };
+  let failed = false;
+
   try {
-    const { sent, skipped, errors } = await runFollowUpCheck(config.followupBatch);
+    auto = await runFollowUpCheck(config.followupBatch);
     console.log(
-      `[cron/followup] ciclo concluido — enviados: ${sent}, pulados: ${skipped}, erros: ${errors}`
+      `[cron/followup] automatico — enviados: ${auto.sent}, pulados: ${auto.skipped}, erros: ${auto.errors}`
     );
-    return NextResponse.json({ ok: true, sent, skipped, errors });
   } catch (e) {
-    console.error('[cron/followup] erro no ciclo:', e);
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : 'erro interno' },
-      { status: 500 }
-    );
+    failed = true;
+    console.error('[cron/followup] erro no ciclo automatico:', e);
   }
+
+  try {
+    agendado = await runScheduledFollowUps();
+    console.log(
+      `[cron/followup] agendado — enviados: ${agendado.sent}, erros: ${agendado.errors}`
+    );
+  } catch (e) {
+    failed = true;
+    console.error('[cron/followup] erro no ciclo agendado:', e);
+  }
+
+  return NextResponse.json(
+    {
+      ok: !failed,
+      auto,
+      agendado,
+      // Compat: campos no topo refletem o ciclo automatico (consumidores antigos).
+      sent: auto.sent,
+      skipped: auto.skipped,
+      errors: auto.errors,
+    },
+    { status: failed ? 500 : 200 }
+  );
 }
 
 export async function GET(req: Request) {

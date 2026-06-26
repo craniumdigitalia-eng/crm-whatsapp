@@ -23,8 +23,17 @@ jest.mock("../whatsapp/evolution", () => ({
   sendText: jest.fn(),
 }));
 
-import { runFollowUpCheck } from "./scheduler";
+// Follow-up agendado (migration 008) — mockado para nao carregar src/db.ts (Supabase)
+// na suite. scheduler.ts importa este modulo desde a integracao do cron.
+jest.mock("../crm/followup-schedule", () => ({
+  getDueFollowUps: jest.fn(),
+  markSent: jest.fn(),
+  markError: jest.fn(),
+}));
+
+import { runFollowUpCheck, runScheduledFollowUps } from "./scheduler";
 import { listFollowUpCandidates, claimFollowUp, addMessage, setStatus } from "../crm/leads";
+import { getDueFollowUps, markSent, markError } from "../crm/followup-schedule";
 import { sendText } from "../whatsapp/evolution";
 
 const mockList = listFollowUpCandidates as jest.Mock;
@@ -32,6 +41,9 @@ const mockClaim = claimFollowUp as jest.Mock;
 const mockSend = sendText as jest.Mock;
 const mockAddMsg = addMessage as jest.Mock;
 const mockSetStatus = setStatus as jest.Mock;
+const mockGetDue = getDueFollowUps as jest.Mock;
+const mockMarkSent = markSent as jest.Mock;
+const mockMarkError = markError as jest.Mock;
 
 // Fabrica de lead de teste com intervalo ja vencido (last_message_at = 2 horas atras).
 function makeExpiredLead(overrides: Partial<{
@@ -65,7 +77,31 @@ beforeEach(() => {
   mockAddMsg.mockResolvedValue(true);
   mockSetStatus.mockResolvedValue(undefined);
   mockSend.mockResolvedValue(undefined);
+  // Follow-up agendado: claim (markSent) bem-sucedido por padrao.
+  mockMarkSent.mockResolvedValue(true);
+  mockMarkError.mockResolvedValue(undefined);
 });
+
+// Fabrica de follow-up agendado vencido (com lead embutido).
+function makeDue(overrides: Partial<{
+  id: string;
+  lead_id: string;
+  message: string;
+  lead: { id: string; name: string | null; phone: string } | null;
+}> = {}) {
+  return {
+    id: "fup-1",
+    lead_id: "lead-1",
+    scheduled_at: new Date(Date.now() - 60 * 1000).toISOString(),
+    message: "Oi! Retomando nossa conversa.",
+    status: "pendente" as const,
+    created_by: null,
+    created_at: new Date().toISOString(),
+    sent_at: null,
+    lead: { id: "lead-1", name: "Teste", phone: "5511999990001" },
+    ...overrides,
+  };
+}
 
 // AC6-1: lead com intervalo vencido recebe exatamente 1 retomada por ciclo.
 test("lead com intervalo vencido recebe 1 retomada", async () => {
@@ -145,4 +181,59 @@ test("dois leads vencidos recebem retomadas independentes", async () => {
 
   expect(mockSend).toHaveBeenCalledTimes(2);
   expect(result.sent).toBe(2);
+});
+
+// =====================================================================
+// runScheduledFollowUps — follow-ups AGENDADOS por lead (migration 008).
+// =====================================================================
+
+// Item vencido e enviado e marcado como enviado.
+test("agendado vencido e enviado via canal e marcado como enviado", async () => {
+  const due = makeDue();
+  mockGetDue.mockResolvedValue([due]);
+
+  const result = await runScheduledFollowUps();
+
+  expect(mockMarkSent).toHaveBeenCalledWith(due.id); // claim antes do envio
+  expect(mockSend).toHaveBeenCalledWith(due.lead!.phone, due.message);
+  expect(mockAddMsg).toHaveBeenCalledWith(due.lead_id, "out", due.message);
+  expect(result.sent).toBe(1);
+  expect(result.errors).toBe(0);
+});
+
+// Claim perdido (outro ciclo pegou): nao envia.
+test("agendado ja reivindicado por outro ciclo nao e reenviado", async () => {
+  mockGetDue.mockResolvedValue([makeDue()]);
+  mockMarkSent.mockResolvedValue(false); // claim falhou
+
+  const result = await runScheduledFollowUps();
+
+  expect(mockSend).not.toHaveBeenCalled();
+  expect(result.sent).toBe(0);
+});
+
+// Falha de envio: marca erro e nao aborta os demais itens.
+test("falha de envio de um agendado marca erro e nao aborta os demais", async () => {
+  const due1 = makeDue({ id: "fup-1", lead_id: "lead-1", lead: { id: "lead-1", name: "A", phone: "5511000000001" } });
+  const due2 = makeDue({ id: "fup-2", lead_id: "lead-2", lead: { id: "lead-2", name: "B", phone: "5511000000002" } });
+  mockGetDue.mockResolvedValue([due1, due2]);
+  mockSend.mockRejectedValueOnce(new Error("rede indisponivel"));
+
+  const result = await runScheduledFollowUps();
+
+  expect(mockMarkError).toHaveBeenCalledWith(due1.id);
+  expect(mockSend).toHaveBeenCalledTimes(2); // segue para o segundo item
+  expect(result.sent).toBe(1);
+  expect(result.errors).toBe(1);
+});
+
+// Lead sem telefone (removido): marca erro sem tentar enviar.
+test("agendado sem telefone do lead vira erro sem enviar", async () => {
+  mockGetDue.mockResolvedValue([makeDue({ lead: null })]);
+
+  const result = await runScheduledFollowUps();
+
+  expect(mockSend).not.toHaveBeenCalled();
+  expect(mockMarkError).toHaveBeenCalled();
+  expect(result.errors).toBe(1);
 });

@@ -3270,3 +3270,187 @@ legend.agent-card-title { margin-bottom: 4px; }
 }
 .agent-bubble--out { align-self: flex-start; max-width: 88%; }
 .agent-handoff-note { font-size: 12px; color: var(--brand-purple-hover); font-weight: 600; }
+
+/* ============================================================
+   Follow-up por lead (migration 008)
+   Reaproveita .integ-page / .integ-head / .btn* ; classes .fup-*
+   ============================================================ */
+
+.fup-note {
+  background: var(--surface-light);
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--fg-muted);
+  margin-bottom: 22px;
+}
+.fup-note strong { color: var(--fg); font-weight: 600; }
+
+.fup-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) 1fr;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .fup-grid { grid-template-columns: 1fr; }
+}
+
+.fup-card {
+  background: #fff;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.fup-card-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--neutral-dark);
+  margin-bottom: 16px;
+}
+
+.fup-empty { color: var(--fg-muted); font-size: 14px; padding: 18px 0; line-height: 1.55; }
+.fup-hint { color: var(--fg-muted); font-size: 12.5px; margin-top: 6px; }
+
+/* Formulario de agendamento */
+.fup-form { display: flex; flex-direction: column; gap: 16px; }
+.fup-field { display: flex; flex-direction: column; gap: 6px; }
+.fup-field > span { font-size: 12.5px; font-weight: 600; color: var(--fg); }
+.fup-field input,
+.fup-field textarea {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--fg);
+  background: #fff;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  width: 100%;
+}
+.fup-field textarea { resize: vertical; line-height: 1.5; }
+.fup-field input:focus,
+.fup-field textarea:focus {
+  outline: none;
+  border-color: var(--brand-light);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.18);
+}
+
+/* Resultados do seletor de lead */
+.fup-results {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 4px;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.fup-result {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.fup-result:hover { background: var(--surface-light); }
+.fup-result-name { font-size: 13.5px; font-weight: 600; color: var(--neutral-dark); }
+.fup-result-phone { font-size: 12px; color: var(--fg-muted); font-family: var(--font-mono); }
+
+.fup-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--surface-light);
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+}
+.fup-selected-name { font-size: 13.5px; font-weight: 600; color: var(--neutral-dark); }
+.fup-selected-clear {
+  border: none;
+  background: none;
+  color: var(--brand-purple);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fup-selected-clear:hover { text-decoration: underline; }
+
+/* Atalhos rapidos de data */
+.fup-quick { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.fup-chip {
+  border: 1px solid var(--neutral-mid);
+  background: #fff;
+  color: var(--fg-muted);
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.fup-chip:hover { border-color: var(--brand-light); color: var(--brand-purple); }
+
+.fup-form-actions { display: flex; justify-content: flex-end; }
+
+/* Listas de follow-ups */
+.fup-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.fup-list--muted { opacity: 0.92; }
+.fup-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  background: #fff;
+}
+.fup-item-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.fup-item-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fup-item-lead { font-size: 13.5px; font-weight: 600; color: var(--neutral-dark); }
+.fup-item-when { font-size: 12px; color: var(--fg-muted); }
+.fup-item-msg {
+  font-size: 13px;
+  color: var(--fg);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.fup-subhead {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 22px 0 10px;
+}
+
+/* Pilulas de status */
+.fup-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.fup-pill--pending   { background: #ede9fe; color: #5b21b6; border-color: #ddd6fe; }
+.fup-pill--sent      { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.fup-pill--cancelled { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+.fup-pill--err       { background: #fef2f2; color: #991b1b; border-color: #fecaca; }

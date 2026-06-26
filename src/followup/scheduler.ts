@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { config } from "../config";
 import { Lead, AUTO_STATUSES } from "../types";
 import { addMessage, claimFollowUp, listFollowUpCandidates, setStatus } from "../crm/leads";
+import { getDueFollowUps, markError, markSent } from "../crm/followup-schedule";
 import { sendText } from "../whatsapp/evolution";
 
 // Rotacao de mensagens de retomada. Como sao ate 30 follow-ups por lead,
@@ -88,6 +89,58 @@ export async function runFollowUpCheck(batchLimit = config.followupBatch): Promi
       console.log(
         `[followup] Lead ${lead.phone} atingiu ${config.followupMax} retomadas → perdido.`
       );
+    }
+  }
+
+  return result;
+}
+
+export interface ScheduledFollowUpResult {
+  sent: number;
+  errors: number;
+}
+
+// Processa os follow-ups AGENDADOS por lead (migration 008) que ja venceram.
+// Diferente do follow-up automatico (runFollowUpCheck): aqui a equipe programou
+// manualmente "lembrar o lead X em N dias com esta mensagem".
+//
+// ATENCAO precisao: na Vercel Hobby o cron roda 1x/dia (12h UTC) — entao um item
+// agendado para 14h dispara na rodada do dia seguinte. Precisao fina (minutos)
+// exige o plano Pro (cron mais frequente). Documentado tambem na UI.
+//
+// Robustez: claim-then-send. markSent() faz o claim atomico (status pendente->enviado)
+// ANTES do envio, fechando a janela de envio-duplo caso dois ciclos rodem em paralelo.
+// Cada item e isolado: uma falha de envio vira markError e NAO aborta os demais.
+export async function runScheduledFollowUps(now = new Date()): Promise<ScheduledFollowUpResult> {
+  const due = await getDueFollowUps(now.toISOString());
+  const result: ScheduledFollowUpResult = { sent: 0, errors: 0 };
+
+  for (const item of due) {
+    if (!item.lead?.phone) {
+      // Lead sem telefone (ou removido entre o select e o processamento): marca erro e segue.
+      console.error(`[followup-agendado] item ${item.id} sem telefone do lead — pulando.`);
+      await markError(item.id).catch(() => {});
+      result.errors++;
+      continue;
+    }
+
+    // Claim atomico: garante que so um ciclo envia este item.
+    const claimed = await markSent(item.id);
+    if (!claimed) {
+      // Outro ciclo ja pegou (ou foi cancelado entre o select e agora).
+      continue;
+    }
+
+    try {
+      await sendText(item.lead.phone, item.message);
+      await addMessage(item.lead_id, "out", item.message);
+      console.log(`[followup-agendado] enviado para ${item.lead.phone} (item ${item.id}).`);
+      result.sent++;
+    } catch (err) {
+      console.error(`[followup-agendado] falha ao enviar item ${item.id}:`, err);
+      // Reverte o claim para 'erro' — a equipe reprograma manualmente.
+      await markError(item.id).catch(() => {});
+      result.errors++;
     }
   }
 

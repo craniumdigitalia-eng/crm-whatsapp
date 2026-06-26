@@ -244,3 +244,25 @@ create table if not exists email_unsubscribes (
 -- alter table email_campaigns enable row level security;
 -- alter table email_events    enable row level security;
 -- alter table email_unsubscribes enable row level security;
+
+-- =====================================================================
+-- Follow-up agendado por lead (migration 008).
+-- Programa um follow-up especifico ("lembrar o lead X em 2 dias com esta
+-- mensagem"). Complementa o follow-up automatico (leads.follow_up_count).
+-- =====================================================================
+create table if not exists follow_up_schedule (
+  id           uuid        primary key default gen_random_uuid(),
+  lead_id      uuid        not null references leads(id) on delete cascade,
+  scheduled_at timestamptz not null,
+  message      text        not null,
+  status       text        not null default 'pendente'
+                 check (status in ('pendente','enviado','cancelado','erro')),
+  created_by   uuid,
+  created_at   timestamptz not null default now(),
+  sent_at      timestamptz
+);
+
+create index if not exists idx_follow_up_schedule_due
+  on follow_up_schedule(status, scheduled_at);
+create index if not exists idx_follow_up_schedule_lead
+  on follow_up_schedule(lead_id);
