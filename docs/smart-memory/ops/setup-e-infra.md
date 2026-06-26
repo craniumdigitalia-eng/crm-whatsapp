@@ -22,6 +22,17 @@ related: ["[[../project/visao-e-requisitos]]", "[[../shared-context]]"]
 | **Make** | Ponte Facebook Lead Ads → `/api/leadgen` (a configurar) | conta Make do usuário | — |
 | **Google Calendar** | Agenda (a configurar) | — | — |
 | **GitHub** | Versionamento/backup do código | github.com/craniumdigitalia-eng/crm-whatsapp · branch `feat/portal-epic-5` | — (sem segredos) |
+| **Vercel** | Hospeda o PORTAL (produção) | projeto **`crm-cranium`** (time craniumdigitalia-engs-projects) · **https://crm-cranium.vercel.app** | env vars no painel Vercel (Production) |
+
+> ⚠️ NÃO confundir: o projeto certo é **`crm-cranium`** (https://crm-cranium.vercel.app). Existe um `cranium-crm` ANTIGO (30 dias) no Vercel que NÃO é este — ignorar/deletar se o usuário confirmar.
+
+## 🌐 Produção (Vercel) — estado
+- **URL:** https://crm-cranium.vercel.app · login admin: `craniumdigital.ia@gmail.com`.
+- **Env vars** configuradas no Vercel (Production): Supabase*, Anthropic, Evolution*, EMAIL_TRACK_SECRET, CRON_SECRET, APP_URL, NEXT_PUBLIC_*. Falta (quando for ligar): META_MAKE_SECRET, GOOGLE_CLIENT_ID/SECRET, EMAIL_PROVIDER/EMAIL_API_KEY/EMAIL_FROM.
+- **Webhook Evolution** já apontado p/ `https://crm-cranium.vercel.app/api/webhook?token=...` (evento MESSAGES_UPSERT).
+- **Cron** Vercel: `0 12 * * *` (diário — limite do plano Hobby; Pro libera de hora em hora).
+- **Funções movidas** p/ route handlers Next (`app/api/webhook|cron/followup|health`) — a pasta raiz `api/` foi removida (não deployável em projeto Next).
+- **Falta ativar:** reconectar WhatsApp (QR em /whatsapp) · cenário Make (Facebook) · OAuth Google · provedor de email.
 
 ## Variáveis de ambiente (no `.env` local — gitignored)
 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ANTHROPIC_API_KEY`, `AGENT_MODEL`, `EVOLUTION_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_INSTANCE=cranium-crm`, `EVOLUTION_WEBHOOK_TOKEN`, `COMPANY_NAME`, `FOLLOWUP_*`. (Meta/Google a adicionar.)
