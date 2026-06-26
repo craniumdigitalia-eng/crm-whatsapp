@@ -54,7 +54,7 @@ export default function AgentConfigModule({ isAdmin }: { isAdmin: boolean }) {
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   // Previa "testar"
-  const [testMsg, setTestMsg] = useState('Oi, vi o anúncio de vocês sobre plano de saúde');
+  const [testMsg, setTestMsg] = useState('Oi, vi o anúncio de vocês e queria saber mais sobre tráfego pago');
   const [testReply, setTestReply] = useState<{ reply: string; handoff: boolean } | null>(null);
   const [testing, setTesting] = useState(false);
 

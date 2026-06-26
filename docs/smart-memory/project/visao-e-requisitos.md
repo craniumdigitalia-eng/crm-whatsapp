@@ -12,7 +12,9 @@ related: ["[[overview]]", "[[../shared-context]]", "[[../decisions/ADR-004-canal
 > **Segundo cérebro do projeto.** Tudo que o usuário (Bruno, Cranium Digital) já definiu fica aqui pra não se repetir. Atualizar SEMPRE que surgir um requisito/preferência novo.
 
 ## Quem é a Cranium / o negócio
-Agência de **marketing + tecnologia + IA**, foco em **planos de saúde** (corretores; operadoras: Amil, Bradesco, SulAmérica, Unimed, Omint, Porto Saúde, Prevent Senior, MedSênior). Tagline: *"Inteligência de quem vive o mercado"* / *"Marketing + Tecnologia + IA"*. Site: www.craniumdigital.com.br. Dono/admin: **Bruno de Castro** (`craniumdigital.ia@gmail.com`).
+**Agência de marketing + tecnologia + IA.** Vende SERVIÇOS DE MARKETING: tráfego pago (Meta/Google Ads), gestão de redes sociais, sites/landing pages, branding, automação e IA. Tagline: *"Inteligência de quem vive o mercado"*. Site: www.craniumdigital.com.br. Dono/admin: **Bruno de Castro** (`craniumdigital.ia@gmail.com`).
+
+> ⚠️ CORREÇÃO 2026-06-26 (importante, o usuário foi enfático): o **SDR de IA é da agência de MARKETING** — qualifica leads que querem **contratar serviços de marketing da Cranium**. **NÃO é sobre vender plano de saúde** (premissa anterior estava errada). Persona do SDR configurada: **"Bia"**, consultora de novos negócios. Config viva em `integrations_config` (chaves `agent_*`).
 
 ## Visão do produto
 Era um **CRM de WhatsApp que substitui o SDR** → virou um **PORTAL interno multi-módulo** da equipe. A IA (Claude) faz o **primeiro atendimento**, qualifica e faz follow-up; a equipe acompanha tudo no portal.
