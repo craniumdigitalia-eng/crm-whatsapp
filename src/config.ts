@@ -28,6 +28,11 @@ export const config = {
   evolutionUrl: (process.env.EVOLUTION_URL ?? "http://localhost:8080").replace(/\/$/, ""),
   evolutionInstance: required("EVOLUTION_INSTANCE"),
   evolutionApiKey: required("EVOLUTION_API_KEY"),
+  // Token validado no webhook de entrada do WhatsApp (POST /api/webhook).
+  // O usuario cola no painel da Evolution como ?token=... na URL do webhook
+  // (ou envia no header "apikey"). Lido do env PRIMEIRO; a aba WhatsApp pode
+  // sobrescrever via integrations_config (chave evolution_webhook_token).
+  evolutionWebhookToken: process.env.EVOLUTION_WEBHOOK_TOKEN ?? "",
 
   followupMax, // quantas retomadas no maximo por lead
   followupIntervalMs: followupInterval * unitMs, // intervalo entre retomadas

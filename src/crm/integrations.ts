@@ -13,7 +13,12 @@ export type IntegrationKey =
   | "meta_page_access_token"
   | "meta_app_secret"
   | "meta_verify_token"
-  | "meta_form_id";
+  | "meta_form_id"
+  // ===== WhatsApp / Evolution (ADR-004) =====
+  | "evolution_url"
+  | "evolution_api_key"
+  | "evolution_instance"
+  | "evolution_webhook_token";
 
 // Le um valor da tabela integrations_config. Tolerante: se a tabela ainda
 // nao existe (migration 003 nao aplicada), retorna undefined sem quebrar.
@@ -67,6 +72,54 @@ export async function getMetaConfig(): Promise<MetaConfig> {
     verifyToken: verify ?? config.metaVerifyToken,
     formId: form ?? config.metaFormId,
     graphVersion: config.metaGraphVersion,
+  };
+}
+
+// =====================================================================
+// WhatsApp / Evolution (ADR-004 — Evolution e o canal de WhatsApp).
+// Mesma estrategia do Meta: env como base, integrations_config como override
+// salvo pela aba WhatsApp. Tudo server-side; a apikey NUNCA vai ao browser.
+// =====================================================================
+
+export interface EvolutionConfig {
+  url: string; // sem barra no final
+  apiKey: string;
+  instance: string;
+  webhookToken: string; // valida a origem do POST /api/webhook
+}
+
+// Resolve a config efetiva da Evolution. Tabela sobrescreve o env quando preenchida.
+export async function getEvolutionConfig(): Promise<EvolutionConfig> {
+  const [url, apiKey, instance, webhookToken] = await Promise.all([
+    getConfigValue("evolution_url"),
+    getConfigValue("evolution_api_key"),
+    getConfigValue("evolution_instance"),
+    getConfigValue("evolution_webhook_token"),
+  ]);
+  return {
+    url: (url ?? config.evolutionUrl).replace(/\/$/, ""),
+    apiKey: apiKey ?? config.evolutionApiKey,
+    instance: instance ?? config.evolutionInstance,
+    webhookToken: webhookToken ?? config.evolutionWebhookToken,
+  };
+}
+
+// Status "seguro" para a UI: diz SE cada credencial existe, sem revelar o valor.
+// A url e o instance NAO sao segredos — podem aparecer na tela.
+export async function getEvolutionConnectionStatus(): Promise<{
+  configured: boolean;
+  url: string;
+  instance: string;
+  hasApiKey: boolean;
+  hasWebhookToken: boolean;
+}> {
+  const cfg = await getEvolutionConfig();
+  return {
+    configured: Boolean(cfg.url && cfg.apiKey && cfg.instance),
+    url: cfg.url,
+    instance: cfg.instance,
+    hasApiKey: Boolean(cfg.apiKey),
+    hasWebhookToken: Boolean(cfg.webhookToken),
   };
 }
 

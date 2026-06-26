@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { config } from "../config";
+import { getEvolutionConfig } from "../crm/integrations";
 
 export interface InboundMessage {
   phone: string; // numero do lead, somente digitos (ex: 5511999998888)
@@ -36,13 +37,14 @@ export async function sendText(phone: string, text: string): Promise<void> {
     return;
   }
 
-  // Fallback Evolution (dev local / sem MAKE_SEND_URL).
-  const url = `${config.evolutionUrl}/message/sendText/${config.evolutionInstance}`;
+  // Canal Evolution (ADR-004). Credenciais via env + override da aba WhatsApp.
+  const evo = await getEvolutionConfig();
+  const url = `${evo.url}/message/sendText/${evo.instance}`;
   const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      apikey: config.evolutionApiKey,
+      apikey: evo.apiKey,
     },
     body: JSON.stringify({ number: phone, text }),
   });

@@ -37,8 +37,15 @@ async function apiCall<T = unknown>(url: string, opts?: RequestInit): Promise<T>
   return res.json() as Promise<T>;
 }
 
+interface EvoStatus {
+  configured: boolean;
+  state: 'connected' | 'connecting' | 'disconnected' | 'unreachable';
+  number?: string;
+}
+
 export default function IntegracoesPage() {
   const [meta, setMeta] = useState<MetaStatus | null>(null);
+  const [evo, setEvo] = useState<EvoStatus | null>(null);
 
   // Form de conexão Meta.
   const [pageToken, setPageToken] = useState('');
@@ -60,10 +67,20 @@ export default function IntegracoesPage() {
     }
   }, []);
 
+  const loadEvo = useCallback(async () => {
+    try {
+      const status = await apiCall<EvoStatus>('/api/integrations/evolution/status');
+      setEvo(status);
+    } catch {
+      // Evolution opcional — silencia falha de status no painel de integracoes.
+    }
+  }, []);
+
   useEffect(() => {
     void loadStatus();
+    void loadEvo();
     setVerifyToken((prev) => prev || genVerifyToken());
-  }, [loadStatus]);
+  }, [loadStatus, loadEvo]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,14 +183,20 @@ export default function IntegracoesPage() {
             </div>
             <div className="integ-card-titles">
               <h2 className="integ-card-name">WhatsApp · Evolution</h2>
-              <span className="integ-badge integ-badge--off">Não conectado</span>
+              <span className={`integ-badge ${evo?.state === 'connected' ? 'integ-badge--on' : 'integ-badge--off'}`}>
+                {evo?.state === 'connected'
+                  ? `Conectado${evo.number ? ` · +${evo.number}` : ''}`
+                  : 'Não conectado'}
+              </span>
             </div>
           </div>
           <p className="integ-card-desc">
-            Canal de atendimento via WhatsApp. Configuração via QR Code — em breve.
+            Canal de atendimento via WhatsApp. Conecte o número via QR Code e receba as mensagens no CRM.
           </p>
           <div className="integ-card-actions">
-            <button type="button" className="btn btn-ghost" disabled>Configurar via QR (em breve)</button>
+            <a className="btn btn-primary" href="/whatsapp">
+              {evo?.state === 'connected' ? 'Gerenciar conexão' : 'Conectar via QR'}
+            </a>
           </div>
         </article>
 

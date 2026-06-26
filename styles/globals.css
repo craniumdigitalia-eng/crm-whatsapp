@@ -2018,6 +2018,36 @@ body {
 }
 
 /* ============================================================
+   WhatsApp · Evolution — QR de conexão (ADR-004)
+   ============================================================ */
+
+.wa-qr {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: 14px 0 4px;
+  padding: 16px;
+  background: var(--surface-light);
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-md);
+}
+.wa-qr-img {
+  width: 264px;
+  height: 264px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  border: 1px solid var(--border-dark);
+  image-rendering: pixelated;
+}
+.wa-qr-hint { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--fg-muted); }
+.wa-qr-hint p { margin: 0; }
+
+@media (max-width: 640px) {
+  .wa-qr-img { width: 220px; height: 220px; }
+}
+
+/* ============================================================
    Drawer — Origem / Formulário (Story 5.14)
    ============================================================ */
 
