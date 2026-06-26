@@ -25,7 +25,12 @@ export type IntegrationKey =
   | "google_client_id"
   | "google_client_secret"
   | "google_refresh_token"
-  | "google_calendar_id";
+  | "google_calendar_id"
+  // ===== Email Marketing (migration 007) =====
+  // ESP plugável: 'dev' (default, só loga) | 'resend' | 'sendgrid' | 'brevo' | 'ses' ...
+  | "email_provider"
+  | "email_api_key"
+  | "email_from";
 
 // Le um valor da tabela integrations_config. Tolerante: se a tabela ainda
 // nao existe (migration 003 nao aplicada), retorna undefined sem quebrar.
@@ -202,5 +207,49 @@ export async function getGoogleConnectionStatus(): Promise<{
     configured: Boolean(cfg.clientId && cfg.clientSecret),
     connected: Boolean(cfg.refreshToken),
     calendarId: cfg.calendarId,
+  };
+}
+
+// =====================================================================
+// Email Marketing (migration 007). Mesma estrategia: env como base,
+// integrations_config como override salvo pela aba "Email". A api key
+// NUNCA vai ao browser — so o getEmailConnectionStatus (has*) e exposto.
+// =====================================================================
+
+export interface EmailConfig {
+  provider: string; // 'dev' (default) | 'resend' | 'sendgrid' | 'brevo' | 'ses' ...
+  apiKey: string; // credencial do ESP (vazio no provider 'dev')
+  from: string; // remetente "Nome <email@dominio>"
+}
+
+export async function getEmailConfig(): Promise<EmailConfig> {
+  const [provider, apiKey, from] = await Promise.all([
+    getConfigValue("email_provider"),
+    getConfigValue("email_api_key"),
+    getConfigValue("email_from"),
+  ]);
+  return {
+    provider: (provider ?? config.emailProvider ?? "dev").toLowerCase(),
+    apiKey: apiKey ?? config.emailApiKey,
+    from: from ?? config.emailFrom,
+  };
+}
+
+// Status "seguro" para a UI: o provider e o remetente nao sao segredos;
+// a api key so e reportada como presente/ausente. configured = da pra enviar
+// de verdade ('dev' sempre pode "enviar" (loga); ESP real exige apiKey+from).
+export async function getEmailConnectionStatus(): Promise<{
+  provider: string;
+  from: string;
+  hasApiKey: boolean;
+  configured: boolean;
+}> {
+  const cfg = await getEmailConfig();
+  const isDev = cfg.provider === "dev" || !cfg.provider;
+  return {
+    provider: cfg.provider || "dev",
+    from: cfg.from,
+    hasApiKey: Boolean(cfg.apiKey),
+    configured: isDev ? true : Boolean(cfg.apiKey && cfg.from),
   };
 }

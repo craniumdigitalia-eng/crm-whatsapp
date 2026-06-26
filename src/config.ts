@@ -73,4 +73,16 @@ export const config = {
   cronSecret: process.env.CRON_SECRET ?? "",
   // Numero maximo de leads processados por ciclo de cron — evita estourar timeout da funcao.
   followupBatch: parseInt(process.env.FOLLOWUP_BATCH ?? "50", 10),
+
+  // ===== Email Marketing (migration 007) =====
+  // Provedor de envio (ESP) plugavel. 'dev' (default) so loga, nao envia.
+  // O provedor real (resend/sendgrid/brevo/ses) sera plugado depois — ver
+  // src/crm/email-provider.ts. Env como base; a aba Email pode sobrescrever
+  // via integrations_config (email_provider / email_api_key / email_from).
+  emailProvider: process.env.EMAIL_PROVIDER ?? "dev",
+  emailApiKey: process.env.EMAIL_API_KEY ?? "",
+  emailFrom: process.env.EMAIL_FROM ?? "",
+  // URL publica base usada nos links/pixel de tracking dentro do email.
+  // Vazio = derivar do request (origin) no momento do envio.
+  appUrl: (process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, ""),
 };

@@ -152,3 +152,86 @@ create trigger trg_integrations_config_updated_at
 -- alter table lead_tags           enable row level security;
 -- alter table checklist_items     enable row level security;
 -- alter table integrations_config enable row level security;
+
+-- =====================================================================
+-- Migration 007 — Email Marketing (v1)
+-- Listas/contatos, templates, campanhas e eventos — 2026-06-26
+-- Arquivo formal: supabase/migrations/007-email-marketing.sql
+-- =====================================================================
+
+-- E-mail do lead (destinatário "base do CRM"). Opcional — pode vir do
+-- form_data do Meta Lead Ads ou ser preenchido manualmente.
+alter table leads add column if not exists email text;
+create index if not exists idx_leads_email on leads(email) where email is not null;
+
+-- Listas de contatos (público importado, fora do funil).
+create table if not exists email_lists (
+  id         uuid        primary key default gen_random_uuid(),
+  name       text        not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists email_contacts (
+  id           uuid        primary key default gen_random_uuid(),
+  list_id      uuid        not null references email_lists(id) on delete cascade,
+  email        text        not null,
+  name         text,
+  unsubscribed boolean     not null default false,
+  created_at   timestamptz not null default now()
+);
+
+create unique index if not exists idx_email_contacts_list_email
+  on email_contacts(list_id, lower(email));
+
+-- Templates reutilizáveis (assunto + HTML).
+create table if not exists email_templates (
+  id         uuid        primary key default gen_random_uuid(),
+  name       text        not null,
+  subject    text,
+  html       text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists trg_email_templates_updated_at on email_templates;
+create trigger trg_email_templates_updated_at
+  before update on email_templates
+  for each row execute function set_updated_at();
+
+-- Campanhas. audience (jsonb): {type:'leads',filters:{status,tags}} ou {type:'list',list_id}.
+create table if not exists email_campaigns (
+  id          uuid        primary key default gen_random_uuid(),
+  name        text        not null,
+  subject     text,
+  template_id uuid        references email_templates(id) on delete set null,
+  html        text,
+  audience    jsonb,
+  status      text        not null default 'rascunho'
+                check (status in ('rascunho','enviando','enviada','erro')),
+  sent_count  int         not null default 0,
+  created_at  timestamptz not null default now(),
+  sent_at     timestamptz
+);
+
+create index if not exists idx_email_campaigns_status on email_campaigns(status);
+
+-- Eventos de envio/engajamento por campanha.
+create table if not exists email_events (
+  id            uuid        primary key default gen_random_uuid(),
+  campaign_id   uuid        not null references email_campaigns(id) on delete cascade,
+  contact_email text        not null,
+  type          text        not null
+                  check (type in ('sent','open','click','bounce','unsubscribe')),
+  meta          jsonb,
+  created_at    timestamptz not null default now()
+);
+
+create index if not exists idx_email_events_campaign_type
+  on email_events(campaign_id, type);
+
+-- RLS (comentado — acesso via service_role):
+-- alter table email_lists     enable row level security;
+-- alter table email_contacts  enable row level security;
+-- alter table email_templates enable row level security;
+-- alter table email_campaigns enable row level security;
+-- alter table email_events    enable row level security;
