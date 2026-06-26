@@ -25,8 +25,10 @@ Era um **CRM de WhatsApp que substitui o SDR** → virou um **PORTAL interno mul
 5. **WhatsApp** (Evolution + QR) — a fazer
 6. **Integrações** (aba dedicada: Google Calendar, Facebook Ads, WhatsApp) ✅
 7. **Email Marketing** (NOVO, pedido 2026-06-26) — enviar campanhas/sequências de email. Provedor (ESP) a definir.
-8. **Conversas / Inbox** (NOVO, pedido 2026-06-26) — tela estilo **WhatsApp Web** (lista de conversas + chat aberto com balões), mas **DARK com as cores da Cranium** (roxo/violeta). Responder, assumir/devolver IA, mudar estágio. Reusa os endpoints de leads/mensagens.
-9. **Config**
+8. **Conversas / Inbox** (NOVO, 2026-06-26) — tela estilo **WhatsApp Web** dark Cranium (lista + chat com balões). Responder, assumir/devolver IA, mudar estágio. ✅
+9. **Agente IA — config** (NOVO, 2026-06-26) — tela pra configurar a persona/abordagem da IA: ela deve **responder como se fosse o usuário/equipe** (nome configurável), tom, contexto da empresa, abordagem do lead, metas de qualificação, escalonamento, guardrails. Config em integrations_config; prompt montado dinâmico. 🔨
+10. **Follow-up por lead** (NOVO, 2026-06-26) — aba **abaixo de Conversas** pra **programar follow-up de cada lead** (quando + mensagem/sequência). Complementa o follow-up automático (cron). 🔨
+11. **Config**
 
 ## Requisitos explícitos do usuário (NÃO esquecer)
 - **Layout bonito, com a marca Cranium** (roxo/violeta #7C3AED, off-white, Geist, pill, glow). KV completo em `docs/design/kv/`. ✅

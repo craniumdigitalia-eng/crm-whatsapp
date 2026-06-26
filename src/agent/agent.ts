@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { config } from "../config";
-import { systemPrompt } from "./prompt";
+import { systemPrompt, buildSystemPrompt } from "./prompt";
+import type { AgentConfig } from "./config";
 import { Lead, Message, LeadStatus } from "../types";
 import { updateLeadFields } from "../crm/leads";
 
@@ -87,18 +88,34 @@ export interface AgentResult {
   handoff: boolean;
 }
 
+export interface GenerateOptions {
+  // Sobrescreve a config do agente (usado pela previa "testar" da aba Agente IA
+  // para refletir edicoes ainda nao salvas). Se ausente, le a config salva.
+  config?: AgentConfig;
+  // Dry-run: NAO executa as ferramentas no CRM (nao grava nada). A previa usa isso
+  // para testar a resposta sem efeitos colaterais. O handoff vira so um sinal.
+  dryRun?: boolean;
+}
+
 // Gera a resposta do agente para a ultima mensagem do lead.
-export async function generateReply(lead: Lead, history: Message[]): Promise<AgentResult> {
+export async function generateReply(
+  lead: Lead,
+  history: Message[],
+  opts: GenerateOptions = {}
+): Promise<AgentResult> {
   // any[] porque o historico mistura mensagens de texto e blocos de conteudo (tool_use/thinking).
   const messages: any[] = historyToMessages(history);
   let handoff = false;
+
+  // Monta o system prompt uma vez (config override na previa, ou a config salva).
+  const system = opts.config ? buildSystemPrompt(opts.config) : await systemPrompt();
 
   // Loop agentic: executa ferramentas ate o modelo dar a resposta final.
   for (let i = 0; i < 5; i++) {
     const params: any = {
       model: config.agentModel,
       max_tokens: 1024,
-      system: systemPrompt(),
+      system,
       tools,
       messages,
     };
@@ -113,8 +130,13 @@ export async function generateReply(lead: Lead, history: Message[]): Promise<Age
       const toolResults: Anthropic.ToolResultBlockParam[] = [];
       for (const block of response.content) {
         if (block.type === "tool_use") {
-          const result = await applyTool(lead, block.name, block.input);
-          handoff = handoff || result.handoff;
+          if (opts.dryRun) {
+            // Previa: nao grava no CRM; so detecta a intencao de handoff.
+            handoff = handoff || block.name === "transferir_para_humano";
+          } else {
+            const result = await applyTool(lead, block.name, block.input);
+            handoff = handoff || result.handoff;
+          }
           toolResults.push({
             type: "tool_result",
             tool_use_id: block.id,

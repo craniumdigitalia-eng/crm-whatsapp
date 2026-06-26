@@ -15,6 +15,11 @@ jest.mock("../crm/leads", () => ({
   updateLeadFields: jest.fn(),
 }));
 
+// Mock do db: agent.ts -> prompt.ts -> config.ts importa { supabase } de ../db.
+// Sem mock, o cliente Supabase real seria construido na carga (e estouraria com
+// o config mockado sem URL). applyTool nao toca no supabase, entao um stub basta.
+jest.mock("../db", () => ({ supabase: {} }));
+
 import { applyTool } from "./agent";
 import { updateLeadFields } from "../crm/leads";
 import { Lead } from "../types";

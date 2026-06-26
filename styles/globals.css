@@ -3130,3 +3130,143 @@ body {
   .conv-back { display: flex; }
   .conv-chat-actions { gap: 6px; }
 }
+
+/* ============================================================
+   Agente IA — personalização do atendimento (aba /agente)
+   Reaproveita .integ-page / .integ-head / .btn* ; classes .agent-*
+   ============================================================ */
+.agent-page { /* herda .integ-page */ }
+.agent-empty { color: var(--fg-muted); font-size: 14px; padding: 20px 0; }
+
+.agent-readonly-note {
+  background: var(--brand-tint);
+  color: var(--brand-purple-hover);
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+.agent-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .agent-grid { grid-template-columns: 1fr; }
+}
+
+.agent-form { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+.agent-card {
+  background: #fff;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  margin: 0;
+}
+.agent-card[disabled] { opacity: 0.85; }
+.agent-card-title {
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--neutral-dark);
+  padding: 0;
+}
+legend.agent-card-title { margin-bottom: 4px; }
+.agent-card-hint { font-size: 12.5px; color: var(--fg-muted); margin: 4px 0 12px; line-height: 1.45; }
+
+.agent-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .agent-row { grid-template-columns: 1fr; } }
+
+.agent-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.agent-field:last-child { margin-bottom: 0; }
+.agent-field > span { font-size: 12.5px; font-weight: 600; color: var(--fg); }
+.agent-field input,
+.agent-field select,
+.agent-field textarea {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--fg);
+  background: #fff;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  width: 100%;
+}
+.agent-field textarea { font-size: 13.5px; line-height: 1.5; resize: vertical; }
+.agent-field input:focus,
+.agent-field select:focus,
+.agent-field textarea:focus {
+  outline: none;
+  border-color: var(--brand-light);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.18);
+}
+
+.agent-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(248,247,255,0) 0%, var(--off-white) 40%);
+  padding: 12px 0 4px;
+}
+
+/* ---- Prévia ---- */
+.agent-preview { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 16px; }
+.agent-preview-card { box-shadow: var(--shadow-sm); }
+
+.agent-persona-line { display: flex; align-items: center; gap: 12px; margin: 4px 0 10px; }
+.agent-persona-avatar {
+  width: 42px; height: 42px;
+  flex: none;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(135deg, var(--brand-purple), #5B21B6);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 18px;
+}
+.agent-persona-name { font-weight: 700; font-size: 15px; color: var(--neutral-dark); }
+.agent-persona-role { font-size: 12.5px; color: var(--fg-muted); }
+.agent-persona-tone {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--brand-purple-hover);
+  background: var(--brand-tint);
+  border-radius: var(--radius-pill);
+  padding: 4px 12px;
+  margin-bottom: 12px;
+}
+.agent-preview-sub {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+  margin-bottom: 8px;
+}
+
+.agent-bubble {
+  background: var(--surface-light);
+  border: 1px solid var(--border-dark);
+  border-radius: 4px 14px 14px 14px;
+  padding: 10px 13px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--fg);
+  white-space: pre-wrap;
+}
+.agent-chat-preview { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.agent-bubble--in {
+  align-self: flex-end;
+  max-width: 88%;
+  background: linear-gradient(135deg, var(--brand-purple), #5B21B6);
+  color: #fff;
+  border: none;
+  border-radius: 14px 14px 4px 14px;
+}
+.agent-bubble--out { align-self: flex-start; max-width: 88%; }
+.agent-handoff-note { font-size: 12px; color: var(--brand-purple-hover); font-weight: 600; }
