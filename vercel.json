@@ -1,22 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "@vercel/node@5"
-    },
-    "api/webhook.ts": {
-      "runtime": "@vercel/node@5",
-      "maxDuration": 60
-    },
-    "api/cron/followup.ts": {
-      "runtime": "@vercel/node@5",
-      "maxDuration": 60
-    }
-  },
   "crons": [
     {
       "path": "/api/cron/followup",
-      "schedule": "0 * * * *"
+      "schedule": "0 12 * * *"
     }
   ]
 }
