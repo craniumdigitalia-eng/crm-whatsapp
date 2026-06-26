@@ -25,6 +25,7 @@ export interface Lead {
   id: string; // UUID (TEXT no SQLite, uuid no Supabase/Postgres)
   phone: string;
   name: string | null;
+  email: string | null;
   status: LeadStatus;
   service_interest: string | null;
   budget: string | null;

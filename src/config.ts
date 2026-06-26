@@ -85,4 +85,9 @@ export const config = {
   // URL publica base usada nos links/pixel de tracking dentro do email.
   // Vazio = derivar do request (origin) no momento do envio.
   appUrl: (process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, ""),
+  // Segredo HMAC que assina os links de tracking/descadastro do email
+  // (anti open-redirect no click + valida o descadastro). Se vazio, cai num
+  // fallback estavel de segredos do servidor (cron/service_role) — defina este
+  // em producao. Ver src/crm/email-sign.ts.
+  emailTrackSecret: process.env.EMAIL_TRACK_SECRET ?? "",
 };

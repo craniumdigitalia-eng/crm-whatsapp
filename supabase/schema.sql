@@ -229,9 +229,18 @@ create table if not exists email_events (
 create index if not exists idx_email_events_campaign_type
   on email_events(campaign_id, type);
 
+-- Supressão global de descadastro (opt-out) — um email aqui nunca recebe campanha.
+create table if not exists email_unsubscribes (
+  email       text        primary key,
+  campaign_id uuid        references email_campaigns(id) on delete set null,
+  reason      text,
+  created_at  timestamptz not null default now()
+);
+
 -- RLS (comentado — acesso via service_role):
 -- alter table email_lists     enable row level security;
 -- alter table email_contacts  enable row level security;
 -- alter table email_templates enable row level security;
 -- alter table email_campaigns enable row level security;
 -- alter table email_events    enable row level security;
+-- alter table email_unsubscribes enable row level security;

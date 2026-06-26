@@ -33,6 +33,7 @@ const STATUS_ORDER: LeadStatus[] = [
 interface Lead {
   id: string;
   name: string | null;
+  email: string | null;
   phone: string;
   status: LeadStatus;
   service_interest: string | null;
@@ -167,7 +168,7 @@ export default function ConversationDrawer({
   // Edit mode
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: '', service_interest: '', budget: '', notes: '',
+    name: '', email: '', service_interest: '', budget: '', notes: '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -196,6 +197,7 @@ export default function ConversationDrawer({
       // Pré-popula edit form com dados atuais.
       setEditForm({
         name:             data.lead.name            ?? '',
+        email:            data.lead.email           ?? '',
         service_interest: data.lead.service_interest ?? '',
         budget:           data.lead.budget           ?? '',
         notes:            data.lead.notes            ?? '',
@@ -535,6 +537,9 @@ export default function ConversationDrawer({
             {lead && (
               <span className="drawer-lead-phone">{lead.phone}</span>
             )}
+            {lead?.email && (
+              <span className="drawer-lead-email">{lead.email}</span>
+            )}
           </div>
           <button
             ref={closeBtnRef}
@@ -713,6 +718,16 @@ export default function ConversationDrawer({
                       value={editForm.name}
                       onChange={(e) => setEditForm(f => ({ ...f, name: e.target.value }))}
                       placeholder="Nome do lead"
+                    />
+                  </div>
+                  <div className="drawer-edit-field">
+                    <label htmlFor="edit-email">E-mail</label>
+                    <input
+                      id="edit-email"
+                      type="email"
+                      value={editForm.email}
+                      onChange={(e) => setEditForm(f => ({ ...f, email: e.target.value }))}
+                      placeholder="email@exemplo.com"
                     />
                   </div>
                   <div className="drawer-edit-field">

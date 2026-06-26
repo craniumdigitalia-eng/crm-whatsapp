@@ -18,12 +18,13 @@ export async function POST(
     }
     const body = await req.json().catch(() => ({})) as {
       name?: string;
+      email?: string;
       service_interest?: string;
       budget?: string;
       notes?: string;
     };
-    const { name, service_interest, budget, notes } = body;
-    await updateLeadFields(id, { name, service_interest, budget, notes });
+    const { name, email, service_interest, budget, notes } = body;
+    await updateLeadFields(id, { name, email, service_interest, budget, notes });
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error('[api/leads/:id/edit] POST:', e);

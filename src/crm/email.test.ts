@@ -1,4 +1,5 @@
 import { parseCsv, isValidEmail, injectTracking } from "./email";
+import { verifyClick, verifyUnsub } from "./email-sign";
 
 // Funções puras do módulo de Email Marketing (sem acesso a banco).
 describe("isValidEmail", () => {
@@ -65,5 +66,25 @@ describe("injectTracking", () => {
     const out = injectTracking(h, "c", "e@x.com", "https://app.x.com");
     expect(out).toContain('href="mailto:x@y.com"');
     expect(out).toContain('href="#topo"');
+  });
+
+  it("assina a URL de destino do click (E3) — sig válida e verificável", () => {
+    const url = "https://cranium.com/promo";
+    const out = injectTracking(html, "camp1", "ana@x.com", "https://app.cranium.com");
+    const m = out.match(/track\/click\?c=camp1&e=ana%40x\.com&u=([^"&]+)&sig=([a-f0-9]+)/);
+    expect(m).not.toBeNull();
+    const [, u, sig] = m as RegExpMatchArray;
+    expect(decodeURIComponent(u)).toBe(url);
+    // A assinatura confere para (campaign, email, url) — e falha se a URL muda.
+    expect(verifyClick("camp1", "ana@x.com", url, sig)).toBe(true);
+    expect(verifyClick("camp1", "ana@x.com", "https://evil.com", sig)).toBe(false);
+  });
+
+  it("injeta rodapé de descadastro assinado (E0)", () => {
+    const out = injectTracking(html, "camp1", "ana@x.com", "https://app.cranium.com");
+    expect(out).toContain("/api/email/unsubscribe?c=camp1&e=ana%40x.com&sig=");
+    const m = out.match(/unsubscribe\?c=camp1&e=ana%40x\.com&sig=([a-f0-9]+)/);
+    expect(m).not.toBeNull();
+    expect(verifyUnsub("camp1", "ana@x.com", (m as RegExpMatchArray)[1])).toBe(true);
   });
 });

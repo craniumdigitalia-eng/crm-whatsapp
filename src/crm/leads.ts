@@ -3,7 +3,7 @@ import { Lead, Message, LeadStatus, LeadAttribution } from "../types";
 
 // Colunas explicitas — evita SELECT * e garante paridade com a interface Lead.
 const LEAD_COLS =
-  "id,phone,name,status,service_interest,budget,notes,follow_up_count,last_direction,last_message_at,created_at,updated_at";
+  "id,phone,name,email,status,service_interest,budget,notes,follow_up_count,last_direction,last_message_at,created_at,updated_at";
 const MSG_COLS = "id,lead_id,direction,body,external_id,created_at";
 // Colunas da migration 003 — selecionadas a parte (podem nao existir antes da migration).
 const ATTRIBUTION_COLS = "source,form_id,leadgen_id,ad_id,campaign_id,form_data";
@@ -164,9 +164,9 @@ export async function claimFollowUp(
 
 export async function updateLeadFields(
   leadId: string,
-  fields: Partial<Pick<Lead, "name" | "status" | "service_interest" | "budget" | "notes">>
+  fields: Partial<Pick<Lead, "name" | "email" | "status" | "service_interest" | "budget" | "notes">>
 ): Promise<void> {
-  const allowed = ["name", "status", "service_interest", "budget", "notes"] as const;
+  const allowed = ["name", "email", "status", "service_interest", "budget", "notes"] as const;
   const patch: Record<string, unknown> = {};
   for (const key of allowed) {
     if (fields[key] !== undefined) patch[key] = fields[key];

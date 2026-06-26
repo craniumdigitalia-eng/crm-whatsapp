@@ -4,6 +4,7 @@
 -- =====================================================================
 
 drop table if exists email_events;
+drop table if exists email_unsubscribes;
 drop table if exists email_campaigns;
 
 drop trigger if exists trg_email_templates_updated_at on email_templates;

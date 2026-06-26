@@ -2,6 +2,7 @@ import { supabase } from "../db";
 import { LeadStatus } from "../types";
 import { config } from "../config";
 import { getEmailProvider } from "./email-provider";
+import { signClick, signUnsub } from "./email-sign";
 
 // =====================================================================
 // Domínio Email Marketing (migration 007).
@@ -168,16 +169,53 @@ export async function deleteContact(id: string): Promise<void> {
   if (error) throw error;
 }
 
-// Marca um email como descadastrado (em todas as listas em que aparece).
-// Chamado pelo tracking de unsubscribe; idempotente.
-export async function unsubscribeEmail(email: string): Promise<void> {
+// Descadastro (opt-out) — QA E0. Idempotente. Faz as duas coisas:
+//   1) grava na supressão GLOBAL (email_unsubscribes) — nunca mais recebe campanha;
+//   2) marca unsubscribed=true nos contatos daquele email (reflete na UI das listas).
+// campaignId/reason são opcionais (rastreabilidade do opt-out).
+export async function suppressEmail(
+  email: string,
+  campaignId?: string | null,
+  reason?: string
+): Promise<void> {
   const norm = email.trim().toLowerCase();
   if (!norm) return;
-  const { error } = await supabase
+
+  // 1) supressão global (PK email — upsert idempotente).
+  const { error: supErr } = await supabase
+    .from("email_unsubscribes")
+    .upsert(
+      { email: norm, campaign_id: campaignId ?? null, reason: reason ?? null },
+      { onConflict: "email", ignoreDuplicates: true }
+    );
+  if (supErr) throw supErr;
+
+  // 2) reflete nos contatos das listas (não-crítico se falhar).
+  const { error: cErr } = await supabase
     .from("email_contacts")
     .update({ unsubscribed: true })
     .eq("email", norm);
+  if (cErr) {
+    console.error(`[email] suppressEmail: falha ao marcar contatos de ${norm}:`, cErr.message);
+  }
+}
+
+// Compat: mantém o nome antigo apontando para o fluxo completo de supressão.
+export async function unsubscribeEmail(email: string): Promise<void> {
+  return suppressEmail(email);
+}
+
+// Subconjunto dos emails (já normalizados em minúsculas) que estão na supressão
+// global. Usado para excluir descadastrados de QUALQUER público antes do envio.
+export async function getSuppressedSet(emails: string[]): Promise<Set<string>> {
+  const norm = Array.from(new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean)));
+  if (norm.length === 0) return new Set();
+  const { data, error } = await supabase
+    .from("email_unsubscribes")
+    .select("email")
+    .in("email", norm);
   if (error) throw error;
+  return new Set(((data ?? []) as Array<{ email: string }>).map((r) => r.email.toLowerCase()));
 }
 
 // Parser de CSV simples (sem dependência externa). Aceita:
@@ -438,12 +476,17 @@ export async function resolveRecipients(audience: Audience | null): Promise<Reci
       .map((l) => ({ email: (l.email as string).trim(), name: l.name }));
   }
 
+  // Supressão GLOBAL (QA E2): remove descadastrados de QUALQUER público —
+  // inclusive leads (que não têm flag local) e contatos descadastrados em
+  // outra lista. Vale para 'leads' e 'list'.
+  const suppressed = await getSuppressedSet(rows.map((r) => r.email));
+
   // Deduplica por email (case-insensitive), preservando o primeiro nome visto.
   const seen = new Set<string>();
   const out: Recipient[] = [];
   for (const r of rows) {
     const key = r.email.toLowerCase();
-    if (!r.email || seen.has(key)) continue;
+    if (!r.email || seen.has(key) || suppressed.has(key)) continue;
     seen.add(key);
     out.push(r);
   }
@@ -493,9 +536,34 @@ function resolveBaseUrl(baseUrl?: string): string {
   return (baseUrl || config.appUrl || "").replace(/\/$/, "");
 }
 
+// URL assinada do redirect de click (QA E3 — a assinatura cobre c|e|u, então
+// o /track/click só redireciona para destinos que ele próprio gerou).
+export function buildClickUrl(
+  base: string,
+  campaignId: string,
+  email: string,
+  url: string
+): string {
+  const sig = signClick(campaignId, email, url);
+  const qs =
+    `c=${encodeURIComponent(campaignId)}` +
+    `&e=${encodeURIComponent(email)}` +
+    `&u=${encodeURIComponent(url)}` +
+    `&sig=${sig}`;
+  return `${base}/api/email/track/click?${qs}`;
+}
+
+// URL assinada de descadastro (QA E0). O /unsubscribe só descadastra com sig válida.
+export function buildUnsubUrl(base: string, campaignId: string, email: string): string {
+  const sig = signUnsub(campaignId, email);
+  const qs = `c=${encodeURIComponent(campaignId)}&e=${encodeURIComponent(email)}&sig=${sig}`;
+  return `${base}/api/email/unsubscribe?${qs}`;
+}
+
 // Injeta tracking no HTML do email:
-//   - reescreve <a href="..."> para passar pelo redirect /api/email/track/click
-//   - acrescenta um pixel 1x1 /api/email/track/open antes de </body> (ou no fim)
+//   - reescreve <a href="..."> http(s) para o redirect ASSINADO /track/click (E3)
+//   - acrescenta um rodapé com link de DESCADASTRO assinado (E0)
+//   - acrescenta um pixel 1x1 /track/open antes de </body> (ou no fim)
 // Se não há baseUrl absoluto, devolve o HTML intacto (não dá pra rastrear).
 export function injectTracking(
   html: string,
@@ -508,20 +576,27 @@ export function injectTracking(
   const c = encodeURIComponent(campaignId);
   const e = encodeURIComponent(email);
 
-  // Reescreve href de links http(s). Pula mailto:, tel:, âncoras e o próprio domínio de tracking.
+  // Reescreve href de links http(s) com URL de destino ASSINADA. Pula mailto:,
+  // tel:, âncoras (#) — só casa https?://...
   const rewritten = html.replace(
     /(<a\b[^>]*\bhref=)(["'])(https?:\/\/[^"']+)\2/gi,
-    (_m, pre: string, quote: string, url: string) => {
-      const u = encodeURIComponent(url);
-      return `${pre}${quote}${base}/api/email/track/click?c=${c}&e=${e}&u=${u}${quote}`;
-    }
+    (_m, pre: string, quote: string, url: string) =>
+      `${pre}${quote}${buildClickUrl(base, campaignId, email, url)}${quote}`
   );
 
+  // Rodapé de descadastro (link assinado) — obrigatório por conformidade.
+  const unsubUrl = buildUnsubUrl(base, campaignId, email);
+  const footer =
+    `<p style="margin-top:24px;font-size:12px;color:#888;text-align:center">` +
+    `Não quer mais receber estes e-mails? ` +
+    `<a href="${unsubUrl}" style="color:#888">Descadastrar</a>.</p>`;
+
   const pixel = `<img src="${base}/api/email/track/open?c=${c}&e=${e}" width="1" height="1" alt="" style="display:none" />`;
+
   if (/<\/body>/i.test(rewritten)) {
-    return rewritten.replace(/<\/body>/i, `${pixel}</body>`);
+    return rewritten.replace(/<\/body>/i, `${footer}${pixel}</body>`);
   }
-  return rewritten + pixel;
+  return rewritten + footer + pixel;
 }
 
 // ---------- Envio ----------
@@ -540,7 +615,18 @@ export interface SendResult {
 export async function sendCampaign(campaignId: string, baseUrl?: string): Promise<SendResult> {
   const campaign = await getCampaign(campaignId);
   if (!campaign) throw new Error("campanha não encontrada");
-  if (campaign.status === "enviando" || campaign.status === "enviada") {
+
+  // CLAIM ATÔMICO (QA E1): só assume o envio quem conseguir trocar o status de
+  // rascunho/erro -> enviando NESTE update. Se afetou 0 linhas, outra execução
+  // já está enviando (ou já enviou) — aborta sem reenviar. Fecha a corrida TOCTOU.
+  const { data: claimed, error: claimErr } = await supabase
+    .from("email_campaigns")
+    .update({ status: "enviando" })
+    .eq("id", campaignId)
+    .in("status", ["rascunho", "erro"])
+    .select("id");
+  if (claimErr) throw claimErr;
+  if (!claimed || claimed.length === 0) {
     throw new CampaignLockedError("campanha já enviada ou em envio");
   }
 
@@ -557,9 +643,7 @@ export async function sendCampaign(campaignId: string, baseUrl?: string): Promis
   }
 
   const recipients = await resolveRecipients(campaign.audience);
-
-  // Marca como "enviando" (lock otimista — quem já está enviando não reentra).
-  await supabase.from("email_campaigns").update({ status: "enviando" }).eq("id", campaignId);
+  const base = resolveBaseUrl(baseUrl);
 
   const provider = await getEmailProvider();
   let sent = 0;
@@ -567,13 +651,14 @@ export async function sendCampaign(campaignId: string, baseUrl?: string): Promis
 
   for (const r of recipients) {
     const body = injectTracking(html, campaignId, r.email, baseUrl);
+    // Header List-Unsubscribe (QA E0) — link assinado de descadastro com 1 clique.
+    const headers: Record<string, string> = { "X-Campaign-Id": campaignId };
+    if (base) {
+      headers["List-Unsubscribe"] = `<${buildUnsubUrl(base, campaignId, r.email)}>`;
+      headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
+    }
     try {
-      const { id } = await provider.send({
-        to: r.email,
-        subject,
-        html: body,
-        headers: { "X-Campaign-Id": campaignId },
-      });
+      const { id } = await provider.send({ to: r.email, subject, html: body, headers });
       await recordEvent(campaignId, r.email, "sent", { provider: provider.name, message_id: id });
       sent++;
     } catch (e) {

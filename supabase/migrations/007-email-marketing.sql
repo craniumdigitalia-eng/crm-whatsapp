@@ -95,6 +95,19 @@ create table if not exists email_events (
 create index if not exists idx_email_events_campaign_type
   on email_events(campaign_id, type);
 
+-- ------------------------------------------------------------------
+-- Supressão GLOBAL de descadastro (opt-out). Conformidade legal: um email
+-- aqui NUNCA recebe campanha, independente da lista/origem. Alimentada pela
+-- rota pública /api/email/unsubscribe (link assinado no rodapé do email).
+-- email é a PK (normalizado em minúsculas).
+-- ------------------------------------------------------------------
+create table if not exists email_unsubscribes (
+  email       text        primary key,
+  campaign_id uuid        references email_campaigns(id) on delete set null,
+  reason      text,
+  created_at  timestamptz not null default now()
+);
+
 -- =====================================================================
 -- RLS: as funções serverless (Vercel) acessam via service_role, que
 -- ignora RLS. Habilitar policies só quando expor leitura direta ao
@@ -106,3 +119,4 @@ create index if not exists idx_email_events_campaign_type
 -- alter table email_templates enable row level security;
 -- alter table email_campaigns enable row level security;
 -- alter table email_events    enable row level security;
+-- alter table email_unsubscribes enable row level security;
