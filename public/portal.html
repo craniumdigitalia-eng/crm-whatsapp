@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM — Cranium Digital</title>
+  <link rel="stylesheet" href="portal.css" />
+</head>
+<body>
+
+  <!-- =========================================================
+       SIDEBAR
+       ========================================================= -->
+  <aside class="sidebar" aria-label="Menu do CRM">
+
+    <!-- Brand lockup -->
+    <a href="#" class="sidebar-brand" aria-label="Cranium Digital — início">
+      <div
+        class="brand-logo"
+        role="img"
+        aria-label="Logo Cranium Digital"
+      ></div>
+      <div class="brand-wordmark" aria-hidden="true">
+        <span class="brand-wordmark__name">Cranium</span>
+        <span class="brand-wordmark__suffix">digital</span>
+      </div>
+    </a>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav" aria-label="Módulos">
+      <span class="nav-section" aria-hidden="true">Principal</span>
+
+      <a href="#" class="nav-item" data-module="dashboard" aria-label="Dashboard">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+        <span>Dashboard</span>
+      </a>
+
+      <a href="#" class="nav-item active" data-module="crm"
+         aria-current="page" aria-label="CRM Kanban (módulo atual)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <rect x="2" y="5" width="20" height="14" rx="2"/>
+          <line x1="8"  y1="5" x2="8"  y2="19"/>
+          <line x1="16" y1="5" x2="16" y2="19"/>
+        </svg>
+        <span>CRM</span>
+        <span class="nav-badge" aria-label="6 leads">6</span>
+      </a>
+
+      <a href="#" class="nav-item" data-module="leads" aria-label="Todos os leads">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span>Leads</span>
+      </a>
+
+      <span class="nav-section" aria-hidden="true">Inteligência</span>
+
+      <a href="#" class="nav-item" data-module="bi" aria-label="Métricas e BI">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        <span>Métricas &amp; BI</span>
+      </a>
+
+      <span class="nav-section" aria-hidden="true">Operações</span>
+
+      <a href="#" class="nav-item" data-module="agenda" aria-label="Agenda">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8"  y1="2" x2="8"  y2="6"/>
+          <line x1="3"  y1="10" x2="21" y2="10"/>
+        </svg>
+        <span>Agenda</span>
+      </a>
+
+      <a href="#" class="nav-item" data-module="whatsapp" aria-label="WhatsApp (2 novas mensagens)">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span>WhatsApp</span>
+        <span class="nav-badge" aria-label="2 novas mensagens">2</span>
+      </a>
+
+      <a href="#" class="nav-item" data-module="config" aria-label="Configurações">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0
+                   0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65
+                   1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65
+                   1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0
+                   0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0
+                   0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06
+                   -.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2
+                   2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        <span>Config</span>
+      </a>
+    </nav>
+
+    <!-- Bottom: IA status + user -->
+    <div class="sidebar-bottom">
+      <div class="ai-status-bar" role="status" aria-live="polite">
+        <span class="ai-status-dot" aria-hidden="true"></span>
+        <span class="ai-status-text">IA ativa · respondendo</span>
+      </div>
+      <div class="sidebar-user" tabindex="0" role="button" aria-label="Menu do usuário Bruno de Castro">
+        <div class="user-avatar" aria-hidden="true">B</div>
+        <div class="user-info">
+          <div class="user-name">Bruno de Castro</div>
+          <div class="user-role">Admin · Corretor</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- =========================================================
+       MAIN
+       ========================================================= -->
+  <main class="main">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-breadcrumb">
+        <span class="topbar-page">CRM</span>
+        <span class="topbar-sep" aria-hidden="true">/</span>
+        <span class="topbar-sub">Kanban</span>
+      </div>
+
+      <div class="topbar-search" role="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="#94A3B8" stroke-width="2" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          type="search"
+          placeholder="Buscar lead, telefone, serviço…"
+          aria-label="Buscar leads"
+        />
+      </div>
+
+      <div class="topbar-actions">
+        <button class="icon-btn" aria-label="Notificações (1 nova)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span class="notif-dot" aria-hidden="true"></span>
+        </button>
+
+        <button class="icon-btn" aria-label="Filtrar leads">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+        </button>
+
+        <div
+          class="topbar-avatar"
+          tabindex="0"
+          role="button"
+          aria-label="Perfil: Bruno de Castro"
+          aria-haspopup="true"
+        >B</div>
+      </div>
+    </header>
+
+    <!-- Kanban -->
+    <section class="kanban-wrapper" aria-label="Funil de leads CRM">
+
+      <!-- Toolbar / filtros rápidos -->
+      <div class="kanban-toolbar">
+        <div class="kanban-toolbar-left">
+          <span
+            class="kanban-lead-count"
+            id="lead-count-label"
+            aria-live="polite"
+            aria-atomic="true"
+          >Carregando…</span>
+
+          <button class="filter-chip active" aria-pressed="true">Todos</button>
+          <button class="filter-chip" aria-pressed="false">IA ativa</button>
+          <button class="filter-chip" aria-pressed="false">Humano</button>
+        </div>
+
+        <div class="kanban-toolbar-right">
+          <button
+            class="btn btn-ghost"
+            onclick="loadLeads()"
+            aria-label="Recarregar leads"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <polyline points="23 4 23 10 17 10"/>
+              <polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            Atualizar
+          </button>
+
+          <button class="btn btn-primary" aria-label="Adicionar novo lead">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5"  y1="12" x2="19" y2="12"/>
+            </svg>
+            Novo Lead
+          </button>
+        </div>
+      </div>
+
+      <!-- Board -->
+      <div
+        class="kanban-board"
+        id="kanban-board"
+        role="list"
+        aria-label="Colunas do funil de vendas"
+      >
+        <!-- Colunas e cards são injetados pelo portal.js -->
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="portal.js"></script>
+</body>
+</html>

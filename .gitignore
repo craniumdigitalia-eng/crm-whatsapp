@@ -8,3 +8,4 @@ data/*.db
 .next/
 data/
 .claude/agent-memory/
+*.tsbuildinfo

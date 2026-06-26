@@ -1,0 +1,149 @@
+/* ============================================================
+   Cranium Digital — Web Extensions
+   Adições ao DS específicas pra site (não conflitam com tokens base)
+   ============================================================ */
+
+:root {
+  /* ---------- Hero/display scale específica de web ---------- */
+  --text-hero-wide:    clamp(64px, 6.5vw, 96px);  /* 1440+ */
+  --text-hero:         clamp(48px, 5vw, 72px);    /* 1280  */
+  --text-lead:         clamp(18px, 1.5vw, 22px);  /* lead paragraph */
+  --text-blog-body:    17px;                       /* blog reading */
+  --text-stat-xl:      clamp(72px, 9vw, 128px);   /* big numerals */
+
+  /* ---------- Semantic colors (fria, sem quente) ---------- */
+  --semantic-success:        #10B981;
+  --semantic-success-bg:     rgba(16, 185, 129, 0.10);
+  --semantic-success-border: rgba(16, 185, 129, 0.30);
+
+  /* Error: sem vermelho — resolve com violeta + ícone */
+  --semantic-error-fg:       #7C3AED;
+  --semantic-error-bg:       rgba(124, 58, 237, 0.08);
+  --semantic-error-border:   rgba(124, 58, 237, 0.30);
+
+  /* Warning: reuso brand-light */
+  --semantic-warning-fg:     #A78BFA;
+  --semantic-warning-bg:     rgba(167, 139, 250, 0.10);
+
+  /* Info */
+  --semantic-info-fg:        #A78BFA;
+  --semantic-info-bg:        rgba(167, 139, 250, 0.08);
+
+  /* ---------- Hover states web ---------- */
+  --link-hover-light:        #6D28D9;
+  --card-hover-border:       rgba(167, 139, 250, 0.4);
+
+  /* ---------- Disabled state ---------- */
+  --disabled-bg:             #F5F3FF;
+  --disabled-fg:             #94A3B8;
+
+  /* ---------- Overlay ---------- */
+  --overlay-modal:           rgba(26, 10, 46, 0.72);
+}
+
+/* ============================================================
+   Reset minimal pro canvas
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* tabular nums em métricas */
+.cd-tnum {
+  font-feature-settings: "tnum", "lnum";
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ============================================================
+   Eyebrow (kicker label acima de H1/H2)
+   ============================================================ */
+
+.cd-eyebrow {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand-purple);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.cd-eyebrow--dark { color: var(--brand-light); }
+.cd-eyebrow::before {
+  content: "";
+  width: 24px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
+}
+
+/* ============================================================
+   Lead paragraph
+   ============================================================ */
+
+.cd-lead {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--text-lead);
+  line-height: 1.5;
+  color: var(--fg-muted);
+}
+.cd-lead--dark { color: var(--neutral-soft); }
+
+/* ============================================================
+   Focus ring (WCAG AA)
+   ============================================================ */
+
+.cd-focus-ring:focus-visible,
+.cd-btn:focus-visible,
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--brand-light);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   Sticky neural background
+   ============================================================ */
+
+.cd-neural-bg {
+  position: absolute;
+  inset: 0;
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Skeleton loading
+   ============================================================ */
+
+@keyframes cd-skeleton-shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: 200px 0; }
+}
+.cd-skeleton {
+  background: linear-gradient(90deg, rgba(167,139,250,0.06) 0%, rgba(167,139,250,0.18) 50%, rgba(167,139,250,0.06) 100%);
+  background-size: 400px 100%;
+  animation: cd-skeleton-shimmer 1.4s infinite linear;
+  border-radius: 8px;
+}
+
+/* ============================================================
+   IA pulse
+   ============================================================ */
+@keyframes cd-pulse { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+.cd-pulse { animation: cd-pulse 1.2s var(--ease) infinite; }
+
+/* ============================================================
+   Custom scrollbars (web only)
+   ============================================================ */
+.cd-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.cd-scroll::-webkit-scrollbar-track { background: transparent; }
+.cd-scroll::-webkit-scrollbar-thumb {
+  background: rgba(167,139,250,0.25);
+  border-radius: 999px;
+}
+.cd-scroll::-webkit-scrollbar-thumb:hover { background: rgba(167,139,250,0.45); }
