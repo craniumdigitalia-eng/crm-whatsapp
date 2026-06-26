@@ -48,92 +48,6 @@ const STAGES: Array<{ key: string; label: string; dotClass: string }> = [
 const AI_STAGES = new Set(['novo', 'em_atendimento', 'qualificado']);
 
 /* ============================================================
-   Mock de demonstração — usado quando /api/leads está indisponível
-   (next dev local sem credenciais Supabase)
-   ============================================================ */
-
-const MOCK_LEADS: Lead[] = [
-  {
-    id: 'demo-1',
-    name: 'Ana Beatriz Souza',
-    phone: '+55 11 98765-4321',
-    status: 'novo',
-    service_interest: 'PME · 8 vidas',
-    budget: 'R$ 2.400/mês',
-    notes: null,
-    last_message_at: new Date(Date.now() - 4 * 60 * 1000).toISOString(),
-    follow_up_count: 0,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'demo-2',
-    name: 'Carlos Eduardo Lima',
-    phone: '+55 21 99234-5678',
-    status: 'em_atendimento',
-    service_interest: 'Plano Individual',
-    budget: 'R$ 680/mês',
-    notes: null,
-    last_message_at: new Date(Date.now() - 22 * 60 * 1000).toISOString(),
-    follow_up_count: 1,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'demo-3',
-    name: 'Mariana Ferreira',
-    phone: '+55 31 98111-2233',
-    status: 'qualificado',
-    service_interest: 'Adesão Entidade',
-    budget: 'R$ 1.100/mês',
-    notes: null,
-    last_message_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    follow_up_count: 2,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'demo-4',
-    name: 'Roberto Alves Pinto',
-    phone: '+55 11 97654-3210',
-    status: 'proposta',
-    service_interest: 'PME · 15 vidas',
-    budget: 'R$ 5.200/mês',
-    notes: null,
-    last_message_at: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
-    follow_up_count: 3,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'demo-5',
-    name: 'Fernanda Costa',
-    phone: '+55 41 98000-1111',
-    status: 'fechado',
-    service_interest: 'PME · 3 vidas',
-    budget: 'R$ 950/mês',
-    notes: null,
-    last_message_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    follow_up_count: 0,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'demo-6',
-    name: 'Paulo Henrique Braga',
-    phone: '+55 85 99888-7766',
-    status: 'humano',
-    service_interest: 'Plano Individual',
-    budget: null,
-    notes: null,
-    last_message_at: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
-    follow_up_count: 1,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-/* ============================================================
    Helpers
    ============================================================ */
 
@@ -349,7 +263,7 @@ function KanbanSkeleton() {
 export default function KanbanBoard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isMock, setIsMock] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterKey>('all');
 
   // Busca textual (nome ou telefone) — debounce leve para não filtrar a cada tecla.
@@ -367,9 +281,6 @@ export default function KanbanBoard() {
   const lastFocusedRef = useRef<HTMLElement | null>(null);
 
   const loadLeads = useCallback(async () => {
-    let fetched: Lead[] = [];
-    let usedMock = false;
-
     try {
       const res = await fetch('/api/leads', {
         signal: AbortSignal.timeout(5000),
@@ -377,17 +288,17 @@ export default function KanbanBoard() {
       if (res.status === 401) { window.location.href = '/login'; return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json() as { leads?: Lead[] };
-      fetched = Array.isArray(data.leads) ? data.leads : [];
-      if (fetched.length === 0) throw new Error('sem leads na API');
+      const fetched = Array.isArray(data.leads) ? data.leads : [];
+      setLeads(fetched);
+      setLoadError(null);
     } catch (err) {
-      console.warn('[KanbanBoard] /api/leads indisponível — usando mock:', (err as Error).message);
-      fetched  = MOCK_LEADS;
-      usedMock = true;
+      // Erro real de API — nunca cai para dados fake. Mantém a lista atual e
+      // mostra um estado de erro honesto com opção de recarregar.
+      console.warn('[KanbanBoard] /api/leads indisponível:', (err as Error).message);
+      setLoadError('Não foi possível carregar os leads. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
-
-    setLeads(fetched);
-    setIsMock(usedMock);
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -500,12 +411,11 @@ export default function KanbanBoard() {
 
   const total = leads.length;
   const shown = filtered.length;
-  const mode = isMock ? 'demonstração' : 'ao vivo';
   const countLabel = loading
     ? 'Carregando…'
     : hasActiveFilter
-      ? `${shown} de ${total} lead${total !== 1 ? 's' : ''} · ${mode}`
-      : `${total} lead${total !== 1 ? 's' : ''} · ${mode}`;
+      ? `${shown} de ${total} lead${total !== 1 ? 's' : ''}`
+      : `${total} lead${total !== 1 ? 's' : ''}`;
 
   return (
     <>
@@ -669,6 +579,16 @@ export default function KanbanBoard() {
         >
           {loading ? (
             <KanbanSkeleton />
+          ) : loadError && leads.length === 0 ? (
+            <div className="kanban-error" role="alert">
+              <p className="kanban-error-text">{loadError}</p>
+              <button
+                className="btn btn-primary"
+                onClick={() => { setLoading(true); void loadLeads(); }}
+              >
+                Tentar novamente
+              </button>
+            </div>
           ) : (
             STAGES.map((stage) => (
               <KanbanColumn

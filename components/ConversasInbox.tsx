@@ -123,51 +123,6 @@ async function apiCall<T = unknown>(url: string, opts?: RequestInit): Promise<T>
 }
 
 /* ============================================================
-   Mock de demonstração — usado quando /api/leads está
-   indisponível (next dev local sem credenciais Supabase).
-   Espelha a estratégia do KanbanBoard para o módulo não ficar vazio.
-   ============================================================ */
-
-const now = Date.now();
-const iso = (msAgo: number) => new Date(now - msAgo).toISOString();
-
-const MOCK_LEADS: Lead[] = [
-  {
-    id: 'demo-carlos', name: 'Carlos Eduardo Lima', email: null, phone: '+55 21 99234-5678',
-    status: 'humano', service_interest: 'Plano Individual', budget: 'R$ 680/mês', notes: null,
-    follow_up_count: 1, last_direction: 'in', last_message_at: iso(4 * 60_000),
-    created_at: iso(86_400_000), updated_at: iso(4 * 60_000),
-  },
-  {
-    id: 'demo-juliana', name: 'Juliana Ferreira', email: null, phone: '+55 31 98111-2233',
-    status: 'em_atendimento', service_interest: 'Adesão Entidade', budget: 'R$ 1.100/mês', notes: null,
-    follow_up_count: 0, last_direction: 'out', last_message_at: iso(22 * 60_000),
-    created_at: iso(2 * 86_400_000), updated_at: iso(22 * 60_000),
-  },
-  {
-    id: 'demo-ana', name: 'Ana Beatriz Souza', email: null, phone: '+55 11 98765-4321',
-    status: 'novo', service_interest: 'PME · 8 vidas', budget: 'R$ 2.400/mês', notes: null,
-    follow_up_count: 0, last_direction: 'in', last_message_at: iso(2 * 3_600_000),
-    created_at: iso(3 * 3_600_000), updated_at: iso(2 * 3_600_000),
-  },
-];
-
-const MOCK_MESSAGES: Record<string, Message[]> = {
-  'demo-carlos': [
-    { id: 'm1', lead_id: 'demo-carlos', direction: 'in',  body: 'Oi, queria saber sobre o plano individual', external_id: null, created_at: iso(30 * 60_000) },
-    { id: 'm2', lead_id: 'demo-carlos', direction: 'out', body: 'Olá Carlos! Claro, o plano individual sai a partir de R$ 680/mês. Posso te enviar os detalhes?', external_id: null, created_at: iso(28 * 60_000) },
-    { id: 'm3', lead_id: 'demo-carlos', direction: 'in',  body: 'Pode sim, por favor', external_id: null, created_at: iso(4 * 60_000) },
-  ],
-  'demo-juliana': [
-    { id: 'm4', lead_id: 'demo-juliana', direction: 'in',  body: 'Bom dia! Vocês têm adesão por entidade de classe?', external_id: null, created_at: iso(40 * 60_000) },
-    { id: 'm5', lead_id: 'demo-juliana', direction: 'out', body: 'Bom dia, Juliana! Temos sim. Qual a sua categoria profissional?', external_id: null, created_at: iso(22 * 60_000) },
-  ],
-  'demo-ana': [
-    { id: 'm6', lead_id: 'demo-ana', direction: 'in', body: 'Olá! Preciso de um plano PME para 8 funcionários', external_id: null, created_at: iso(2 * 3_600_000) },
-  ],
-};
-
-/* ============================================================
    ConversasInbox
    ============================================================ */
 
@@ -175,7 +130,6 @@ export default function ConversasInbox() {
   const [leads, setLeads]       = useState<Lead[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [listError, setListError]     = useState<string | null>(null);
-  const [usingMock, setUsingMock]     = useState(false);
   const [search, setSearch]           = useState('');
 
   const [selectedId, setSelectedId]   = useState<string | null>(null);
@@ -190,7 +144,6 @@ export default function ConversasInbox() {
   const [replyText, setReplyText]     = useState('');
   const [replying, setReplying]       = useState(false);
 
-  const usingMockRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const replyInputRef  = useRef<HTMLInputElement>(null);
 
@@ -201,25 +154,15 @@ export default function ConversasInbox() {
     try {
       const data = await apiCall<{ leads: Lead[] }>('/api/leads');
       setLeads(data.leads);
-      setUsingMock(false);
-      usingMockRef.current = false;
       setListError(null);
     } catch (e) {
-      // Fallback de demonstração (igual ao KanbanBoard) quando a API falha.
-      if (!usingMockRef.current && leadsEmptyRef.current) {
-        setLeads(MOCK_LEADS);
-        setUsingMock(true);
-        usingMockRef.current = true;
-      }
+      // Erro real de API — nunca cai para dados fake. Mantém a lista atual e
+      // mostra um estado de erro honesto com opção de recarregar.
       setListError(e instanceof Error ? e.message : 'Erro ao carregar conversas');
     } finally {
       if (showSpinner) setLoadingList(false);
     }
   }, []);
-
-  // Ref para saber se a lista está vazia sem recriar fetchLeads.
-  const leadsEmptyRef = useRef(true);
-  useEffect(() => { leadsEmptyRef.current = leads.length === 0; }, [leads]);
 
   // Carga inicial + polling leve da lista.
   useEffect(() => {
@@ -232,14 +175,6 @@ export default function ConversasInbox() {
 
   const fetchChat = useCallback(async (id: string, showSpinner = false) => {
     if (showSpinner) { setLoadingChat(true); setChatError(null); }
-    // Modo mock: serve mensagens locais.
-    if (usingMockRef.current) {
-      const mockLead = MOCK_LEADS.find((l) => l.id === id) ?? null;
-      setLead(mockLead);
-      setMessages(MOCK_MESSAGES[id] ?? []);
-      if (showSpinner) setLoadingChat(false);
-      return;
-    }
     try {
       const data = await apiCall<{ lead: Lead; messages: Message[] }>(`/api/leads/${id}`);
       setLead(data.lead);
@@ -293,14 +228,7 @@ export default function ConversasInbox() {
   /* ---- Prévia da última mensagem na lista ---- */
 
   function preview(l: Lead): string {
-    // Em modo mock temos as mensagens; senão usamos last_direction como dica.
-    if (usingMock) {
-      const msgs = MOCK_MESSAGES[l.id];
-      if (msgs && msgs.length) {
-        const last = msgs[msgs.length - 1];
-        return (last.direction === 'out' ? 'Você: ' : '') + last.body;
-      }
-    }
+    // Sem o corpo da última mensagem na lista, usamos last_direction como dica.
     if (l.last_direction === 'out') return 'Você respondeu';
     if (l.last_direction === 'in')  return 'Nova mensagem recebida';
     return l.service_interest ?? 'Sem mensagens ainda';
@@ -322,11 +250,6 @@ export default function ConversasInbox() {
     setActing(actionKey);
     setActionError(null);
 
-    if (usingMockRef.current) {
-      // Modo mock: aplica localmente, sem round-trip.
-      setActing(null);
-      return;
-    }
     try {
       await apiCall(`/api/leads/${selectedId}/${path}`, {
         method: 'POST',
@@ -376,11 +299,6 @@ export default function ConversasInbox() {
     setReplying(true);
     setActionError(null);
 
-    if (usingMockRef.current) {
-      MOCK_MESSAGES[selectedId] = [...(MOCK_MESSAGES[selectedId] ?? []), optimistic];
-      setReplying(false);
-      return;
-    }
     try {
       await apiCall(`/api/leads/${selectedId}/reply`, {
         method: 'POST',
@@ -413,11 +331,6 @@ export default function ConversasInbox() {
       <aside className="conv-list" aria-label="Lista de conversas">
         <div className="conv-list-head">
           <h1 className="conv-list-title">Conversas</h1>
-          {usingMock && (
-            <span className="conv-mock-badge" title="Sem conexão com o servidor — exibindo dados de demonstração">
-              demo
-            </span>
-          )}
         </div>
 
         <div className="conv-search">
@@ -439,6 +352,17 @@ export default function ConversasInbox() {
         <div className="conv-list-body" role="list">
           {loadingList && leads.length === 0 ? (
             <div className="conv-list-state" aria-busy="true">Carregando conversas…</div>
+          ) : listError && leads.length === 0 ? (
+            <div className="conv-list-state" role="alert">
+              Não foi possível carregar as conversas. Tente novamente.
+              <button
+                className="conv-btn conv-btn--ghost"
+                style={{ marginTop: 12 }}
+                onClick={() => void fetchLeads(true)}
+              >
+                Tentar novamente
+              </button>
+            </div>
           ) : visibleLeads.length === 0 ? (
             <div className="conv-list-state">
               {search ? 'Nenhuma conversa encontrada.' : 'Nenhuma conversa ainda.'}

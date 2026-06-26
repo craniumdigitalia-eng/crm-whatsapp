@@ -715,6 +715,22 @@ body {
   align-items: flex-start;
 }
 
+.kanban-error {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 48px 24px;
+  text-align: center;
+}
+.kanban-error-text {
+  color: var(--neutral-soft);
+  font-size: 14px;
+  margin: 0;
+}
+
 .kanban-board::-webkit-scrollbar { height: 6px; }
 .kanban-board::-webkit-scrollbar-track { background: transparent; }
 .kanban-board::-webkit-scrollbar-thumb { background: rgba(167, 139, 250, 0.22); border-radius: 999px; }
