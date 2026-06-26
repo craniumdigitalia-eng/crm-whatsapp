@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireUser } from '@/lib/auth';
 import { getLead, addMessage, setStatus } from '@/src/crm/leads';
 import { sendText } from '@/src/whatsapp/evolution';
 
@@ -9,6 +10,8 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
   const { id } = await params;
   if (!id) return NextResponse.json({ error: 'id invalido' }, { status: 400 });
   try {

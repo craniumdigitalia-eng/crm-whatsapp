@@ -35,6 +35,21 @@ export const config = {
 
   companyName: process.env.COMPANY_NAME ?? "nossa agencia",
 
+  // ===== Meta / Facebook Lead Ads (Story 5.14) =====
+  // Lidos primeiro do env; a aba "Integracoes" pode sobrescrever via
+  // tabela integrations_config (merge em src/crm/integrations.ts).
+  metaPageAccessToken: process.env.META_PAGE_ACCESS_TOKEN ?? "",
+  metaAppSecret: process.env.META_APP_SECRET ?? "",
+  metaVerifyToken: process.env.META_VERIFY_TOKEN ?? "",
+  metaFormId: process.env.META_FORM_ID ?? "",
+  // Versao da Graph API usada nas chamadas (GET /{form_id}/leads etc.).
+  metaGraphVersion: process.env.META_GRAPH_VERSION ?? "v21.0",
+
+  // ===== Google Calendar OAuth (stub — Parte 3) =====
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+  googleRedirectUri: process.env.GOOGLE_REDIRECT_URI ?? "",
+
   // Make como ponte de canal WhatsApp (producao).
   // Se MAKE_SEND_URL nao estiver definido, sendText cai no fallback Evolution (dev local).
   makeSendUrl: process.env.MAKE_SEND_URL ?? "",

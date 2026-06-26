@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireUser } from '@/lib/auth';
 import { getLead, updateLeadFields } from '@/src/crm/leads';
 
 // POST /api/leads/:id/edit — edita campos de qualificação manualmente.
@@ -7,6 +8,8 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
   const { id } = await params;
   if (!id) return NextResponse.json({ error: 'id invalido' }, { status: 400 });
   try {

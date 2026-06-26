@@ -36,6 +36,19 @@ export interface Lead {
   updated_at: string;
 }
 
+// Atribuicao / origem do lead (Story 5.14 — Meta Lead Ads).
+// Selecionada separadamente de LEAD_COLS (colunas da migration 003);
+// os campos sao opcionais para nao quebrar leads pre-migration.
+export interface LeadAttribution {
+  source: string | null; // ex: 'meta_lead_ads'
+  form_id: string | null;
+  leadgen_id: string | null;
+  ad_id: string | null;
+  campaign_id: string | null;
+  // Respostas do formulario instantaneo: { "Qual seu interesse?": "Plano PME", ... }
+  form_data: Record<string, string> | null;
+}
+
 export interface Message {
   id: string; // UUID
   lead_id: string; // UUID — FK para leads.id
@@ -43,4 +56,23 @@ export interface Message {
   body: string;
   external_id: string | null; // ID externo (Evolution/Make) para deduplicacao de reentregas
   created_at: string;
+}
+
+// Etiqueta (Story 5.12) — catalogo de tags aplicaveis aos leads.
+export interface Tag {
+  id: string; // UUID
+  name: string; // unico
+  color: string; // hex CSS, default '#7C3AED'
+  created_at: string;
+}
+
+// Item de checklist de um lead (Story 5.13).
+export interface ChecklistItem {
+  id: string; // UUID
+  lead_id: string; // UUID — FK para leads.id
+  text: string;
+  done: boolean;
+  position: number; // ordem dentro do lead
+  created_at: string;
+  updated_at: string;
 }

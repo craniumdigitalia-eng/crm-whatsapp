@@ -13,7 +13,7 @@ const tools = [
   {
     name: "atualizar_lead",
     description:
-      "Registra ou atualiza informacoes de qualificacao do lead no CRM. Use sempre que descobrir o servico desejado, orcamento, ou quiser anotar algo util.",
+      "Registra ou atualiza informacoes de qualificacao do lead no CRM. Use sempre que descobrir o servico desejado, orcamento, ou quando o resumo da qualificacao (notes) precisar ser atualizado.",
     input_schema: {
       type: "object",
       properties: {
@@ -22,7 +22,11 @@ const tools = [
           description: "Servico/projeto que o lead deseja (ex: 'site institucional', 'trafego pago').",
         },
         budget: { type: "string", description: "Nocao de orcamento informada pelo lead, se houver." },
-        notes: { type: "string", description: "Anotacoes uteis sobre o contexto/necessidade do lead." },
+        notes: {
+          type: "string",
+          description:
+            "Resumo conciso e estruturado da qualificacao do lead, no formato definido nas instrucoes. REESCREVA o resumo inteiro (estado atual) a cada atualizacao — nao anexe nem empilhe historico.",
+        },
         status: {
           type: "string",
           enum: ["em_atendimento", "qualificado"],
@@ -38,7 +42,11 @@ const tools = [
     input_schema: {
       type: "object",
       properties: {
-        resumo: { type: "string", description: "Resumo do caso para o especialista que vai assumir." },
+        resumo: {
+          type: "string",
+          description:
+            "Resumo da qualificacao para o especialista que vai assumir, no mesmo formato estruturado do campo notes, com o Status indicando a transferencia. Vira o resumo (notes) do lead.",
+        },
       },
       required: ["resumo"],
     },
@@ -53,7 +61,7 @@ function historyToMessages(history: Message[]): Anthropic.MessageParam[] {
   }));
 }
 
-async function applyTool(lead: Lead, name: string, input: any): Promise<{ handoff: boolean }> {
+export async function applyTool(lead: Lead, name: string, input: any): Promise<{ handoff: boolean }> {
   if (name === "atualizar_lead") {
     await updateLeadFields(lead.id, {
       service_interest: input.service_interest,
@@ -64,8 +72,11 @@ async function applyTool(lead: Lead, name: string, input: any): Promise<{ handof
     return { handoff: false };
   }
   if (name === "transferir_para_humano") {
-    const note = input.resumo ? `[Transferido p/ humano] ${input.resumo}` : "[Transferido p/ humano]";
-    await updateLeadFields(lead.id, { status: "humano", notes: note });
+    // O resumo da transferencia e o proprio resumo de qualificacao (formato estruturado) —
+    // vira o notes do lead. Se vier vazio, preserva o resumo que o agente ja mantinha em notes.
+    const fields: Partial<Pick<Lead, "status" | "notes">> = { status: "humano" };
+    if (input.resumo) fields.notes = input.resumo;
+    await updateLeadFields(lead.id, fields);
     return { handoff: true };
   }
   return { handoff: false };

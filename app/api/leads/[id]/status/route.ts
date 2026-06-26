@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireUser } from '@/lib/auth';
 import { getLead, setStatus } from '@/src/crm/leads';
 import { STATUS_LABELS } from '@/src/types';
 import type { LeadStatus } from '@/src/types';
@@ -13,6 +14,8 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
   const { id } = await params;
   if (!id) return NextResponse.json({ error: 'id invalido' }, { status: 400 });
   try {

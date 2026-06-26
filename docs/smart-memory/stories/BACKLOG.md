@@ -100,10 +100,94 @@ flowchart LR
     S34 --> S45
 ```
 
-## Resumo
+## Resumo (Epics 1–4 — migração)
 - **14 stories** em 4 waves: Wave 0 (3) · Wave 1 (2) · Wave 2 (4) · Wave 3 (5).
 - **7 god-node stories** (modo `pre-flight`): 1.1, 1.2, 1.3, 2.2, 3.1, 3.3, 4.3.
 - Complexidade: S(2) · M(7) · L(5) · XL(0).
+
+---
+
+# Epic 5 — Portal interno multi-módulo
+
+Nova direção (usuário, 2026-06-25): CRM → **portal da equipe interna** da Cranium. O backend (Supabase + serverless + agente IA + WhatsApp) vira **fundação**; o CRM vira módulo. Decisões **accepted**: [[../decisions/ADR-003-portal-nextjs]] (front → Next.js App Router) e [[../decisions/ADR-004-canal-whatsapp-qr-vs-make]] (**DECISÃO FINAL: canal = Evolution auto-hospedada; Make dropado de tudo; agendamento via Google Calendar direto; aquisição via Meta Lead Ads (formulário instantâneo) outbound-first**). Princípio: minimizar o esforço do **usuário** (escaneia 1 QR + conecta Google + cria anúncio com formulário; nós hospedamos/mantemos).
+
+## Wave P0 — Fundação do Portal
+> Shell + auth + branding. Base de todos os módulos.
+
+| Story | Título | Complexidade | God node | Status | Agente |
+|---|---|---|---|---|---|
+| [[backlog/5.1-portal-nextjs-shell\|5.1]] | Shell do portal em Next.js App Router | XL | não | backlog | — |
+| [[backlog/5.2-auth-rbac-interno\|5.2]] | Auth interno + RBAC (Supabase Auth SSR + RLS por papel) | L | não | backlog | — |
+| [[5.3-design-system-branded\|5.3]] | Design system branded (KV) | L | não | active | — |
+
+## Wave P1 — Migrar CRM para o portal
+> Depende da P0. Porta o que já existe.
+
+| Story | Título | Complexidade | God node | Status | Agente |
+|---|---|---|---|---|---|
+| [[backlog/5.4-modulo-crm-kanban\|5.4]] | Módulo CRM/kanban no portal | M | não | backlog | — |
+| [[backlog/5.5-aba-leads-rica\|5.5]] | Aba rica de visualização de leads | L | não | backlog | — |
+
+## Wave P2 — Módulos novos
+> Depende da P0 (e P1 p/ contexto de leads). Módulos podem ir em paralelo entre si.
+
+| Story | Título | Complexidade | God node | Status | Agente |
+|---|---|---|---|---|---|
+| [[backlog/5.6-modulo-metricas-bi\|5.6]] | Métricas & BI | L | não | backlog | — |
+| [[backlog/5.7-modulo-agendamento\|5.7]] | Agendamento de reuniões (Google Calendar direto) | L | sim | backlog | — |
+| [[backlog/5.8-evolution-self-hosted\|5.8]] | Provisionar Evolution auto-hospedada + re-rota do canal | L | sim | backlog | — |
+| [[backlog/5.9-whatsapp-connect-qr\|5.9]] | Conectar WhatsApp via QR no portal | M | não | backlog | — |
+| [[backlog/5.10-meta-lead-ads\|5.10]] | Integração Meta Lead Ads (form instantâneo) + opener outbound | L | sim | backlog | — |
+| [[backlog/5.11-guia-setup-evolution-leadads\|5.11]] | Guia de setup (Evolution + Meta Lead Ads + Google Calendar) (doc) | S | não | backlog | — |
+
+> **Decisão final ADR-004 (Evolution, Make dropado):** a 3.1 (adapter→Make) sai do caminho; a borda do canal volta a Vercel↔Evolution direto (encapsulado em 5.8 + ajuste do `/api/webhook`). Make removido também do agendamento (5.7 usa Google Calendar direto).
+
+## Grafo de dependências (Epic 5)
+
+```mermaid
+flowchart LR
+    ADR3[ADR-003 Next.js] --> P51[5.1 shell]
+    ADR4[ADR-004 Evolution] --> P58[5.8 Evolution host]
+    KV[(KV do usuário)] --> P53[5.3 design system]
+    P51 --> P52[5.2 auth+RBAC]
+    P51 --> P53
+    P51 --> P54[5.4 CRM module]
+    P53 --> P54
+    P52 --> P54
+    P53 --> P55[5.5 leads-view]
+    P54 --> P55
+    P53 --> P56[5.6 BI]
+    P45[4.5 tokens/custo] --> P56
+    P510[5.10 Meta Lead Ads + opener] --> P56
+    P53 --> P57[5.7 agendamento - Google Cal]
+    P33[3.3 webhook] --> P58
+    P58 --> P59[5.9 QR connect]
+    P52 --> P59
+    P58 --> P510
+    P58 --> P511[5.11 guia setup]
+    P59 --> P511
+    P57 --> P511
+    P510 --> P511
+```
+
+## Re-escopo de stories da Wave 3 (efeito do Epic 5)
+> O portal absorve/reescopa stories do epic 4 — evitar trabalho duplicado:
+
+| Story 4.x | Destino |
+|---|---|
+| 4.1 dashboard estático na Vercel | **Superseded** por 5.1 (shell Next.js) |
+| 4.2 auth + RLS | **Absorvida** por 5.2 (auth+RBAC do portal) |
+| 4.3 distinguir IA vs humano | **Mantida** — concern de dados; alimenta 5.4/5.5 |
+| 4.4 a11y do drawer | **Absorvida** por 5.3/5.4 |
+| 4.5 observabilidade + tokens/custo | **Mantida** — pré-requisito do BI (5.6) |
+| 4.6 redesign visual dashboard | **Absorvida** por 5.3 (design system) |
+
+## Resumo (Epic 5 — portal)
+- **11 stories** em 3 waves: P0 (3) · P1 (2) · P2 (6).
+- **3 god-node stories** (`pre-flight`): 5.7 (gatilho de qualificação), 5.8 (borda de canal/webhook), 5.10 (Lead Ads: cria lead + opener outbound; toca tipos/intake/envio). 5.1/5.2 também em `pre-flight` por raio de impacto (não-god-node).
+- Complexidade: S(1) · M(2) · L(7) · XL(1).
+- **ADRs accepted:** 003 (Next.js) e 004 (**FINAL: Evolution auto-hospedada; Make dropado de tudo; Google Calendar direto no agendamento; aquisição via Meta Lead Ads / formulário instantâneo, outbound-first**).
+- **Bloqueios:** 5.3 bloqueada pelo KV do usuário; P2 depende de P0; 5.8 re-rota o `/api/webhook` (3.3 entregue) para payload da Evolution; 5.9/5.10/5.11 dependem de 5.8.
 
 ## Follow-ups / Tech-debt (de QA)
 > Itens não-bloqueantes levantados em review. Endereçar em hardening futuro.

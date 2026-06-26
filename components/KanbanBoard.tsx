@@ -7,6 +7,12 @@ import ConversationDrawer from './ConversationDrawer';
    Types
    ============================================================ */
 
+interface Tag {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface Lead {
   id: string;
   name: string | null;
@@ -20,6 +26,7 @@ interface Lead {
   last_direction?: 'in' | 'out' | null;
   created_at: string;
   updated_at: string;
+  tags?: Tag[];
 }
 
 type FilterKey = 'all' | 'ia' | 'human';
@@ -153,14 +160,8 @@ function relativeTime(iso: string | null): string {
   return `${Math.floor(diff / 86400)}d`;
 }
 
-const SOURCES = ['WhatsApp', 'Site', 'Indicação', 'Instagram', 'Google'];
-function originTag(lead: Lead): string {
-  let h = 0;
-  for (let i = 0; i < (lead.id || '').length; i++) {
-    h = (h * 31 + lead.id.charCodeAt(i)) & 0xffffffff;
-  }
-  return SOURCES[Math.abs(h) % SOURCES.length];
-}
+// Origem real do lead virá da integração Meta Lead Ads (stories 5.10 / 5.14).
+// Até lá não exibimos nenhuma origem no card — origem inventada é enganosa.
 
 function esc(str: string | null | undefined): string {
   if (!str) return '';
@@ -183,7 +184,6 @@ function LeadCard({
   onOpen: (id: string, el: HTMLElement) => void;
 }) {
   const isAI  = AI_STAGES.has(lead.status);
-  const src   = originTag(lead);
   const color = avatarColor(lead.name);
   const time  = relativeTime(lead.last_message_at);
 
@@ -221,6 +221,21 @@ function LeadCard({
         </div>
       </div>
 
+      {lead.tags && lead.tags.length > 0 && (
+        <div className="lead-card-tags" aria-label="Etiquetas">
+          {lead.tags.map((t) => (
+            <span
+              key={t.id}
+              className="lead-tag-chip"
+              style={{ background: t.color }}
+              title={t.name}
+            >
+              {esc(t.name)}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="lead-card-meta">
         {lead.service_interest && (
           <span className="tag tag-service">{esc(lead.service_interest)}</span>
@@ -228,7 +243,7 @@ function LeadCard({
         {lead.budget && (
           <span className="tag tag-budget">{esc(lead.budget)}</span>
         )}
-        <span className="tag tag-source">{esc(src)}</span>
+        {/* Origem (Meta Lead Ads) será exibida aqui quando a integração existir — stories 5.10 / 5.14. */}
       </div>
 
       <div className="lead-card-footer">
@@ -337,6 +352,16 @@ export default function KanbanBoard() {
   const [isMock, setIsMock] = useState(false);
   const [filter, setFilter] = useState<FilterKey>('all');
 
+  // Busca textual (nome ou telefone) — debounce leve para não filtrar a cada tecla.
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+
+  // Filtro por etiqueta (catálogo + seleção; match ANY).
+  const [tagCatalog, setTagCatalog] = useState<Tag[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [tagMenuOpen, setTagMenuOpen] = useState(false);
+  const tagFilterRef = useRef<HTMLDivElement | null>(null);
+
   // Drawer state
   const [openLeadId, setOpenLeadId] = useState<string | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
@@ -349,6 +374,7 @@ export default function KanbanBoard() {
       const res = await fetch('/api/leads', {
         signal: AbortSignal.timeout(5000),
       });
+      if (res.status === 401) { window.location.href = '/login'; return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json() as { leads?: Lead[] };
       fetched = Array.isArray(data.leads) ? data.leads : [];
@@ -369,6 +395,52 @@ export default function KanbanBoard() {
     const interval = setInterval(() => { void loadLeads(); }, 15000);
     return () => clearInterval(interval);
   }, [loadLeads]);
+
+  /* Debounce da busca (~200ms) — evita refiltrar a lista a cada tecla. */
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 200);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  /* Carrega o catálogo de etiquetas para o filtro (silencioso se indisponível). */
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/tags', { signal: AbortSignal.timeout(5000) });
+        if (res.status === 401) { window.location.href = '/login'; return; }
+        if (!res.ok) return;
+        const data = await res.json() as { tags?: Tag[] };
+        if (active && Array.isArray(data.tags)) setTagCatalog(data.tags);
+      } catch {
+        /* sem catálogo → o filtro de etiqueta simplesmente não aparece */
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  /* Fecha o dropdown de etiquetas ao clicar fora ou pressionar Escape. */
+  useEffect(() => {
+    if (!tagMenuOpen) return;
+    const onPointer = (e: MouseEvent) => {
+      if (tagFilterRef.current && !tagFilterRef.current.contains(e.target as Node)) {
+        setTagMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setTagMenuOpen(false); };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [tagMenuOpen]);
+
+  const toggleTag = useCallback((id: string) => {
+    setSelectedTagIds(prev =>
+      prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
+    );
+  }, []);
 
   /* Abre o drawer e registra o elemento gatilho para restaurar foco ao fechar (AC2). */
   const handleOpenLead = useCallback((id: string, el: HTMLElement) => {
@@ -392,12 +464,31 @@ export default function KanbanBoard() {
     );
   }, []);
 
-  /* Filtragem por chip */
+  /* Filtragem combinada (AND): chip de estágio-tipo E busca textual E etiquetas. */
+  const query = search.trim().toLowerCase();
   const filtered = leads.filter((lead) => {
-    if (filter === 'ia')    return AI_STAGES.has(lead.status);
-    if (filter === 'human') return lead.status === 'humano';
+    // Chip Todos / IA ativa / Humano
+    if (filter === 'ia'    && !AI_STAGES.has(lead.status)) return false;
+    if (filter === 'human' && lead.status !== 'humano')    return false;
+
+    // Busca por nome OU telefone (case-insensitive, contém)
+    if (query) {
+      const name  = (lead.name ?? '').toLowerCase();
+      const phone = (lead.phone ?? '').toLowerCase();
+      if (!name.includes(query) && !phone.includes(query)) return false;
+    }
+
+    // Etiquetas — mostra leads com pelo menos uma das selecionadas (match ANY)
+    if (selectedTagIds.length > 0) {
+      const leadTagIds = (lead.tags ?? []).map(t => t.id);
+      if (!selectedTagIds.some(id => leadTagIds.includes(id))) return false;
+    }
+
     return true;
   });
+
+  const hasActiveFilter =
+    filter !== 'all' || query !== '' || selectedTagIds.length > 0;
 
   /* Agrupa por estágio */
   const grouped: Record<string, Lead[]> = {};
@@ -408,11 +499,13 @@ export default function KanbanBoard() {
   });
 
   const total = leads.length;
+  const shown = filtered.length;
+  const mode = isMock ? 'demonstração' : 'ao vivo';
   const countLabel = loading
     ? 'Carregando…'
-    : isMock
-      ? `${total} leads · demonstração`
-      : `${total} lead${total !== 1 ? 's' : ''} · ao vivo`;
+    : hasActiveFilter
+      ? `${shown} de ${total} lead${total !== 1 ? 's' : ''} · ${mode}`
+      : `${total} lead${total !== 1 ? 's' : ''} · ${mode}`;
 
   return (
     <>
@@ -445,6 +538,99 @@ export default function KanbanBoard() {
                 {label}
               </button>
             ))}
+
+            {/* Busca textual — nome ou telefone */}
+            <div className="kanban-search" role="search">
+              <svg
+                className="kanban-search-icon"
+                width="13" height="13" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth={2.4} aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="search"
+                className="kanban-search-input"
+                placeholder="Buscar nome ou telefone…"
+                aria-label="Buscar leads por nome ou telefone"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  className="kanban-search-clear"
+                  aria-label="Limpar busca"
+                  onClick={() => { setSearchInput(''); setSearch(''); }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" strokeWidth={2.6} aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* Filtro por etiqueta — escondido se não há catálogo (match ANY) */}
+            {tagCatalog.length > 0 && (
+              <div className="kanban-tag-filter" ref={tagFilterRef}>
+                <button
+                  type="button"
+                  className={`filter-chip${selectedTagIds.length > 0 ? ' active' : ''}`}
+                  aria-haspopup="true"
+                  aria-expanded={tagMenuOpen}
+                  onClick={() => setTagMenuOpen((o) => !o)}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" strokeWidth={2.2} aria-hidden="true">
+                    <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z" />
+                    <line x1="7" y1="7" x2="7.01" y2="7" />
+                  </svg>
+                  Etiquetas
+                  {selectedTagIds.length > 0 && (
+                    <span className="kanban-tag-filter-badge">{selectedTagIds.length}</span>
+                  )}
+                </button>
+
+                {tagMenuOpen && (
+                  <div
+                    className="kanban-tag-menu"
+                    role="group"
+                    aria-label="Filtrar por etiqueta"
+                  >
+                    {tagCatalog.map((tag) => {
+                      const checked = selectedTagIds.includes(tag.id);
+                      return (
+                        <label key={tag.id} className="kanban-tag-option">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleTag(tag.id)}
+                          />
+                          <span
+                            className="kanban-tag-swatch"
+                            style={{ background: tag.color }}
+                            aria-hidden="true"
+                          />
+                          <span className="kanban-tag-option-name">{esc(tag.name)}</span>
+                        </label>
+                      );
+                    })}
+                    {selectedTagIds.length > 0 && (
+                      <button
+                        type="button"
+                        className="kanban-tag-clear"
+                        onClick={() => setSelectedTagIds([])}
+                      >
+                        Limpar etiquetas
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="kanban-toolbar-right">

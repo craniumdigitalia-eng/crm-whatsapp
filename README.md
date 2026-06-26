@@ -31,13 +31,33 @@ Edite o `.env`:
 
 ## Rodar
 
+### Portal Next.js (Wave 3+)
+
 ```bash
-npm run dev      # modo desenvolvimento (reinicia ao salvar)
-# ou
-npm run build && npm start
+npm run dev      # next dev — portal em http://localhost:3000
+npm run build    # next build — build de produção
+npm start        # next start — serve o build de produção
 ```
 
-Acesse o dashboard em **http://localhost:3000**.
+> **`next dev` local:** sem variáveis de ambiente do Supabase, a API `/api/leads` não responde e o kanban cai automaticamente para dados de demonstração (6 leads mock). Para dados reais, use `vercel dev` — ele carrega as env vars do projeto Vercel e serve as funções `api/` com Supabase.
+
+### Servidor backend (Express + ts-node, Wave 1-2)
+
+```bash
+npm run dev:server    # ts-node-dev — servidor Express em porta 3001 (ou PORTA do .env)
+npm run build:server  # tsc — compila src/ → dist/
+npm run start:server  # node dist/index.js
+npm test              # jest — roda os testes de src/
+```
+
+### Verificação de tipos
+
+```bash
+npx tsc --project tsconfig.backend.json --noEmit  # backend (src/)
+npx tsc --noEmit                                   # portal Next.js (app/ + components/)
+```
+
+Acesse o portal em **http://localhost:3000**.
 
 ## Conectar o WhatsApp (webhook)
 

@@ -29,8 +29,10 @@ Trate o protótipo como **referência de lógica de negócio**. A versão de pro
 | Banco | **Supabase** (Postgres). Schema base pronto em [supabase/schema.sql](supabase/schema.sql). |
 | Hospedagem | **Vercel** (funções serverless + Vercel Cron). |
 | IA | **Claude API** (`claude-opus-4-8`; trocar para `claude-sonnet-4-6` se precisar baratear no volume). |
-| WhatsApp | **Não-oficial**, via **Make** como ponte (ver "Integração WhatsApp"). |
-| Automação/glue | **Make.com** (já disponível). |
+| WhatsApp | **Evolution API** auto-hospedada (Railway) — QR de pareamento exibido no portal; Vercel↔Evolution direto. |
+| Aquisição | **Meta Lead Ads** (formulário instantâneo) → webhook `leadgen` → opener outbound automático. |
+| Agendamento | **Google Calendar API** direto (sem Make). |
+| Front | **Next.js App Router** — portal multi-módulo da equipe interna (Supabase Auth SSR + RBAC). |
 
 ## Implicações de arquitetura (importante)
 
@@ -38,24 +40,34 @@ Trate o protótipo como **referência de lógica de negócio**. A versão de pro
 2. **Persistência** → trocar [src/db.ts](src/db.ts) (SQLite) por `@supabase/supabase-js` usando a **service_role key** no servidor (ignora RLS). Reescrever [src/crm/leads.ts](src/crm/leads.ts) com as mesmas funções, mas batendo no Supabase.
 3. **Webhook idempotente** → Make/Evolution podem reenviar; deduplicar por id da mensagem.
 
-## Integração WhatsApp — DECIDIDO: Make como ponte
+## Canal WhatsApp + Aquisição — DECIDIDO: Evolution + Meta Lead Ads (ADR-004)
 
-A Vercel (serverless) não hospeda a Evolution, então o **Make** é a ponte com o WhatsApp:
-- **Entrada:** WhatsApp → cenário no Make → `POST {VERCEL_URL}/api/webhook` com `{ phone, name, text }` (deduplicar por id da mensagem).
-- **Saída:** a rota da Vercel faz `POST` no **webhook do Make** (`MAKE_SEND_URL`) com `{ phone, text }`, e o Make envia no WhatsApp.
+**Make foi descartado.** Decisão final (ver `docs/smart-memory/decisions/ADR-004`):
 
-Assim a Vercel não fala com a Evolution diretamente — o Make abstrai o canal. (Alternativa descartada: Evolution num VPS/Railway com a Vercel chamando direto.)
+- **Canal = Evolution API auto-hospedada** (Railway). A Vercel fala **direto** com a Evolution.
+  - **Saída:** `src/whatsapp/evolution.ts` envia direto na Evolution.
+  - **Entrada (respostas do lead):** webhook da Evolution → `POST {VERCEL_URL}/api/webhook` → `handleInbound` → agente. Dedupe por `external_id = key.id` (id nativo da mensagem).
+  - **QR:** o portal mostra o QR de pareamento, proxied por uma função `/api` autenticada (nunca client→Evolution direto).
+- **Aquisição = Meta Lead Ads (formulário instantâneo)** — fluxo **outbound-first**:
+  - Lead preenche o form no Meta → webhook `leadgen` → `POST {VERCEL_URL}/api/leadgen` → busca dados via Graph API → cria o lead → **dispara mensagem de abertura (outbound)** via Evolution → lead responde → cai no `/api/webhook` → agente assume.
+  - Dois ingressos distintos: `/api/leadgen` (novos leads do Meta) e `/api/webhook` (respostas do WhatsApp).
+  - O **opener livre exige Evolution** (a Cloud API oficial pediria template aprovado).
+- **Agendamento:** Google Calendar API direto (sem Make).
 
-## Roadmap de migração (protótipo → produção)
+## Roadmap — migração FEITA, agora vira PORTAL
 
-- [ ] Criar projeto Supabase, rodar [supabase/schema.sql](supabase/schema.sql).
-- [ ] `db.ts`/`leads.ts` → Supabase (`@supabase/supabase-js`, service_role no server).
-- [ ] Reestruturar rotas Express → funções serverless em `/api` (ou migrar para Next.js App Router).
-- [ ] `/api/webhook` (entrada de mensagens, idempotente) → chama o agente → responde via Make.
-- [ ] `/api/cron/followup` + **Vercel Cron** (config em `vercel.json`), protegido por `CRON_SECRET`.
-- [ ] Dashboard na Vercel (estático ou Next.js); opcional **Supabase Auth** + RLS.
-- [ ] **Substituir o SDR de fato:** quando o lead qualifica, agendar reunião (Cal.com/Google Calendar via Make) e notificar a equipe.
-- [ ] Observabilidade (logs, métricas de conversão por estágio) e rate limiting.
+**Migração protótipo → produção: CONCLUÍDA (PRs #1-#3).**
+- [x] **Wave 0 — Hardening:** idempotência (`external_id`), UUID, follow-up atômico.
+- [x] **Wave 1 — Supabase:** `db.ts`/`leads.ts` reescritos para `@supabase/supabase-js`; schema aplicado.
+- [x] **Wave 2 — Serverless:** rotas → funções `/api`; `/api/webhook`; `/api/cron/followup` + Vercel Cron (`CRON_SECRET`); webhook fail-closed.
+
+**Próximo — Epic 5: Portal interno (Next.js).** Ver `docs/smart-memory/stories/backlog/5.*` + ADR-003/004.
+- [ ] P0: shell Next.js · auth Supabase + RBAC · design system (KV em `docs/design/kv/`).
+- [ ] P1: módulo CRM/kanban · aba rica de leads.
+- [ ] P2: Métricas & BI · Agendamento (Google Calendar direto) · Evolution self-hosted + QR · Meta Lead Ads (form → opener) · guia de setup.
+- [ ] Observabilidade + rate limiting.
+
+> Nota: a Wave 2 entregou a borda do canal via Make; o ADR-004 re-rota para **Evolution direto** (encapsulado nas stories 5.8/5.10 + ajuste do `/api/webhook`). Domínio intacto.
 
 ## Variáveis de ambiente (produção)
 
@@ -64,8 +76,17 @@ ANTHROPIC_API_KEY=...
 AGENT_MODEL=claude-opus-4-8
 SUPABASE_URL=...
 SUPABASE_SERVICE_ROLE_KEY=...
-MAKE_SEND_URL=...            # webhook do Make para enviar no WhatsApp (se usar Make)
+# Canal Evolution (auto-hospedada)
+EVOLUTION_URL=...           # URL da instância Evolution (Railway)
+EVOLUTION_INSTANCE=...
+EVOLUTION_API_KEY=...
+# Meta Lead Ads (formulário instantâneo)
+META_APP_SECRET=...         # validar assinatura X-Hub-Signature-256 do webhook leadgen
+META_VERIFY_TOKEN=...       # handshake do webhook
+META_PAGE_ACCESS_TOKEN=...  # buscar dados do lead via Graph API
+# Cron + agenda
 CRON_SECRET=...             # protege /api/cron/followup
+GOOGLE_CALENDAR_CREDENTIALS=... # service account / OAuth para agendamento
 COMPANY_NAME=Cranium Digital
 FOLLOWUP_MAX=30
 FOLLOWUP_INTERVAL=24

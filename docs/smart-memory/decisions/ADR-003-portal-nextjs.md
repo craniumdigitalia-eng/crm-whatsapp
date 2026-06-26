@@ -1,7 +1,7 @@
 ---
 title: "ADR-003: Arquitetura do Portal — migrar front para Next.js App Router"
 type: decision
-status: proposed
+status: accepted
 agent: crm-architect
 created: 2026-06-25
 updated: 2026-06-25
@@ -12,7 +12,7 @@ related: ["[[ADR-001-serverless-vercel]]", "[[ADR-004-canal-whatsapp-qr-vs-make]
 # ADR-003: Arquitetura do Portal — migrar front para Next.js App Router
 
 ## Status
-**Proposed** — aguarda confirmação do lead antes do dispatch do epic Portal.
+**Accepted** (usuário, 2026-06-25) — epic 5 aprovado em estrutura (shell → auth → design system → portar CRM → módulos).
 
 ## Contexto
 

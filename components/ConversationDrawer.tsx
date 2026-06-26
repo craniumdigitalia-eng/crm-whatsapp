@@ -43,6 +43,13 @@ interface Lead {
   last_message_at: string | null;
   created_at: string;
   updated_at: string;
+  // Origem / atribuição (Story 5.14 — Meta Lead Ads). Opcionais.
+  source?: string | null;
+  form_id?: string | null;
+  leadgen_id?: string | null;
+  ad_id?: string | null;
+  campaign_id?: string | null;
+  form_data?: Record<string, string> | null;
 }
 
 interface Message {
@@ -55,6 +62,25 @@ interface Message {
   // Story 4.3: campo 'author' ainda não existe na tabela messages.
   // Mensagens 'out' não distinguem IA vs humano até que Story 4.3 seja implementada.
 }
+
+// Story 5.12 — etiqueta aplicável aos leads.
+interface Tag {
+  id: string;
+  name: string;
+  color: string;
+}
+
+// Story 5.13 — item de checklist do lead.
+interface ChecklistItem {
+  id: string;
+  lead_id: string;
+  text: string;
+  done: boolean;
+  position: number;
+}
+
+// Paleta de cores para novas etiquetas (identidade Cranium roxo/violeta + apoios).
+const TAG_COLORS = ['#7C3AED', '#6D28D9', '#A78BFA', '#2563EB', '#059669', '#D97706', '#DC2626', '#475569'];
 
 /* ============================================================
    Props
@@ -78,6 +104,15 @@ function fmtTime(iso: string | null): string {
   });
 }
 
+// Rótulo amigável da origem do lead (Story 5.14).
+function sourceLabel(source: string): string {
+  const map: Record<string, string> = {
+    meta_lead_ads: 'Facebook / Meta Lead Ads',
+    whatsapp: 'WhatsApp',
+  };
+  return map[source] ?? source;
+}
+
 // Retorna todos os elementos focáveis dentro de um container.
 function getFocusable(container: HTMLElement): HTMLElement[] {
   return Array.from(
@@ -90,6 +125,11 @@ function getFocusable(container: HTMLElement): HTMLElement[] {
 // Thin wrapper: lança se a resposta não for ok.
 async function apiCall<T = unknown>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, opts);
+  if (res.status === 401) {
+    // Sessao expirou — volta para o login (Story 5.2).
+    window.location.href = '/login';
+    throw new Error('nao autenticado');
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({})) as { error?: string };
     throw new Error(body.error ?? res.statusText);
@@ -131,6 +171,19 @@ export default function ConversationDrawer({
   });
   const [saving, setSaving] = useState(false);
 
+  // Etiquetas (Story 5.12)
+  const [leadTags,      setLeadTags     ] = useState<Tag[]>([]);
+  const [allTags,       setAllTags      ] = useState<Tag[]>([]);
+  const [tagPickerOpen, setTagPickerOpen] = useState(false);
+  const [newTagName,    setNewTagName   ] = useState('');
+  const [newTagColor,   setNewTagColor  ] = useState(TAG_COLORS[0]);
+  const [tagBusy,       setTagBusy      ] = useState(false);
+
+  // Checklist (Story 5.13)
+  const [checklist,    setChecklist   ] = useState<ChecklistItem[]>([]);
+  const [newItemText,  setNewItemText ] = useState('');
+  const [addingItem,   setAddingItem  ] = useState(false);
+
   /* ---- Fetch lead + mensagens ---- */
 
   const fetchLead = useCallback(async (id: string) => {
@@ -154,6 +207,23 @@ export default function ConversationDrawer({
     }
   }, []);
 
+  /* Busca etiquetas (do lead + catalogo) e checklist. Story 5.12 / 5.13. */
+  const fetchExtras = useCallback(async (id: string) => {
+    try {
+      const [leadTagsRes, allTagsRes, checklistRes] = await Promise.all([
+        apiCall<{ tags: Tag[] }>(`/api/leads/${id}/tags`),
+        apiCall<{ tags: Tag[] }>(`/api/tags`),
+        apiCall<{ items: ChecklistItem[] }>(`/api/leads/${id}/checklist`),
+      ]);
+      setLeadTags(leadTagsRes.tags);
+      setAllTags(allTagsRes.tags);
+      setChecklist(checklistRes.items);
+    } catch (e) {
+      // Nao-critico: etiquetas/checklist sao secundarios ao corpo da conversa.
+      console.warn('[drawer] falha ao carregar etiquetas/checklist:', (e as Error).message);
+    }
+  }, []);
+
   /* Abre/fecha efeito: busca lead ao abrir; reseta estado ao fechar. */
   useEffect(() => {
     if (!leadId) {
@@ -162,10 +232,17 @@ export default function ConversationDrawer({
       setEditMode(false);
       setActionError(null);
       setReplyText('');
+      setLeadTags([]);
+      setAllTags([]);
+      setChecklist([]);
+      setTagPickerOpen(false);
+      setNewTagName('');
+      setNewItemText('');
       return;
     }
     void fetchLead(leadId);
-  }, [leadId, fetchLead]);
+    void fetchExtras(leadId);
+  }, [leadId, fetchLead, fetchExtras]);
 
   /* Move foco para o botão fechar na abertura inicial (AC2). */
   useEffect(() => {
@@ -297,9 +374,136 @@ export default function ConversationDrawer({
     }
   };
 
+  /* ---- Etiquetas (Story 5.12) ---- */
+
+  // Atribui ou remove uma etiqueta existente do lead (toggle no picker).
+  const toggleTag = useCallback(async (tag: Tag) => {
+    if (!leadId || tagBusy) return;
+    const assigned = leadTags.some((t) => t.id === tag.id);
+    setTagBusy(true);
+    setActionError(null);
+    try {
+      const res = await apiCall<{ tags: Tag[] }>(`/api/leads/${leadId}/tags`, {
+        method: assigned ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag_id: tag.id }),
+      });
+      setLeadTags(res.tags);
+      onLeadUpdated();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Erro ao alterar etiqueta');
+    } finally {
+      setTagBusy(false);
+    }
+  }, [leadId, leadTags, tagBusy, onLeadUpdated]);
+
+  // Remove uma etiqueta do lead direto pelo chip (sem abrir o picker).
+  const removeTag = useCallback(async (tag: Tag) => {
+    if (!leadId || tagBusy) return;
+    setTagBusy(true);
+    setActionError(null);
+    try {
+      const res = await apiCall<{ tags: Tag[] }>(`/api/leads/${leadId}/tags`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag_id: tag.id }),
+      });
+      setLeadTags(res.tags);
+      onLeadUpdated();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Erro ao remover etiqueta');
+    } finally {
+      setTagBusy(false);
+    }
+  }, [leadId, tagBusy, onLeadUpdated]);
+
+  // Cria uma etiqueta nova no catalogo e ja aplica ao lead.
+  const handleCreateTag = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newTagName.trim();
+    if (!name || !leadId || tagBusy) return;
+    setTagBusy(true);
+    setActionError(null);
+    try {
+      const { tag } = await apiCall<{ tag: Tag }>(`/api/tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, color: newTagColor }),
+      });
+      setAllTags((prev) =>
+        [...prev, tag].sort((a, b) => a.name.localeCompare(b.name))
+      );
+      const res = await apiCall<{ tags: Tag[] }>(`/api/leads/${leadId}/tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag_id: tag.id }),
+      });
+      setLeadTags(res.tags);
+      setNewTagName('');
+      onLeadUpdated();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Erro ao criar etiqueta');
+    } finally {
+      setTagBusy(false);
+    }
+  }, [newTagName, newTagColor, leadId, tagBusy, onLeadUpdated]);
+
+  /* ---- Checklist (Story 5.13) ---- */
+
+  const handleAddItem = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = newItemText.trim();
+    if (!text || !leadId || addingItem) return;
+    setAddingItem(true);
+    setActionError(null);
+    try {
+      const { item } = await apiCall<{ item: ChecklistItem }>(`/api/leads/${leadId}/checklist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      setChecklist((prev) => [...prev, item]);
+      setNewItemText('');
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Erro ao adicionar item');
+    } finally {
+      setAddingItem(false);
+    }
+  }, [newItemText, leadId, addingItem]);
+
+  const toggleItem = useCallback(async (item: ChecklistItem) => {
+    // Otimista: alterna o done localmente antes do round-trip.
+    setChecklist((prev) => prev.map((i) => (i.id === item.id ? { ...i, done: !i.done } : i)));
+    try {
+      await apiCall(`/api/checklist/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ done: !item.done }),
+      });
+    } catch (e) {
+      // Reverte em caso de falha.
+      setChecklist((prev) => prev.map((i) => (i.id === item.id ? { ...i, done: item.done } : i)));
+      setActionError(e instanceof Error ? e.message : 'Erro ao atualizar item');
+    }
+  }, []);
+
+  const deleteItem = useCallback(async (item: ChecklistItem) => {
+    const prev = checklist;
+    setChecklist((cur) => cur.filter((i) => i.id !== item.id));
+    try {
+      await apiCall(`/api/checklist/${item.id}`, { method: 'DELETE' });
+    } catch (e) {
+      setChecklist(prev); // restaura
+      setActionError(e instanceof Error ? e.message : 'Erro ao remover item');
+    }
+  }, [checklist]);
+
   /* ---- Render ---- */
 
   if (!leadId) return null;
+
+  const doneCount = checklist.filter((i) => i.done).length;
+  const checklistPct = checklist.length ? Math.round((doneCount / checklist.length) * 100) : 0;
 
   const isHuman = lead?.status === 'humano';
   const busy    = acting !== null;
@@ -387,6 +591,56 @@ export default function ConversationDrawer({
                   <div className="drawer-notes">{lead.notes}</div>
                 )}
               </div>
+
+              {/* Origem / Formulário (Story 5.14 — Meta Lead Ads) */}
+              {(lead.source || (lead.form_data && Object.keys(lead.form_data).length > 0)) && (
+                <section className="drawer-section drawer-origin" aria-label="Origem e formulário do lead">
+                  <div className="drawer-section-head">
+                    <span className="drawer-section-title">📋 Origem / Formulário</span>
+                  </div>
+
+                  <dl className="drawer-origin-attrs">
+                    {lead.source && (
+                      <div className="drawer-origin-row">
+                        <dt>Origem</dt>
+                        <dd>{sourceLabel(lead.source)}</dd>
+                      </div>
+                    )}
+                    {lead.campaign_id && (
+                      <div className="drawer-origin-row">
+                        <dt>Campanha</dt>
+                        <dd className="drawer-origin-id">{lead.campaign_id}</dd>
+                      </div>
+                    )}
+                    {lead.ad_id && (
+                      <div className="drawer-origin-row">
+                        <dt>Anúncio</dt>
+                        <dd className="drawer-origin-id">{lead.ad_id}</dd>
+                      </div>
+                    )}
+                    {lead.form_id && (
+                      <div className="drawer-origin-row">
+                        <dt>Formulário</dt>
+                        <dd className="drawer-origin-id">{lead.form_id}</dd>
+                      </div>
+                    )}
+                  </dl>
+
+                  {lead.form_data && Object.keys(lead.form_data).length > 0 && (
+                    <div className="drawer-form-data">
+                      <span className="drawer-form-data-title">Respostas do formulário</span>
+                      <dl className="drawer-form-list">
+                        {Object.entries(lead.form_data).map(([question, answer]) => (
+                          <div key={question} className="drawer-form-row">
+                            <dt>{question}</dt>
+                            <dd>{answer || '—'}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  )}
+                </section>
+              )}
 
               {/* Erro de ação */}
               {actionError && (
@@ -512,6 +766,191 @@ export default function ConversationDrawer({
                   </div>
                 </form>
               )}
+
+              {/* Etiquetas (Story 5.12) */}
+              <section className="drawer-section" aria-label="Etiquetas do lead">
+                <div className="drawer-section-head">
+                  <span className="drawer-section-title">Etiquetas</span>
+                  <button
+                    type="button"
+                    className="drawer-section-add"
+                    onClick={() => setTagPickerOpen((o) => !o)}
+                    aria-expanded={tagPickerOpen}
+                    aria-label={tagPickerOpen ? 'Fechar seletor de etiquetas' : 'Adicionar etiqueta'}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                      <line x1="12" y1="5" x2="12" y2="19"/>
+                      <line x1="5"  y1="12" x2="19" y2="12"/>
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="drawer-tags">
+                  {leadTags.length === 0 ? (
+                    <span className="drawer-tags-empty">Nenhuma etiqueta.</span>
+                  ) : (
+                    leadTags.map((t) => (
+                      <span key={t.id} className="drawer-tag-chip" style={{ background: t.color }}>
+                        {t.name}
+                        <button
+                          type="button"
+                          className="drawer-tag-remove"
+                          onClick={() => void removeTag(t)}
+                          disabled={tagBusy}
+                          aria-label={`Remover etiqueta ${t.name}`}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                               stroke="currentColor" strokeWidth={3} aria-hidden="true">
+                            <line x1="18" y1="6"  x2="6"  y2="18"/>
+                            <line x1="6"  y1="6"  x2="18" y2="18"/>
+                          </svg>
+                        </button>
+                      </span>
+                    ))
+                  )}
+                </div>
+
+                {tagPickerOpen && (
+                  <div className="tag-picker" role="group" aria-label="Escolher ou criar etiqueta">
+                    {allTags.length > 0 && (
+                      <div className="tag-picker-list">
+                        {allTags.map((t) => {
+                          const active = leadTags.some((lt) => lt.id === t.id);
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              className={`tag-picker-item${active ? ' active' : ''}`}
+                              onClick={() => void toggleTag(t)}
+                              disabled={tagBusy}
+                              aria-pressed={active}
+                            >
+                              <span className="tag-picker-dot" style={{ background: t.color }} aria-hidden="true" />
+                              <span className="tag-picker-name">{t.name}</span>
+                              {active && (
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" strokeWidth={3} aria-hidden="true">
+                                  <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <form className="tag-picker-create" onSubmit={(e) => void handleCreateTag(e)}>
+                      <input
+                        type="text"
+                        className="tag-picker-input"
+                        placeholder="Nova etiqueta"
+                        value={newTagName}
+                        onChange={(e) => setNewTagName(e.target.value)}
+                        disabled={tagBusy}
+                        aria-label="Nome da nova etiqueta"
+                      />
+                      <div className="tag-picker-colors" role="group" aria-label="Cor da etiqueta">
+                        {TAG_COLORS.map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            className={`tag-color-swatch${newTagColor === c ? ' active' : ''}`}
+                            style={{ background: c }}
+                            onClick={() => setNewTagColor(c)}
+                            aria-pressed={newTagColor === c}
+                            aria-label={`Cor ${c}`}
+                          />
+                        ))}
+                      </div>
+                      <button
+                        type="submit"
+                        className="btn btn-primary tag-picker-submit"
+                        disabled={tagBusy || !newTagName.trim()}
+                      >
+                        Criar e aplicar
+                      </button>
+                    </form>
+                  </div>
+                )}
+              </section>
+
+              {/* Checklist (Story 5.13) */}
+              <section className="drawer-section" aria-label="Checklist do lead">
+                <div className="drawer-section-head">
+                  <span className="drawer-section-title">Checklist</span>
+                  {checklist.length > 0 && (
+                    <span className="checklist-count">{doneCount}/{checklist.length}</span>
+                  )}
+                </div>
+
+                {checklist.length > 0 && (
+                  <div
+                    className="checklist-progress"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={checklist.length}
+                    aria-valuenow={doneCount}
+                    aria-label={`Progresso do checklist: ${doneCount} de ${checklist.length}`}
+                  >
+                    <div className="checklist-progress-bar" style={{ width: `${checklistPct}%` }} />
+                  </div>
+                )}
+
+                {checklist.length > 0 && (
+                  <ul className="checklist-items">
+                    {checklist.map((item) => (
+                      <li key={item.id} className={`checklist-item${item.done ? ' done' : ''}`}>
+                        <label className="checklist-label">
+                          <input
+                            type="checkbox"
+                            className="checklist-checkbox"
+                            checked={item.done}
+                            onChange={() => void toggleItem(item)}
+                          />
+                          <span className="checklist-text">{item.text}</span>
+                        </label>
+                        <button
+                          type="button"
+                          className="checklist-remove"
+                          onClick={() => void deleteItem(item)}
+                          aria-label={`Remover item ${item.text}`}
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                               stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                            <line x1="18" y1="6"  x2="6"  y2="18"/>
+                            <line x1="6"  y1="6"  x2="18" y2="18"/>
+                          </svg>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <form className="checklist-add" onSubmit={(e) => void handleAddItem(e)}>
+                  <input
+                    type="text"
+                    className="checklist-add-input"
+                    placeholder="Adicionar item…"
+                    value={newItemText}
+                    onChange={(e) => setNewItemText(e.target.value)}
+                    disabled={addingItem}
+                    aria-label="Novo item do checklist"
+                  />
+                  <button
+                    type="submit"
+                    className="checklist-add-btn"
+                    disabled={addingItem || !newItemText.trim()}
+                    aria-label="Adicionar item ao checklist"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                      <line x1="12" y1="5" x2="12" y2="19"/>
+                      <line x1="5"  y1="12" x2="19" y2="12"/>
+                    </svg>
+                  </button>
+                </form>
+              </section>
 
               {/* Histórico de mensagens */}
               <div

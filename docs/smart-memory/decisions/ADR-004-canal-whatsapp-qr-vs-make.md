@@ -1,63 +1,56 @@
 ---
-title: "ADR-004: Canal WhatsApp — QR (Evolution auto-hospedada) vs Make"
+title: "ADR-004: Canal WhatsApp — decidido Evolution auto-hospedada (Make dropado)"
 type: decision
-status: proposed
+status: accepted
 agent: crm-architect
 created: 2026-06-25
 updated: 2026-06-25
 tags: [architecture, decision, security]
-related: ["[[ADR-003-portal-nextjs]]", "[[../project/architecture]]", "[[../stories/backlog/3.1-adapter-canal-make]]", "[[../stories/backlog/5.8-evolution-self-hosted]]", "[[../stories/backlog/5.9-whatsapp-connect-qr]]"]
+related: ["[[ADR-003-portal-nextjs]]", "[[../project/architecture]]", "[[../stories/backlog/5.8-evolution-self-hosted]]", "[[../stories/backlog/5.9-whatsapp-connect-qr]]", "[[../stories/backlog/5.10-meta-lead-ads]]", "[[../stories/backlog/5.7-modulo-agendamento]]"]
 ---
 
-# ADR-004: Canal WhatsApp — QR (Evolution auto-hospedada) vs Make
+# ADR-004: Canal WhatsApp — decidido Evolution auto-hospedada (Make dropado)
 
 ## Status
-**Proposed** — aguarda confirmação do lead. **Conflita com a decisão "Make como ponte"** do CLAUDE.md e com a Wave 2 **já entregue** (Story [[../stories/backlog/3.1-adapter-canal-make|3.1]] Evolution→Make DONE/QA PASS; webhook 3.3 construído em torno do inbound do Make) — ver impacto abaixo. É a reversão mais cara deste ADR e por isso precisa de aceite explícito do lead/usuário.
-
-## Contexto
-
-O módulo 4 do portal pede **"Conectar WhatsApp via QR code"** — onboarding self-service: o operador lê o QR no portal e parea o número. O **QR de pareamento é um recurso da Evolution API** (auto-hospedada, conectada à sessão do WhatsApp). O **Make NÃO expõe** esse QR para o nosso portal — no Make a conexão é gerida dentro do próprio Make. Portanto **o requisito de QR no portal força ter a Evolution acessível a nós**.
-
-Isso colide com a decisão anterior (Make como ponte, já que a Vercel serverless não hospeda a Evolution). A Story 3.1 está construindo justamente o adapter de saída Evolution→Make.
-
-## Opções consideradas
-
-### A — Evolution auto-hospedada (VPS/Railway) — recomendada
-Evolution roda num host gerenciado (Railway/Fly/VPS). O portal mostra o **QR** (proxy ao endpoint da Evolution) e gere a instância; a Vercel fala **direto** com a Evolution para enviar/receber.
-- **Prós:** satisfaz o requisito de QR/onboarding self-service no portal; controle total da instância (status, reconexão, múltiplas instâncias por cliente no futuro); sem custo variável por operação do Make; o protótipo **já** fala com a Evolution direto (`src/whatsapp/evolution.ts`) — menos reescrita de domínio; entrada via webhook da Evolution → `/api/webhook`.
-- **Contras:** **ops próprio** — hospedar, monitorar, atualizar a Evolution, manter a sessão WhatsApp viva (reconexão/expiração); superfície de segurança (expor a Evolution API com `apikey`, restringir origem à Vercel); precisa de um servidor sempre-ligado (vai contra a simplicidade serverless). Custo: host ~US$5–20/mês.
-
-### B — Make como ponte (decisão atual)
-Mantém o Make abstraindo o canal; sem QR no portal (conexão gerida no Make).
-- **Prós:** zero infra para nós; já decidido e em construção (3.1); Make também serve de glue para outras automações (calendário, notificações).
-- **Contras:** **não entrega o requisito do módulo 4** (sem QR/onboarding self-service no portal); custo do Make escala com operações; menos controle e um hop a mais de latência; dependência de produto de terceiro no caminho crítico de mensagens.
-
-### C — Híbrido
-Evolution auto-hospedada como **canal de mensagens + QR**; Make retido **apenas para glue não-canal** (Cal.com/Google Calendar, notificações internas do módulo de agendamento).
-- **Prós:** entrega o QR (via Evolution) e ainda aproveita o Make onde ele é forte (orquestração de automações), sem pôr o Make no caminho crítico das mensagens.
-- **Contras:** dois sistemas a manter; precisa deixar claro o limite (mensagens = Evolution; automações = Make).
+**Accepted — DECISÃO FINAL** (usuário, 2026-06-25; detalhes delegados ao lead). **Canal = Evolution auto-hospedada. Make removido por completo** (canal *e* automações). **Não muda mais.** Supersede a decisão "Make como ponte" do CLAUDE.md.
 
 ## Decisão
 
-**Opção A como canal (Evolution auto-hospedada), na prática um híbrido C:** a Evolution passa a ser o canal de WhatsApp (entrada/saída + QR no portal) e o **Make é retido apenas para automações não-canal** (agendamento/notificações, módulo 3).
+1. **Canal de WhatsApp = Evolution auto-hospedada** (Railway). O portal mostra o **QR** para parear o número (proxied por função `/api` autenticada). Vercel ↔ Evolution **direto** (entrada via webhook da Evolution, saída via `src/whatsapp/evolution.ts`).
+2. **Make dropado de tudo** — não é mais usado nem no canal nem como glue.
+3. **Agendamento (módulo 3) = Google Calendar API direto** (SDK/MCP), sem Make/Cal.com — menos um terceiro para o usuário configurar/pagar. Ver [[../stories/backlog/5.7-modulo-agendamento|5.7]].
+4. **Aquisição = Meta Lead Ads (formulário instantâneo), outbound-first.** O anúncio usa **formulário instantâneo** (NÃO CTWA). Fluxo: lead preenche o form → webhook **`leadgen`** (`/api/leadgen`) → busca dados via **Graph API** → cria o lead → **dispara o opener outbound** no WhatsApp via Evolution → lead responde → `/api/webhook` (Evolution) → `handleInbound` + agente (fluxo inbound existente). Atribuição (form/anúncio/campanha) capturada para o BI. Ver [[../stories/backlog/5.10-meta-lead-ads|5.10]].
 
-Razão decisiva: o requisito de QR/onboarding no portal é **funcional e explícito** e **só** a Evolution o satisfaz. Como o protótipo já integra a Evolution diretamente, a reversão do caminho de mensagens é de baixo atrito no domínio.
+> **Dois ingressos distintos (documentar):** `/api/leadgen` (novos leads do Meta, **outbound-first**) vs `/api/webhook` (respostas do lead, **inbound**). O **opener livre exige Evolution** — a Cloud API oficial exigiria template aprovado para a 1ª mensagem fora de janela. Isso **reforça** a escolha da Evolution.
 
-## Impacto na Wave 2 já entregue (ação para o lead)
-A Wave 2 **já shipou** o caminho Make: 3.1 (adapter de saída → Make, QA PASS) e 3.3 (webhook construído em torno do **inbound do Make**, dedupe dependente do mapeamento `wamid` no cenário do Make — requisito ainda pendente do usuário). Escolher a Evolution **reverte o caminho de mensagens** para **Vercel↔Evolution direto** (como no protótipo). Recomendo ao lead:
-- **Não jogar fora a Wave 2:** o domínio (`handleInbound`, agente, persistência) é o mesmo; muda só a borda do canal. A saída volta a usar `src/whatsapp/evolution.ts` (envio direto, já existe); a entrada passa a receber o webhook **da Evolution** em `/api/webhook` em vez do payload do Make.
-- **Dedupe melhora:** com a Evolution, o `external_id` vem direto de `key.id` da mensagem — elimina a dependência frágil do mapeamento `wamid` no Make (requisito escalado pelo QA da 3.1).
-- **Repropor o Make para glue não-canal:** o investimento em Make migra para o **módulo de agendamento** (Story 5.7) — notificações/Cal.com — onde agrega valor.
-- Tratar a re-rota do canal como uma **story própria** (5.8 provisionamento Evolution + 5.9 QR connect), não como retrabalho silencioso da 3.1/3.3.
+**Princípio guia:** minimizar o esforço do **usuário** — ele escaneia 1 QR, conecta o Google uma vez e cria o anúncio com formulário; **nós** cuidamos de hospedar e manter a Evolution.
+
+## Contexto e trajetória
+
+O módulo 4 pede conectar o WhatsApp e o objetivo de aquisição é **FB Ads → atendimento**. Houve idas e vindas (Make vs Evolution; CTWA vs formulário). Esclarecido: o anúncio do usuário é **formulário instantâneo (Meta Lead Ads)**, que inverte o fluxo para **outbound-first** (nós disparamos a 1ª mensagem). O usuário fechou em **manter a Evolution** (necessária para o opener livre) e **eliminar o Make**, delegando os detalhes ao lead. Este ADR consolida a decisão final.
+
+## Alternativas descartadas
+- **Make como ponte (canal):** zero infra para nós, mas não entrega QR/onboarding self-service, põe um terceiro pago no caminho crítico e fora do nosso controle. Descartado.
+- **Make/Cal.com como glue de agendamento:** substituído por Google Calendar API direto (menos um terceiro).
+- **Cloud API oficial da Meta:** não escolhida agora (Evolution não-oficial já atende; reavaliar se houver bloqueio de compliance/escala).
+
+## Impacto na Wave 2 (gerir como re-rota planejada, não jogar fora)
+A Wave 2 entregou o caminho Make (3.1 saída→Make, 3.3 webhook sobre payload do Make). Com a decisão final:
+- **Saída** volta a `src/whatsapp/evolution.ts` (envio direto — já existe no protótipo).
+- **Entrada** passa a receber o webhook **da Evolution** em `/api/webhook` (reusa `parseWebhook`); dedupe por **`external_id = key.id`** (mais robusto — elimina a dependência frágil do mapeamento `wamid` no Make que o QA havia escalado).
+- O **domínio** (`handleInbound`, agente, persistência, idempotência) **não muda**.
+- Encapsulado nas stories **[[../stories/backlog/5.8-evolution-self-hosted|5.8]]** (provisionar + re-rota + ajuste do `/api/webhook`) e **[[../stories/backlog/5.9-whatsapp-connect-qr|5.9]]** (QR/status no portal). A 3.1 (adapter→Make) é removida do caminho.
 
 ## Consequências
 
-**Positivas:** módulo 4 viável; controle do canal; custo previsível; menos terceiros no caminho crítico.
+**Positivas:** controle total do canal; QR self-service; opener outbound livre (só possível com Evolution); atribuição via Lead Ads (form/anúncio); menos terceiros (sem Make) → menos custo/configuração para o usuário; dedupe inbound mais forte (`key.id`).
 
 **Negativas / mitigações:**
-- **Ops da Evolution:** isolar numa story de provisionamento (5.8) com host gerenciado (Railway) + healthcheck + estratégia de reconexão; documentar runbook.
-- **Segurança:** Evolution atrás de `apikey` forte, restrição de origem/IP à Vercel, segredos só em env; **nunca** expor a Evolution API direto ao browser — o QR é **proxied** por uma função `/api` autenticada (não chamada client→Evolution).
-- **Sessão WhatsApp:** monitorar expiração/desconexão; o módulo 4 deve mostrar status da instância e permitir re-parear.
+- **Ops da Evolution (host sempre-ligado):** isolar em 5.8 (Railway + healthcheck + runbook de reconexão); é o trade-off aceito para ter QR e controle. Nós operamos, não o usuário.
+- **Risco de ban no outbound-first:** disparar opener para números novos via Evolution (não-oficial) tem risco; o opt-in via formulário reduz, não elimina. Mitigar com **rate limiting / sem blast** e monitorar (AC da 5.10).
+- **Segurança:** Evolution atrás de `apikey` forte, restrição de origem/IP à Vercel, segredos só em env; **nunca** expor a Evolution ao browser — QR e comandos via função `/api` autenticada (5.9). Webhook `leadgen` valida verify token + assinatura.
+- **Sessão WhatsApp:** monitorar expiração/desconexão; 5.9 mostra status e permite re-parear.
+- **Google OAuth (5.7):** autorização única do usuário; tratar token/refresh com segurança.
 
-## Gatilho para reverter ao Make-puro (B)
-Se a ops da Evolution se mostrar cara/instável e o onboarding self-service deixar de ser requisito, reconsiderar B. Decisão reversível: o domínio fala com uma interface de canal; trocar a implementação por trás é localizado.
+## Gatilho para reabrir
+Só se a ops da Evolution se tornar inviável (instabilidade/custo) **ou** surgir necessidade de Cloud API oficial por compliance/escala. Decisão reversível: o domínio fala com uma interface de canal; trocar a implementação por trás é localizado.

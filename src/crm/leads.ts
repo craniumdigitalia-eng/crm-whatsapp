@@ -1,10 +1,12 @@
 import { supabase } from "../db";
-import { Lead, Message, LeadStatus } from "../types";
+import { Lead, Message, LeadStatus, LeadAttribution } from "../types";
 
 // Colunas explicitas — evita SELECT * e garante paridade com a interface Lead.
 const LEAD_COLS =
   "id,phone,name,status,service_interest,budget,notes,follow_up_count,last_direction,last_message_at,created_at,updated_at";
 const MSG_COLS = "id,lead_id,direction,body,external_id,created_at";
+// Colunas da migration 003 — selecionadas a parte (podem nao existir antes da migration).
+const ATTRIBUTION_COLS = "source,form_id,leadgen_id,ad_id,campaign_id,form_data";
 
 export async function findLeadByPhone(phone: string): Promise<Lead | undefined> {
   const { data } = await supabase.from("leads").select(LEAD_COLS).eq("phone", phone).maybeSingle();
@@ -176,4 +178,54 @@ export async function updateLeadFields(
 
 export async function setStatus(leadId: string, status: LeadStatus): Promise<void> {
   await updateLeadFields(leadId, { status });
+}
+
+// =====================================================================
+// Atribuicao / origem (Story 5.14 — Meta Lead Ads).
+// As colunas vivem na migration 003; estas funcoes sao tolerantes a
+// migration ausente (retornam null / nao-op) para nao quebrar o CRM.
+// =====================================================================
+
+// Le os campos de atribuicao do lead. Se a migration 003 nao foi aplicada
+// (coluna inexistente -> erro 42703), retorna null silenciosamente.
+export async function getLeadAttribution(id: string): Promise<LeadAttribution | null> {
+  const { data, error } = await supabase
+    .from("leads")
+    .select(ATTRIBUTION_COLS)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) {
+    console.warn(`[leads] getLeadAttribution(${id}): ${error.message}`);
+    return null;
+  }
+  return (data as LeadAttribution) ?? null;
+}
+
+// Acha um lead pelo leadgen_id do Meta (dedupe idempotente da importacao).
+export async function findLeadByLeadgenId(leadgenId: string): Promise<Lead | undefined> {
+  const { data, error } = await supabase
+    .from("leads")
+    .select(LEAD_COLS)
+    .eq("leadgen_id", leadgenId)
+    .maybeSingle();
+  if (error) {
+    console.warn(`[leads] findLeadByLeadgenId(${leadgenId}): ${error.message}`);
+    return undefined;
+  }
+  return (data as Lead) ?? undefined;
+}
+
+// Grava os campos de atribuicao em um lead existente.
+export async function setLeadAttribution(
+  leadId: string,
+  attr: Partial<LeadAttribution>
+): Promise<void> {
+  const allowed = ["source", "form_id", "leadgen_id", "ad_id", "campaign_id", "form_data"] as const;
+  const patch: Record<string, unknown> = {};
+  for (const key of allowed) {
+    if (attr[key] !== undefined) patch[key] = attr[key];
+  }
+  if (Object.keys(patch).length === 0) return;
+  const { error } = await supabase.from("leads").update(patch).eq("id", leadId);
+  if (error) throw error;
 }

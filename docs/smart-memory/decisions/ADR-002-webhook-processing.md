@@ -14,6 +14,8 @@ related: ["[[ADR-001-serverless-vercel]]", "[[../project/architecture]]", "[[../
 ## Status
 **Accepted** — gate de design da Story [[../stories/backlog/3.3-api-webhook-idempotente|3.3]] (implementa após 3.1 + 3.2).
 
+> **Nota (2026-06-25):** a decisão de **canal** mudou para Evolution auto-hospedada ([[ADR-004-canal-whatsapp-qr-vs-make]], final). O `/api/webhook` passa a receber o payload **da Evolution** (não do Make) e o dedupe usa `external_id = key.id`. A decisão **síncrono vs fila deste ADR permanece inalterada** — é independente do canal; só muda a forma do payload de entrada. Onde o texto/diagramas abaixo citam "Make inbound", leia "Evolution inbound".
+
 ## Contexto
 
 `/api/webhook` roda como função serverless na Vercel ([[ADR-001-serverless-vercel|Opção A]]). Fluxo de uma mensagem: **dedupe por `external_id` → loop do agente Claude → `sendText` via Make → persistir**.
