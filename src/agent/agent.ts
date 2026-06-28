@@ -4,6 +4,7 @@ import { systemPrompt, buildSystemPrompt } from "./prompt";
 import type { AgentConfig } from "./config";
 import { Lead, Message, LeadStatus } from "../types";
 import { updateLeadFields } from "../crm/leads";
+import { createEvent, CalendarError } from "../crm/calendar";
 
 const client = new Anthropic({ apiKey: config.anthropicApiKey });
 
@@ -53,6 +54,34 @@ const tools = [
       required: ["resumo"],
     },
   },
+  {
+    name: "agendar_reuniao",
+    description:
+      "Cria a reuniao online no Google Calendar e envia o convite. Use SOMENTE depois que o lead CONFIRMAR um dia e horario especificos (nunca invente data/hora). Apos sucesso, confirme ao lead que enviou o convite. Se a ferramenta retornar erro, NAO prometa o agendamento — reconfirme o horario com o lead ou use transferir_para_humano.",
+    input_schema: {
+      type: "object",
+      properties: {
+        data_hora_iso: {
+          type: "string",
+          description:
+            "Data e hora de inicio da reuniao em ISO 8601 no horario de Brasilia (ex.: '2026-07-02T15:00:00-03:00'). Deve ser uma data/hora FUTURA e em horario comercial.",
+        },
+        duracao_min: {
+          type: "number",
+          description: "Duracao da reuniao em minutos (default 30).",
+        },
+        titulo: {
+          type: "string",
+          description: "Titulo opcional do evento. Se vazio, usa 'Reuniao Cranium × {nome do lead}'.",
+        },
+        observacoes: {
+          type: "string",
+          description: "Observacoes/contexto para a descricao do evento (ex.: resumo da qualificacao). Opcional.",
+        },
+      },
+      required: ["data_hora_iso"],
+    },
+  },
 ];
 
 function historyToMessages(history: Message[]): Anthropic.MessageParam[] {
@@ -63,7 +92,25 @@ function historyToMessages(history: Message[]): Anthropic.MessageParam[] {
   }));
 }
 
-export async function applyTool(lead: Lead, name: string, input: any): Promise<{ handoff: boolean }> {
+export interface ToolOutcome {
+  handoff: boolean;
+  // Conteudo do tool_result devolvido ao modelo. Para a maioria basta "ok";
+  // para agendar_reuniao descreve sucesso/erro para o agente saber como seguir.
+  content: string;
+}
+
+// Formata um instante no fuso de Brasilia para confirmar ao lead (ex.: "02/07 às 15:00").
+function formatBR(date: Date): string {
+  return date.toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export async function applyTool(lead: Lead, name: string, input: any): Promise<ToolOutcome> {
   if (name === "atualizar_lead") {
     await updateLeadFields(lead.id, {
       service_interest: input.service_interest,
@@ -71,7 +118,7 @@ export async function applyTool(lead: Lead, name: string, input: any): Promise<{
       notes: input.notes,
       status: input.status as LeadStatus | undefined,
     });
-    return { handoff: false };
+    return { handoff: false, content: "ok" };
   }
   if (name === "transferir_para_humano") {
     // O resumo da transferencia e o proprio resumo de qualificacao (formato estruturado) —
@@ -79,9 +126,74 @@ export async function applyTool(lead: Lead, name: string, input: any): Promise<{
     const fields: Partial<Pick<Lead, "status" | "notes">> = { status: "humano" };
     if (input.resumo) fields.notes = input.resumo;
     await updateLeadFields(lead.id, fields);
-    return { handoff: true };
+    return { handoff: true, content: "ok" };
   }
-  return { handoff: false };
+  if (name === "agendar_reuniao") {
+    // Valida a data/hora: precisa ser parseavel e futura. Erros voltam como tool_result
+    // (nao lancam) para o agente reconfirmar o horario ou cair pro transferir_para_humano.
+    const start = new Date(input.data_hora_iso);
+    if (isNaN(start.getTime())) {
+      return {
+        handoff: false,
+        content:
+          "Nao foi possivel agendar: data/hora invalida. Peca ao lead para confirmar um dia e horario validos antes de tentar de novo.",
+      };
+    }
+    if (start.getTime() <= Date.now()) {
+      return {
+        handoff: false,
+        content:
+          "Nao foi possivel agendar: a data/hora informada esta no passado. Reconfirme com o lead um horario futuro.",
+      };
+    }
+
+    const durationMin =
+      typeof input.duracao_min === "number" && input.duracao_min > 0 ? input.duracao_min : 30;
+    const end = new Date(start.getTime() + durationMin * 60_000);
+    const quem = lead.name?.trim() || `+${lead.phone}`;
+    const summary = (input.titulo as string)?.trim() || `Reuniao Cranium × ${quem}`;
+    const description =
+      (input.observacoes as string)?.trim() ||
+      [`Lead: ${quem}`, `Telefone: ${lead.phone}`, lead.notes ? `\n${lead.notes}` : ""]
+        .filter(Boolean)
+        .join("\n");
+
+    try {
+      const event = await createEvent({
+        summary,
+        description,
+        start,
+        end,
+        attendees: lead.email ? [lead.email] : undefined,
+      });
+      // Registra a reuniao no lead: status qualificado + linha de agendamento no resumo
+      // (preserva o resumo existente, sem duplicar a linha).
+      const quando = formatBR(start);
+      const link = event.hangoutLink || event.htmlLink;
+      const meetingLine = `📅 Reuniao agendada para ${quando}${link ? ` — ${link}` : ""}`;
+      // Anexa a linha ao resumo existente (sem duplicar se ja houver agendamento).
+      const notes = !lead.notes
+        ? meetingLine
+        : lead.notes.includes("Reuniao agendada")
+          ? lead.notes
+          : `${lead.notes}\n${meetingLine}`;
+      await updateLeadFields(lead.id, { status: "qualificado", notes });
+      return {
+        handoff: false,
+        content: `Reuniao criada no Google Calendar para ${quando} (${durationMin} min)${
+          link ? `, link ${link}` : ""
+        }. Convite ${lead.email ? `enviado para ${lead.email}` : "na agenda da Cranium (lead sem e-mail)"}. Confirme ao lead.`,
+      };
+    } catch (e) {
+      const msg = e instanceof CalendarError ? e.message : (e as Error).message;
+      console.error("[agent] agendar_reuniao:", msg);
+      return {
+        handoff: false,
+        content: `Nao foi possivel criar o evento agora (${msg}). NAO prometa o agendamento ao lead — use transferir_para_humano para um consultor confirmar a reuniao.`,
+      };
+    }
+  }
+  return { handoff: false, content: "ok" };
 }
 
 export interface AgentResult {
@@ -131,17 +243,23 @@ export async function generateReply(
       const toolResults: Anthropic.ToolResultBlockParam[] = [];
       for (const block of response.content) {
         if (block.type === "tool_use") {
+          let content = "ok";
           if (opts.dryRun) {
-            // Previa: nao grava no CRM; so detecta a intencao de handoff.
+            // Previa: nao grava no CRM nem cria evento real; so detecta o handoff
+            // e simula o resultado do agendamento para o fluxo continuar.
             handoff = handoff || block.name === "transferir_para_humano";
+            if (block.name === "agendar_reuniao") {
+              content = "Reuniao simulada (previa) — em producao o evento seria criado no Google Calendar. Confirme ao lead.";
+            }
           } else {
             const result = await applyTool(lead, block.name, block.input);
             handoff = handoff || result.handoff;
+            content = result.content;
           }
           toolResults.push({
             type: "tool_result",
             tool_use_id: block.id,
-            content: "ok",
+            content,
           });
         }
       }
