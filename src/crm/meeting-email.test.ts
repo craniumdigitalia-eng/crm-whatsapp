@@ -46,7 +46,8 @@ describe("buildMeetingConfirmationHtml", () => {
   it("inclui saudacao com o nome, link do Meet e a landing de corretores", () => {
     const html = buildMeetingConfirmationHtml(
       lead,
-      { meetLink: when, startISO: "2026-07-03T18:00:00Z", durationMin: 30 },
+      // durationMin = 60 (bloqueio na agenda) — NAO deve aparecer no email.
+      { meetLink: when, startISO: "2026-07-03T18:00:00Z", durationMin: 60 },
       "https://craniumdigital.com.br/corretores"
     );
     expect(html).toContain("Carlos"); // primeiro nome na saudacao
@@ -55,6 +56,9 @@ describe("buildMeetingConfirmationHtml", () => {
     expect(html).toContain("Bruno Castro"); // assinatura
     expect(html).toContain("Cranium Digital");
     expect(html).toMatch(/15h/); // data/hora formatada
+    // Comunica ~20 min ao lead; nunca expoe o bloqueio de 60 min.
+    expect(html).toContain("cerca de 20 minutos");
+    expect(html).not.toContain("60 min");
   });
 
   it("sem meetLink, nao quebra e orienta sobre o convite da agenda", () => {

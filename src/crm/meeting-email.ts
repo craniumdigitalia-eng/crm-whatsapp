@@ -24,10 +24,16 @@ const BG = "#F4F1FB";
 const FONT =
   "'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
+// Duracao COMUNICADA ao lead (call rapida). Independe do bloqueio na agenda
+// (que reserva 60 min de margem) — ao lead sempre mostramos ~20 min.
+const COMMUNICATED_MIN = 20;
+
 export interface MeetingConfirmationData {
   meetLink?: string; // link da sala do Google Meet (pode faltar se a sala nao foi criada)
   startISO: string | Date; // inicio da reuniao
-  durationMin?: number; // duracao em minutos (default 30)
+  // Duracao do BLOQUEIO na agenda (default 60). NAO e exibida ao lead — o email
+  // sempre comunica COMMUNICATED_MIN (~20 min). Mantida para contexto/log.
+  durationMin?: number;
 }
 
 // Dias da semana em PT-BR (Date.getDay no fuso de Brasilia via Intl).
@@ -98,7 +104,6 @@ export function buildMeetingConfirmationHtml(
   const nome = greetingName(lead);
   const saudacao = nome ? `Olá, ${esc(nome)}!` : "Olá!";
   const when = formatMeetingWhen(data.startISO);
-  const duracao = data.durationMin && data.durationMin > 0 ? data.durationMin : 30;
   const meet = data.meetLink ? esc(data.meetLink) : "";
   const landing = esc(landingUrl);
 
@@ -181,7 +186,7 @@ export function buildMeetingConfirmationHtml(
                       ${esc(when)}
                     </div>
                     <div style="font-size:13px;color:${MUTED};margin-top:4px">
-                      Duração de ${duracao} minutos · online pelo Google Meet
+                      Reunião online pelo Google Meet (cerca de ${COMMUNICATED_MIN} minutos)
                     </div>
                   </td>
                 </tr>

@@ -122,6 +122,13 @@ test("agendar_reuniao cria o evento, registra o Meet e envia a confirmacao", asy
   expect(mockCreateEvent.mock.calls[0][0]).toEqual(
     expect.objectContaining({ attendees: ["corretor@ex.com"] })
   );
+  // Bloqueio na agenda: default 60 min (margem) — end = start + 60min.
+  const ev = mockCreateEvent.mock.calls[0][0];
+  expect(new Date(ev.end).getTime() - new Date(ev.start).getTime()).toBe(60 * 60_000);
+  // Ao email comunicamos ~20 min (call rapida) — o lead NAO ve o bloqueio de 60.
+  expect(mockSendConfirmation.mock.calls[0][1]).toEqual(
+    expect.objectContaining({ durationMin: 20 })
+  );
   // notes recebe o link do Meet (preferido sobre htmlLink).
   expect(mockUpdate).toHaveBeenCalledWith(
     leadComEmail.id,
