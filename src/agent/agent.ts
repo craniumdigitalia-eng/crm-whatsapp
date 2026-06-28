@@ -206,7 +206,8 @@ export async function applyTool(lead: Lead, name: string, input: any): Promise<T
       typeof input.duracao_min === "number" && input.duracao_min > 0 ? input.duracao_min : 60;
     const end = new Date(start.getTime() + durationMin * 60_000);
     const quem = lead.name?.trim() || `+${lead.phone}`;
-    const summary = (input.titulo as string)?.trim() || `Reuniao Cranium × ${quem}`;
+    // Nomenclatura fixa pedida pelo usuario: NOME - TELEFONE - SESSAO ESTRATEGICA CRANIUM.
+    const summary = `${lead.name?.trim() || "Lead"} - ${lead.phone} - SESSÃO ESTRATÉGICA CRANIUM`;
     const description =
       (input.observacoes as string)?.trim() ||
       [`Lead: ${quem}`, `Telefone: ${lead.phone}`, lead.notes ? `\n${lead.notes}` : ""]
@@ -220,6 +221,7 @@ export async function applyTool(lead: Lead, name: string, input: any): Promise<T
         start,
         end,
         attendees: lead.email ? [lead.email] : undefined,
+        colorId: "9", // azul (Blueberry) — padrao das sessoes estrategicas Cranium
       });
       // Registra a reuniao no lead: status qualificado + linha de agendamento no resumo
       // (preserva o resumo existente, sem duplicar a linha). Prioriza o link do Meet.

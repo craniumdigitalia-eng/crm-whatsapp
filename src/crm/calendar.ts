@@ -69,6 +69,7 @@ export interface CalendarEventInput {
   attendees?: string[]; // e-mails
   location?: string;
   timeZone?: string; // default America/Sao_Paulo
+  colorId?: string; // cor do evento no Google Calendar (ex.: "9" = azul/Blueberry)
 }
 
 export interface CalendarEventResult {
@@ -104,6 +105,9 @@ export async function createEvent(input: CalendarEventInput): Promise<CalendarEv
   };
   if (input.attendees?.length) {
     event.attendees = input.attendees.map((email) => ({ email }));
+  }
+  if (input.colorId) {
+    event.colorId = input.colorId;
   }
 
   // sendUpdates=all -> notifica os convidados por e-mail.
