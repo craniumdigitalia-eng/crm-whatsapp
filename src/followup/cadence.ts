@@ -194,7 +194,11 @@ export function parseCadenceSteps(raw: unknown): CadenceStep[] | null {
     if (typeof message !== "string" || !message.trim()) continue;
     steps.push({ dueDay, hourBRT, message: message.trim() });
   }
-  return steps.length > 0 ? steps : null;
+  if (steps.length === 0) return null;
+  // Defensivo [K3]: ordena por dueDay ascendente (o motor assume essa ordem ao
+  // escolher o toque "do dia"). Estavel — empates preservam a ordem de entrada.
+  steps.sort((a, b) => a.dueDay - b.dueDay);
+  return steps;
 }
 
 // Passo de indice `count` (= follow_up_count, 0-based), ou null se ja acabou.

@@ -43,6 +43,15 @@ describe("parseCadenceSteps", () => {
     ]);
   });
 
+  test("[K3] ordena por dueDay ascendente (defensivo contra edicao fora de ordem)", () => {
+    const raw = [
+      { dueDay: 10, hourBRT: 9, message: "c" },
+      { dueDay: 1, hourBRT: 8, message: "a" },
+      { dueDay: 4, hourBRT: 12, message: "b" },
+    ];
+    expect(parseCadenceSteps(raw)?.map((s) => s.dueDay)).toEqual([1, 4, 10]);
+  });
+
   test("retorna null quando nao ha toque utilizavel", () => {
     expect(parseCadenceSteps([])).toBeNull();
     expect(parseCadenceSteps([{ dueDay: 0, hourBRT: 8, message: "" }])).toBeNull();

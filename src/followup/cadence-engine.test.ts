@@ -1,6 +1,6 @@
 // Testes do motor (runFollowUpCheck) em modo CADENCIA: gates de dia (dueDay) e
-// hora (BRT), maximo 1 toque/dia e encerramento automatico no ultimo toque.
-// Relogio fixado com fake timers; deps mockadas.
+// hora (BRT), maximo 1 toque/dia, fast-forward do indice ao retomar ([K1]) e
+// encerramento automatico. Relogio fixado com fake timers; deps mockadas.
 
 jest.mock("../config", () => ({
   config: {
@@ -17,6 +17,7 @@ jest.mock("../config", () => ({
 jest.mock("../crm/leads", () => ({
   listFollowUpCandidates: jest.fn(),
   claimFollowUp: jest.fn(),
+  claimFollowUpTo: jest.fn(),
   addMessage: jest.fn(),
   setStatus: jest.fn(),
   updateLeadFields: jest.fn(),
@@ -30,8 +31,9 @@ jest.mock("../crm/followup-schedule", () => ({
   markError: jest.fn(),
 }));
 
-// Cadencia: helpers reais (brtHour/brtDayStartMs/elapsedBrtDays/cadenceMessage),
-// so getCadence e sobrescrito para devolver uma cadencia conhecida e HABILITADA.
+// Cadencia: helpers reais (brtHour/brtDayStartMs/elapsedBrtDays/cadenceMessage +
+// DEFAULT_CADENCE); so getCadence e sobrescrito para devolver uma cadencia
+// conhecida e HABILITADA.
 jest.mock("./cadence", () => {
   const actual = jest.requireActual("./cadence");
   return { ...actual, getCadence: jest.fn() };
@@ -41,15 +43,16 @@ import { runFollowUpCheck } from "./scheduler";
 import {
   listFollowUpCandidates,
   claimFollowUp,
+  claimFollowUpTo,
   addMessage,
   setStatus,
   updateLeadFields,
 } from "../crm/leads";
 import { sendText } from "../whatsapp/evolution";
-import { getCadence, CLOSURE_NOTE } from "./cadence";
+import { getCadence, CLOSURE_NOTE, DEFAULT_CADENCE } from "./cadence";
 
 const mockList = listFollowUpCandidates as jest.Mock;
-const mockClaim = claimFollowUp as jest.Mock;
+const mockClaimTo = claimFollowUpTo as jest.Mock;
 const mockSend = sendText as jest.Mock;
 const mockSetStatus = setStatus as jest.Mock;
 const mockUpdate = updateLeadFields as jest.Mock;
@@ -85,10 +88,11 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
   (addMessage as jest.Mock).mockResolvedValue(true);
+  (claimFollowUp as jest.Mock).mockResolvedValue(true);
   mockSetStatus.mockResolvedValue(undefined);
   mockUpdate.mockResolvedValue(undefined);
   mockSend.mockResolvedValue(undefined);
-  mockClaim.mockResolvedValue(true);
+  mockClaimTo.mockResolvedValue(true);
   mockGetCadence.mockResolvedValue({ steps: STEPS, enabled: true });
 });
 
@@ -96,12 +100,14 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-test("toque 0: dispara apos o dia e a hora do toque, com {nome} interpolado", () => {
-  jest.setSystemTime(new Date("2026-06-25T15:00:00Z")); // 12h BRT; elapsed >> 1
-  mockList.mockResolvedValue([lead({ follow_up_count: 0 })]);
+test("toque 0: dispara apos o dia e a hora, com {nome} interpolado e claim +1", () => {
+  jest.setSystemTime(new Date("2026-06-25T15:00:00Z")); // 12h BRT
+  // Criado 23/06 → elapsed 2: so o toque 0 (dueDay 1) venceu (o toque 1 e dueDay 4).
+  mockList.mockResolvedValue([lead({ follow_up_count: 0, created_at: "2026-06-23T12:00:00Z" })]);
 
   return runFollowUpCheck(50).then((result) => {
-    expect(mockClaim).toHaveBeenCalledWith("lead-1", 0, 2, expect.any(Number));
+    // Sem atraso: claim avanca de 0 -> 1.
+    expect(mockClaimTo).toHaveBeenCalledWith("lead-1", 0, 1, 2, expect.any(Number));
     expect(mockSend).toHaveBeenCalledWith("5511999990001", "D1 Carlos");
     expect(result.sent).toBe(1);
   });
@@ -115,7 +121,7 @@ test("gate de DIA: antes do dueDay nao dispara (sem claim)", () => {
   ]);
 
   return runFollowUpCheck(50).then((result) => {
-    expect(mockClaim).not.toHaveBeenCalled();
+    expect(mockClaimTo).not.toHaveBeenCalled();
     expect(mockSend).not.toHaveBeenCalled();
     expect(result.skipped).toBe(1);
   });
@@ -126,7 +132,7 @@ test("gate de HORA: antes da hora do toque nao dispara (sem claim)", () => {
   mockList.mockResolvedValue([lead({ follow_up_count: 1 })]); // dueDay 4, elapsed grande
 
   return runFollowUpCheck(50).then((result) => {
-    expect(mockClaim).not.toHaveBeenCalled();
+    expect(mockClaimTo).not.toHaveBeenCalled();
     expect(mockSend).not.toHaveBeenCalled();
     expect(result.skipped).toBe(1);
   });
@@ -138,49 +144,46 @@ test("ja contatado hoje: nao dispara de novo (max 1/dia), sem claim", () => {
   mockList.mockResolvedValue([lead({ follow_up_count: 0, last_message_at: "2026-06-25T13:00:00Z" })]);
 
   return runFollowUpCheck(50).then((result) => {
-    expect(mockClaim).not.toHaveBeenCalled();
+    expect(mockClaimTo).not.toHaveBeenCalled();
     expect(mockSend).not.toHaveBeenCalled();
     expect(result.skipped).toBe(1);
   });
 });
 
-test("gate de DIA respeita o dueDay do passo mesmo com follow_up_count avancado (fases 2/3)", () => {
+test("[K1] fast-forward: lead que conversou ~1 mes e sumiu recebe SO 1 toque (o de hoje)", () => {
   jest.setSystemTime(new Date("2026-06-25T15:00:00Z")); // 12h BRT
-  // Cadencia onde o passo de indice 7 (fim da semana 1) so vence no dia 10.
-  const steps = [
-    ...Array.from({ length: 7 }, (_, i) => ({ dueDay: i + 1, hourBRT: 8, message: `S${i + 1}` })),
-    { dueDay: 10, hourBRT: 8, message: "P2 {nome}" }, // indice 7, dueDay 10
-  ];
-  mockGetCadence.mockResolvedValue({ steps, enabled: true });
-
-  // Lead ja em follow_up_count=7, mas com apenas 9 dias → passo dueDay=10 NAO dispara.
-  // created 16/06 (12h BRT) → elapsed 9 dias em 25/06.
+  // Cadencia DEFAULT real (29 toques). Lead criado ha 30 dias, follow_up_count=0
+  // (ficou conversando, indice congelado). elapsed=30 → o toque "de hoje" e o de
+  // maior dueDay <= 30, que e o dia 28 (indice 13).
+  mockGetCadence.mockResolvedValue({ steps: DEFAULT_CADENCE, enabled: true });
   mockList.mockResolvedValue([
-    lead({ follow_up_count: 7, created_at: "2026-06-16T15:00:00Z", last_message_at: "2026-06-24T20:00:00Z" }),
+    lead({ follow_up_count: 0, created_at: "2026-05-26T12:00:00Z", last_message_at: "2026-06-24T20:00:00Z" }),
   ]);
 
-  return runFollowUpCheck(50)
-    .then((result) => {
-      expect(mockClaim).not.toHaveBeenCalled();
-      expect(mockSend).not.toHaveBeenCalled();
-      expect(result.skipped).toBe(1);
+  return runFollowUpCheck(50).then((result) => {
+    // NAO despeja o backlog: 1 unico envio.
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    // Claim salta o indice de 0 direto para 14 (envia so o toque 13).
+    expect(mockClaimTo).toHaveBeenCalledWith("lead-1", 0, 14, DEFAULT_CADENCE.length, expect.any(Number));
+    // Nao encerra (ainda ha toques pela frente).
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(result.sent).toBe(1);
+  });
+});
 
-      // Agora o lead tem 10 dias (created 15/06) → o passo dueDay=10 dispara.
-      jest.clearAllMocks();
-      mockClaim.mockResolvedValue(true);
-      mockSend.mockResolvedValue(undefined);
-      (addMessage as jest.Mock).mockResolvedValue(true);
-      mockGetCadence.mockResolvedValue({ steps, enabled: true });
-      mockList.mockResolvedValue([
-        lead({ follow_up_count: 7, created_at: "2026-06-15T15:00:00Z", last_message_at: "2026-06-24T20:00:00Z" }),
-      ]);
-      return runFollowUpCheck(50);
-    })
-    .then((result2) => {
-      expect(mockClaim).toHaveBeenCalledWith("lead-1", 7, 8, expect.any(Number));
-      expect(mockSend).toHaveBeenCalledWith("5511999990001", "P2 Carlos");
-      expect(result2.sent).toBe(1);
-    });
+test("lead frio normal: indice acompanha os dias, sem salto (claim +1)", () => {
+  jest.setSystemTime(new Date("2026-06-25T15:00:00Z")); // 12h BRT
+  // Criado ontem (24/06) → elapsed 1 → toque do dia = indice 0 (dueDay 1).
+  mockGetCadence.mockResolvedValue({ steps: DEFAULT_CADENCE, enabled: true });
+  mockList.mockResolvedValue([
+    lead({ follow_up_count: 0, created_at: "2026-06-24T12:00:00Z", last_message_at: "2026-06-24T20:00:00Z" }),
+  ]);
+
+  return runFollowUpCheck(50).then((result) => {
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    expect(mockClaimTo).toHaveBeenCalledWith("lead-1", 0, 1, DEFAULT_CADENCE.length, expect.any(Number));
+    expect(result.sent).toBe(1);
+  });
 });
 
 test("ultimo toque da cadencia → encerra com status perdido + nota de encerramento", () => {
@@ -188,6 +191,7 @@ test("ultimo toque da cadencia → encerra com status perdido + nota de encerram
   mockList.mockResolvedValue([lead({ follow_up_count: 1 })]); // ultimo toque (2 toques)
 
   return runFollowUpCheck(50).then(() => {
+    expect(mockClaimTo).toHaveBeenCalledWith("lead-1", 1, 2, 2, expect.any(Number));
     expect(mockSend).toHaveBeenCalledWith("5511999990001", "D4 Carlos");
     expect(mockUpdate).toHaveBeenCalledWith("lead-1", { status: "perdido", notes: CLOSURE_NOTE });
     // Encerramento usa updateLeadFields (com nota), nao setStatus puro.

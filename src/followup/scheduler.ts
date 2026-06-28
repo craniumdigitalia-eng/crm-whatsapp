@@ -4,6 +4,7 @@ import { Lead, AUTO_STATUSES, LeadStatus } from "../types";
 import {
   addMessage,
   claimFollowUp,
+  claimFollowUpTo,
   listFollowUpCandidates,
   setStatus,
   updateLeadFields,
@@ -90,25 +91,35 @@ export async function runFollowUpCheck(batchLimit = config.followupBatch): Promi
   for (const lead of leads) {
     const stage = lead.follow_up_count; // toques ja enviados (pre-claim)
 
-    // Intervalo e texto dependem da modalidade. Em cadencia, o passo `stage`
-    // define a mensagem, o dia minimo (dueDay) e a hora minima; o "1 toque/dia"
-    // vem do corte BRT.
+    // Intervalo e texto dependem da modalidade. Em cadencia, escolhemos o toque
+    // CERTO PRA HOJE (fast-forward, fix [K1]); no fallback, o passo `stage`.
     let intervalMs: number;
     let text: string;
+    // Novo valor de follow_up_count apos o claim. No fallback e stage+1; em
+    // cadencia pode "saltar" para alcancar o toque do dia (pulando atrasados).
+    let claimNewCount = stage + 1;
     if (useCadence) {
-      const step = cadence.steps[stage];
-      const msg = cadenceMessage(cadence.steps, stage, lead.name);
+      // Fast-forward: o toque do dia e o de MAIOR indice em [stage, maxCount) cujo
+      // dueDay ja venceu (elapsedDays >= dueDay). Assim, um lead que ficou
+      // conversando e sumiu recebe SO 1 toque (o coerente com hoje), nao o backlog
+      // inteiro 1/dia. steps em ordem crescente de dueDay (garantido no parse).
+      const elapsed = elapsedBrtDays(lead.created_at, nowDate);
+      let target = -1;
+      for (let i = stage; i < cadence.steps.length; i++) {
+        if (cadence.steps[i].dueDay <= elapsed) target = i;
+      }
+      if (target < 0) {
+        // Proximo toque ainda nao venceu (gate de dia).
+        result.skipped++;
+        continue;
+      }
+      const step = cadence.steps[target];
+      const msg = cadenceMessage(cadence.steps, target, lead.name);
       if (!step || msg === null) {
-        // Passo fora da cadencia (lead ja recebeu todos os toques). Guarda defensiva.
         result.skipped++;
         continue;
       }
-      // Gate de DIA: so dispara quando ja se passaram dueDay dias desde a criacao.
-      if (elapsedBrtDays(lead.created_at, nowDate) < step.dueDay) {
-        result.skipped++;
-        continue;
-      }
-      // Gate de HORA: so dispara a partir da hora (BRT) prevista para o passo.
+      // Gate de HORA: so dispara a partir da hora (BRT) prevista para o toque.
       if (hourNowBRT < step.hourBRT) {
         result.skipped++;
         continue;
@@ -118,6 +129,7 @@ export async function runFollowUpCheck(batchLimit = config.followupBatch): Promi
       // por dia: so e elegivel se o ultimo contato foi ANTES de hoje.
       intervalMs = now - todayStartMs;
       text = msg;
+      claimNewCount = target + 1; // pula os toques intermediarios atrasados
     } else {
       intervalMs = config.followupIntervalMs;
       text = followUpText(stage, maxCount, lead);
@@ -131,10 +143,13 @@ export async function runFollowUpCheck(batchLimit = config.followupBatch): Promi
       continue;
     }
 
-    // Claim atomico: incrementa follow_up_count somente se o lead ainda esta elegivel.
+    // Claim atomico: avanca follow_up_count somente se o lead ainda esta elegivel.
     // Protege contra: lead respondeu entre a leitura e o envio (last_direction vira 'in');
     //                 dois processos de cron rodando em paralelo sobre o mesmo lead.
-    const claimed = await claimFollowUp(lead.id, stage, maxCount, intervalMs);
+    // A guarda (follow_up_count == stage) garante que so um processo aplica o salto.
+    const claimed = useCadence
+      ? await claimFollowUpTo(lead.id, stage, claimNewCount, maxCount, intervalMs)
+      : await claimFollowUp(lead.id, stage, maxCount, intervalMs);
     if (!claimed) {
       console.log(
         `[followup] Claim falhou para ${lead.phone} — lead respondeu ou concorrencia detectada.`
@@ -143,7 +158,7 @@ export async function runFollowUpCheck(batchLimit = config.followupBatch): Promi
       continue;
     }
 
-    const newCount = stage + 1;
+    const newCount = claimNewCount;
     const isLast = newCount >= maxCount;
 
     try {

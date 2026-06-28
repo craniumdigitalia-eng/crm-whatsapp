@@ -130,18 +130,21 @@ export async function listFollowUpCandidates(
   return (data ?? []) as Lead[];
 }
 
-// Claim atomico de um slot de follow-up (padrao "claim-then-send").
-// Incrementa follow_up_count SOMENTE se o lead ainda esta elegivel no momento do claim:
+// Claim atomico que SETA follow_up_count para um valor arbitrario `newCount`
+// (>= expectedCount + 1). Generaliza o "claim-then-send" para permitir o
+// fast-forward do indice da cadencia (pular toques atrasados ao retomar um lead
+// que ficou conversando — fix [K1]), sem abrir janela de duplo-envio.
+// So vence se o lead ainda esta elegivel no momento do claim:
 //   - last_direction = 'out'          (lead nao respondeu desde o ultimo envio)
-//   - last_message_at expirou         (intervalo de followupIntervalMs ja passou)
+//   - last_message_at expirou         (intervalo ja passou)
 //   - follow_up_count == expectedCount (optimistic lock — evita duplo-claim em corrida de cron)
-//   - follow_up_count < maxCount      (limite de retomadas ainda nao atingido)
-// Ao vencer, reescreve last_message_at para agora — reinicia o relogio do intervalo,
-// fechando a janela de claims sequenciais rapidos (fix #12).
-// Retorna true se o claim foi bem-sucedido, false caso contrario.
-export async function claimFollowUp(
+//   - follow_up_count < maxCount      (limite ainda nao atingido)
+// Ao vencer, reescreve last_message_at para agora — reinicia o relogio do intervalo
+// (fecha a janela de claims sequenciais rapidos, fix #12).
+export async function claimFollowUpTo(
   leadId: string,
   expectedCount: number,
+  newCount: number,
   maxCount: number,
   intervalMs: number
 ): Promise<boolean> {
@@ -150,7 +153,7 @@ export async function claimFollowUp(
 
   const { data, error } = await supabase
     .from("leads")
-    .update({ follow_up_count: expectedCount + 1, last_message_at: now })
+    .update({ follow_up_count: newCount, last_message_at: now })
     .eq("id", leadId)
     .eq("last_direction", "out")
     .not("last_message_at", "is", null)
@@ -160,6 +163,18 @@ export async function claimFollowUp(
     .select("id");
   if (error) throw error;
   return (data?.length ?? 0) > 0;
+}
+
+// Claim atomico de um slot de follow-up (padrao "claim-then-send"): incrementa
+// follow_up_count em 1. Caso especial de claimFollowUpTo usado pelo motor
+// ROTATION/fallback. Mantido para nao alterar os chamadores existentes.
+export async function claimFollowUp(
+  leadId: string,
+  expectedCount: number,
+  maxCount: number,
+  intervalMs: number
+): Promise<boolean> {
+  return claimFollowUpTo(leadId, expectedCount, expectedCount + 1, maxCount, intervalMs);
 }
 
 export async function updateLeadFields(
