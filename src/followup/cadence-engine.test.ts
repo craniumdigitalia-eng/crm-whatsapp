@@ -144,6 +144,45 @@ test("ja contatado hoje: nao dispara de novo (max 1/dia), sem claim", () => {
   });
 });
 
+test("gate de DIA respeita o dueDay do passo mesmo com follow_up_count avancado (fases 2/3)", () => {
+  jest.setSystemTime(new Date("2026-06-25T15:00:00Z")); // 12h BRT
+  // Cadencia onde o passo de indice 7 (fim da semana 1) so vence no dia 10.
+  const steps = [
+    ...Array.from({ length: 7 }, (_, i) => ({ dueDay: i + 1, hourBRT: 8, message: `S${i + 1}` })),
+    { dueDay: 10, hourBRT: 8, message: "P2 {nome}" }, // indice 7, dueDay 10
+  ];
+  mockGetCadence.mockResolvedValue({ steps, enabled: true });
+
+  // Lead ja em follow_up_count=7, mas com apenas 9 dias → passo dueDay=10 NAO dispara.
+  // created 16/06 (12h BRT) → elapsed 9 dias em 25/06.
+  mockList.mockResolvedValue([
+    lead({ follow_up_count: 7, created_at: "2026-06-16T15:00:00Z", last_message_at: "2026-06-24T20:00:00Z" }),
+  ]);
+
+  return runFollowUpCheck(50)
+    .then((result) => {
+      expect(mockClaim).not.toHaveBeenCalled();
+      expect(mockSend).not.toHaveBeenCalled();
+      expect(result.skipped).toBe(1);
+
+      // Agora o lead tem 10 dias (created 15/06) → o passo dueDay=10 dispara.
+      jest.clearAllMocks();
+      mockClaim.mockResolvedValue(true);
+      mockSend.mockResolvedValue(undefined);
+      (addMessage as jest.Mock).mockResolvedValue(true);
+      mockGetCadence.mockResolvedValue({ steps, enabled: true });
+      mockList.mockResolvedValue([
+        lead({ follow_up_count: 7, created_at: "2026-06-15T15:00:00Z", last_message_at: "2026-06-24T20:00:00Z" }),
+      ]);
+      return runFollowUpCheck(50);
+    })
+    .then((result2) => {
+      expect(mockClaim).toHaveBeenCalledWith("lead-1", 7, 8, expect.any(Number));
+      expect(mockSend).toHaveBeenCalledWith("5511999990001", "P2 Carlos");
+      expect(result2.sent).toBe(1);
+    });
+});
+
 test("ultimo toque da cadencia → encerra com status perdido + nota de encerramento", () => {
   jest.setSystemTime(new Date("2026-06-25T15:00:00Z")); // 12h BRT (>= 12h do toque 1)
   mockList.mockResolvedValue([lead({ follow_up_count: 1 })]); // ultimo toque (2 toques)

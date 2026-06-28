@@ -61,6 +61,22 @@ describe("parseCadenceSteps", () => {
     expect(days[days.length - 1]).toBe(118);
     for (let i = 1; i < days.length; i++) expect(days[i]).toBeGreaterThan(days[i - 1]);
   });
+
+  test("DEFAULT — fase 1 dias/horas alternadas; fase 2 horas 9/14/19; fase 3 horas 10/15/20", () => {
+    // Fase 1: dias 1-7 com horas 8,12,19,21,8,12,19.
+    expect(DEFAULT_CADENCE.slice(0, 7).map((s) => [s.dueDay, s.hourBRT])).toEqual([
+      [1, 8], [2, 12], [3, 19], [4, 21], [5, 8], [6, 12], [7, 19],
+    ]);
+    // Fase 2: dias 10..28 (passo 3), horas rotacionando 9/14/19.
+    expect(DEFAULT_CADENCE.slice(7, 14).map((s) => [s.dueDay, s.hourBRT])).toEqual([
+      [10, 9], [13, 14], [16, 19], [19, 9], [22, 14], [25, 19], [28, 9],
+    ]);
+    // Fase 3: dias 34..118 (passo 6), horas rotacionando 10/15/20.
+    expect(DEFAULT_CADENCE.slice(14, 17).map((s) => [s.dueDay, s.hourBRT])).toEqual([
+      [34, 10], [40, 15], [46, 20],
+    ]);
+    expect(DEFAULT_CADENCE[DEFAULT_CADENCE.length - 1]).toMatchObject({ dueDay: 118 });
+  });
 });
 
 describe("stepAt", () => {

@@ -112,31 +112,32 @@ const PHASE3_MESSAGES = [
   "{nome}, ainda dá tempo de virar a chave esse ano. Quer que eu te mostre o caminho?",
 ];
 
-// Horarios padrao alternados das fases 2 e 3 (rotacionados pelos toques).
-const ROTATING_HOURS = [9, 14, 19];
+// Horarios padrao alternados (BRT), rotacionados pelos toques de cada fase.
+const PHASE2_HOURS = [9, 14, 19];
+const PHASE3_HOURS = [10, 15, 20];
 
 // Monta a cadencia padrao completa (3 fases). Os toques das fases 2/3 sao
 // gerados em laco (dueDay crescente, hora e mensagem rotacionando).
 function buildDefaultCadence(): CadenceStep[] {
   const steps: CadenceStep[] = [...PHASE1];
 
-  // Fase 2 — dias 10, 13, 16, 19, 22, 25, 28.
+  // Fase 2 — dias 10, 13, 16, 19, 22, 25, 28 (horas 9/14/19).
   let r = 0;
   for (let day = 10; day <= 28; day += 3) {
     steps.push({
       dueDay: day,
-      hourBRT: ROTATING_HOURS[r % ROTATING_HOURS.length],
+      hourBRT: PHASE2_HOURS[r % PHASE2_HOURS.length],
       message: PHASE2_MESSAGES[r % PHASE2_MESSAGES.length],
     });
     r++;
   }
 
-  // Fase 3 — dias 34, 40, 46, ... ate 118 (a cada 6 dias).
+  // Fase 3 — dias 34, 40, 46, ... ate 118 (a cada 6 dias; horas 10/15/20).
   r = 0;
   for (let day = 34; day <= 118; day += 6) {
     steps.push({
       dueDay: day,
-      hourBRT: ROTATING_HOURS[r % ROTATING_HOURS.length],
+      hourBRT: PHASE3_HOURS[r % PHASE3_HOURS.length],
       message: PHASE3_MESSAGES[r % PHASE3_MESSAGES.length],
     });
     r++;

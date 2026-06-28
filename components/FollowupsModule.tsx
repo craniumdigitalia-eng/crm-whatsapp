@@ -348,12 +348,12 @@ export default function FollowupsModule() {
         </div>
 
         <div className="cad-warn" role="note">
-          <strong>Como funciona:</strong> os toques seguem a ordem da lista. Cada um sai quando ja se
-          passaram &ldquo;Dia&rdquo; dias desde a entrada do lead, a partir da hora marcada (horario
-          de Brasilia), no maximo 1 por dia. O padrao cobre ~4 meses em 3 fases (semana 1 diaria,
-          resto do mes 1 a cada 3 dias, meses 2-4 a cada 6 dias). Apos o ultimo toque sem resposta, o
-          lead e <strong>encerrado automaticamente</strong> (perdido). O disparo depende da rodada do
-          cron.
+          <strong>Como funciona:</strong> os disparos seguem o horario configurado em cada toque
+          (requer o cron de hora em hora ativo). Cada toque sai quando ja se passaram
+          &ldquo;Dia&rdquo; dias desde a entrada do lead, a partir da hora marcada (horario de
+          Brasilia), no maximo 1 por dia. O padrao cobre ~4 meses em 3 fases (semana 1 diaria, resto
+          do mes 1 a cada 3 dias, meses 2-4 a cada 6 dias). Apos o ultimo toque sem resposta, o lead
+          e <strong>encerrado automaticamente</strong> (perdido).
         </div>
 
         {loading ? (
