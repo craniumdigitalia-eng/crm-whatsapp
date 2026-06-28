@@ -74,7 +74,8 @@ const tools = [
         },
         duracao_min: {
           type: "number",
-          description: "Duracao da reuniao em minutos (default 30).",
+          description:
+            "Duracao do BLOQUEIO na agenda em minutos (default 60). NAO reduza para 20: ao lead comunicamos uma call rapida de ~20 min, mas reservamos 60 min de margem na agenda. So altere se o lead pedir explicitamente uma reuniao mais longa.",
         },
         titulo: {
           type: "string",
@@ -199,8 +200,10 @@ export async function applyTool(lead: Lead, name: string, input: any): Promise<T
       };
     }
 
+    // BLOQUEIO na agenda: default 60 min (margem de seguranca). Ao lead comunicamos
+    // ~20 min — ver COMMUNICATED_MIN no email/prompt. So muda se o lead pedir mais tempo.
     const durationMin =
-      typeof input.duracao_min === "number" && input.duracao_min > 0 ? input.duracao_min : 30;
+      typeof input.duracao_min === "number" && input.duracao_min > 0 ? input.duracao_min : 60;
     const end = new Date(start.getTime() + durationMin * 60_000);
     const quem = lead.name?.trim() || `+${lead.phone}`;
     const summary = (input.titulo as string)?.trim() || `Reuniao Cranium × ${quem}`;
@@ -238,13 +241,15 @@ export async function applyTool(lead: Lead, name: string, input: any): Promise<T
         await sendMeetingConfirmation(lead, {
           meetLink,
           startISO: start,
-          durationMin,
+          // COMUNICADO ao lead: ~20 min (call rapida). O bloqueio na agenda (durationMin=60)
+          // e so margem interna — o lead NAO ve os 60 min.
+          durationMin: 20,
         }).catch((e) => console.error("[agent] sendMeetingConfirmation:", (e as Error).message));
       }
 
       return {
         handoff: false,
-        content: `Reuniao criada no Google Calendar para ${quando} (${durationMin} min)${
+        content: `Reuniao criada no Google Calendar para ${quando} (bloqueio de ${durationMin} min na agenda — ao lead comunique uma call rapida de ~20 min, NAO os ${durationMin})${
           link ? `, link ${link}` : ""
         }. Convite ${lead.email ? `enviado para ${lead.email}` : "na agenda da Cranium (lead sem e-mail)"}. Confirme ao lead.`,
       };
