@@ -69,7 +69,9 @@ interface Stats {
 interface ConfigStatus {
   provider: string;
   from: string;
+  user: string;
   hasApiKey: boolean;
+  hasAppPassword: boolean;
   configured: boolean;
 }
 
@@ -1049,17 +1051,21 @@ function TemplateEditor({
    ============================================================ */
 function ProviderTab({ isAdmin, flash }: { isAdmin: boolean; flash: Flash }) {
   const [status, setStatus] = useState<ConfigStatus | null>(null);
-  const [provider, setProvider] = useState('dev');
+  const [provider, setProvider] = useState('gmail');
   const [apiKey, setApiKey] = useState('');
   const [from, setFrom] = useState('');
+  const [user, setUser] = useState('');
+  const [appPassword, setAppPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const s = await apiCall<ConfigStatus>('/api/email/config');
       setStatus(s);
-      setProvider(s.provider || 'dev');
+      setProvider(s.provider || 'gmail');
       setFrom(s.from || '');
+      setUser(s.user || '');
     } catch (e) {
       flash('err', `Falha ao carregar provedor: ${(e as Error).message}`);
     }
@@ -1069,15 +1075,27 @@ function ProviderTab({ isAdmin, flash }: { isAdmin: boolean; flash: Flash }) {
     void load();
   }, [load]);
 
+  // Gmail SMTP usa conta + senha de app; 'dev' só loga; os demais são ESP (API key).
+  const isGmail = provider === 'gmail' || provider === 'smtp';
+  const isDev = provider === 'dev';
+
   async function save() {
     setBusy(true);
     try {
       const s = await apiCall<ConfigStatus>('/api/email/config', {
         method: 'PUT',
-        body: JSON.stringify({ provider, apiKey: apiKey || undefined, from: from || undefined }),
+        body: JSON.stringify({
+          provider,
+          from: from || undefined,
+          // Campos vazios não sobrescrevem o que já está salvo (o backend filtra vazio).
+          user: isGmail ? user || undefined : undefined,
+          appPassword: isGmail ? appPassword || undefined : undefined,
+          apiKey: !isGmail && !isDev ? apiKey || undefined : undefined,
+        }),
       });
       setStatus(s);
       setApiKey('');
+      setAppPassword('');
       flash('ok', 'Provedor salvo.');
     } catch (e) {
       flash('err', `Falha ao salvar: ${(e as Error).message}`);
@@ -1086,63 +1104,139 @@ function ProviderTab({ isAdmin, flash }: { isAdmin: boolean; flash: Flash }) {
     }
   }
 
+  async function sendTest() {
+    setTesting(true);
+    try {
+      const r = await apiCall<{ to: string; provider: string }>('/api/email/test', {
+        method: 'POST',
+      });
+      flash('ok', `Email de teste enviado para ${r.to} (via ${r.provider}). Confira a caixa de entrada.`);
+    } catch (e) {
+      flash('err', `Falha ao enviar teste: ${(e as Error).message}`);
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  // Status amigável: nome legível do provedor, sem jargão técnico na tela principal.
+  const connected = Boolean(status?.configured);
+  const friendlyName = isGmail ? 'Gmail' : isDev ? 'modo de teste' : status?.provider || '';
+
   return (
     <div className="em-section">
-      <h2 className="em-section-title">Provedor de envio</h2>
-      <p className="em-hint">
-        O envio é plugável. O provedor <strong>dev</strong> (padrão) apenas registra no log — não
-        envia de verdade. O ESP real (Resend/SendGrid/Brevo/SES) será plugado depois em
-        <code> src/crm/email-provider.ts</code>.
-      </p>
+      <h2 className="em-section-title">Envio de email</h2>
 
       {status && (
-        <div className="em-card">
-          <div className="em-prov-status">
-            <span>
-              Provedor atual: <strong>{status.provider}</strong>
-            </span>
-            <span className={`em-pill ${status.configured ? 'em-pill--sent' : 'em-pill--err'}`}>
-              {status.configured ? 'pronto' : 'incompleto'}
-            </span>
+        <div className="em-card em-prov-hero">
+          <div className="em-prov-hero-icon" aria-hidden>
+            📧
           </div>
-          <div className="em-prov-status">
-            <span>Remetente: {status.from || '—'}</span>
-            <span>API key: {status.hasApiKey ? 'salva' : 'não definida'}</span>
+          <div className="em-prov-hero-main">
+            <span className="em-prov-hero-status">
+              {connected ? `✅ Conectado (${friendlyName})` : '⚠️ Envio ainda não configurado'}
+            </span>
+            {connected && status.from && (
+              <span className="em-prov-hero-from">Enviando de: {status.from}</span>
+            )}
           </div>
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={sendTest}
+            disabled={testing || !connected}
+            title={connected ? 'Envia um email de teste para você' : 'Configure o envio primeiro'}
+          >
+            {testing ? 'Enviando…' : 'Enviar email de teste'}
+          </button>
         </div>
       )}
 
-      {isAdmin ? (
-        <div className="em-card">
-          <label className="em-field">
-            <span>Provedor</span>
-            <select value={provider} onChange={(e) => setProvider(e.target.value)}>
-              <option value="dev">dev (só loga)</option>
-              <option value="resend">resend</option>
-              <option value="sendgrid">sendgrid</option>
-              <option value="brevo">brevo</option>
-              <option value="ses">ses</option>
-            </select>
-          </label>
-          <label className="em-field">
-            <span>Remetente (From)</span>
-            <input value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Cranium <no-reply@dominio.com>" />
-          </label>
-          <label className="em-field">
-            <span>API key {status?.hasApiKey ? '(deixe vazio para manter)' : ''}</span>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="credencial do ESP"
-            />
-          </label>
-          <button className="btn btn-primary" type="button" onClick={save} disabled={busy}>
-            {busy ? 'Salvando…' : 'Salvar provedor'}
-          </button>
-        </div>
-      ) : (
-        <p className="em-hint">Apenas administradores configuram o provedor.</p>
+      {isAdmin && (
+        <details className="em-advanced">
+          <summary className="em-advanced-summary">⚙️ Configurações avançadas</summary>
+          <div className="em-card">
+            <label className="em-field">
+              <span>Provedor</span>
+              <select value={provider} onChange={(e) => setProvider(e.target.value)}>
+                <option value="gmail">Gmail (SMTP) — recomendado</option>
+                <option value="dev">dev (só loga)</option>
+                <option value="resend">resend</option>
+                <option value="sendgrid">sendgrid</option>
+                <option value="brevo">brevo</option>
+                <option value="ses">ses</option>
+              </select>
+            </label>
+
+            {isGmail ? (
+              <>
+                <label className="em-field">
+                  <span>E-mail da conta</span>
+                  <input
+                    value={user}
+                    onChange={(e) => setUser(e.target.value)}
+                    placeholder="voce@gmail.com"
+                  />
+                </label>
+                <label className="em-field">
+                  <span>
+                    Senha de app (16 caracteres)
+                    {status?.hasAppPassword ? ' — deixe vazio para manter' : ''}
+                  </span>
+                  <input
+                    type="password"
+                    value={appPassword}
+                    onChange={(e) => setAppPassword(e.target.value)}
+                    placeholder="xxxx xxxx xxxx xxxx"
+                  />
+                </label>
+                <p className="em-hint">
+                  Gere em myaccount.google.com/apppasswords (não é a senha normal da conta).
+                </p>
+                <label className="em-field">
+                  <span>Remetente (From)</span>
+                  <input
+                    value={from}
+                    onChange={(e) => setFrom(e.target.value)}
+                    placeholder="Cranium <voce@gmail.com>"
+                  />
+                </label>
+              </>
+            ) : isDev ? (
+              <label className="em-field">
+                <span>Remetente (From)</span>
+                <input
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
+                  placeholder="Cranium <no-reply@dominio.com>"
+                />
+              </label>
+            ) : (
+              <>
+                <label className="em-field">
+                  <span>API key {status?.hasApiKey ? '(deixe vazio para manter)' : ''}</span>
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="credencial do ESP"
+                  />
+                </label>
+                <label className="em-field">
+                  <span>Remetente (From)</span>
+                  <input
+                    value={from}
+                    onChange={(e) => setFrom(e.target.value)}
+                    placeholder="Cranium <no-reply@dominio.com>"
+                  />
+                </label>
+              </>
+            )}
+
+            <button className="btn btn-primary" type="button" onClick={save} disabled={busy}>
+              {busy ? 'Salvando…' : 'Salvar configurações'}
+            </button>
+          </div>
+        </details>
       )}
     </div>
   );

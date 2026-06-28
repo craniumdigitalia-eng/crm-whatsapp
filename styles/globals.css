@@ -2597,6 +2597,19 @@ body {
 
 .em-prov-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13.5px; color: var(--fg); padding: 4px 0; }
 .em-prov-status:not(:last-child) { border-bottom: 1px solid var(--neutral-mid); margin-bottom: 6px; padding-bottom: 8px; }
+/* Card "hero" da aba Envio de email — status grande + botão testar. */
+.em-prov-hero { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.em-prov-hero-icon { font-size: 30px; line-height: 1; }
+.em-prov-hero-main { display: flex; flex-direction: column; gap: 3px; flex: 1 1 220px; min-width: 0; }
+.em-prov-hero-status { font-size: 16px; font-weight: 600; color: var(--fg); }
+.em-prov-hero-from { font-size: 13px; color: var(--fg-muted, #6b7280); overflow-wrap: anywhere; }
+
+/* Configurações avançadas (collapsible, fechado por padrão). */
+.em-advanced { margin-top: 14px; }
+.em-advanced-summary { cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--fg-muted, #6b7280); list-style: none; padding: 6px 2px; user-select: none; }
+.em-advanced-summary::-webkit-details-marker { display: none; }
+.em-advanced-summary:hover { color: var(--fg); }
+.em-advanced[open] .em-advanced-summary { margin-bottom: 6px; }
 
 /* ============================================================
    Conversas — inbox estilo WhatsApp Web (tema escuro Cranium).
