@@ -22,6 +22,9 @@ interface AgentConfig {
   qualificationGoals: string;
   escalationRules: string;
   guardrails: string;
+  objections: string;
+  scheduling: string;
+  faq: string;
 }
 
 interface ConfigResponse {
@@ -231,6 +234,30 @@ export default function AgentConfigModule({ isAdmin }: { isAdmin: boolean }) {
           </fieldset>
 
           <fieldset className="agent-card" disabled={disabled}>
+            <legend className="agent-card-title">Quebra de objeções</legend>
+            <p className="agent-card-hint">Playbook de respostas a "tá caro", "já tenho agência", "vou pensar" — sempre reconduzindo para a reunião.</p>
+            <label className="agent-field">
+              <textarea
+                rows={8}
+                value={cfg.objections}
+                onChange={(e) => set('objections', e.target.value)}
+              />
+            </label>
+          </fieldset>
+
+          <fieldset className="agent-card" disabled={disabled}>
+            <legend className="agent-card-title">Instruções de agendamento</legend>
+            <p className="agent-card-hint">Como a IA conduz o lead qualificado até marcar a reunião (ofereça 2 horários).</p>
+            <label className="agent-field">
+              <textarea
+                rows={5}
+                value={cfg.scheduling}
+                onChange={(e) => set('scheduling', e.target.value)}
+              />
+            </label>
+          </fieldset>
+
+          <fieldset className="agent-card" disabled={disabled}>
             <legend className="agent-card-title">Quando transferir para um humano</legend>
             <label className="agent-field">
               <textarea
@@ -249,6 +276,18 @@ export default function AgentConfigModule({ isAdmin }: { isAdmin: boolean }) {
                 rows={5}
                 value={cfg.guardrails}
                 onChange={(e) => set('guardrails', e.target.value)}
+              />
+            </label>
+          </fieldset>
+
+          <fieldset className="agent-card" disabled={disabled}>
+            <legend className="agent-card-title">FAQ / Conhecimento</legend>
+            <p className="agent-card-hint">Base de conhecimento que a IA pode usar (preços de referência, prazos, cases). A IA não inventa além disto.</p>
+            <label className="agent-field">
+              <textarea
+                rows={6}
+                value={cfg.faq}
+                onChange={(e) => set('faq', e.target.value)}
               />
             </label>
           </fieldset>

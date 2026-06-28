@@ -28,11 +28,20 @@ ${cfg.opening}
 O QUE DESCOBRIR (qualificação)
 ${cfg.qualificationGoals}
 
+## Quebra de objeções
+${cfg.objections}
+
+## Agendamento
+${cfg.scheduling}
+
 QUANDO TRANSFERIR PARA UM HUMANO
 ${cfg.escalationRules}
 
 O QUE NUNCA FAZER (guardrails)
 ${cfg.guardrails}
+
+## Conhecimento/FAQ
+${cfg.faq}
 
 USO DAS FERRAMENTAS
 - Conforme for descobrindo informações, use a ferramenta "atualizar_lead" para registrar o interesse (service_interest, ex.: "tráfego pago para e-commerce"), o orçamento (budget) e o resumo da qualificação (notes). Atualize o status para "qualificado" quando já tiver entendido o serviço desejado e tiver pelo menos uma noção do objetivo ou do orçamento.

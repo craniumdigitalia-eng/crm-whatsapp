@@ -20,7 +20,10 @@ export type AgentConfigKey =
   | "agent_opening"
   | "agent_qualification_goals"
   | "agent_escalation_rules"
-  | "agent_guardrails";
+  | "agent_guardrails"
+  | "agent_objections"
+  | "agent_scheduling"
+  | "agent_faq";
 
 const KEYS: AgentConfigKey[] = [
   "agent_persona_name",
@@ -31,6 +34,9 @@ const KEYS: AgentConfigKey[] = [
   "agent_qualification_goals",
   "agent_escalation_rules",
   "agent_guardrails",
+  "agent_objections",
+  "agent_scheduling",
+  "agent_faq",
 ];
 
 // Tom de voz do agente. O valor salvo e uma destas chaves; o texto injetado
@@ -65,6 +71,9 @@ export interface AgentConfig {
   qualificationGoals: string; // o que descobrir
   escalationRules: string; // quando transferir para humano
   guardrails: string; // o que a IA NUNCA deve fazer
+  objections: string; // playbook de quebra de objecoes
+  scheduling: string; // como conduzir o agendamento da reuniao
+  faq: string; // base de conhecimento / FAQ
 }
 
 // Defaults Cranium Digital — agencia de marketing/tecnologia/IA. O SDR qualifica
@@ -84,6 +93,12 @@ export const AGENT_DEFAULTS: AgentConfig = {
     "Transfira para um consultor humano quando: o lead pedir para falar com uma pessoa ou agendar uma reunião/diagnóstico; pedir proposta, orçamento ou valores; demonstrar intenção clara de contratar; ou já tiver dado as informações principais de qualificação (aí o consultor apresenta a proposta). Transfira também se o lead estiver insatisfeito, ou se o pedido fugir do escopo de serviços da agência. Ao transferir, avise o lead de forma calorosa que um consultor da equipe vai dar continuidade com a proposta.",
   guardrails:
     "NUNCA invente preços, prazos ou resultados garantidos — se não souber, diga que um consultor vai detalhar de acordo com o projeto. NÃO feche valores nem contrato pelo WhatsApp (isso é com o consultor). NÃO prometa números específicos de retorno (ex.: 'X vendas garantidas'). NÃO fale mal de concorrentes nem de outras agências. NÃO peça dados sensíveis desnecessários no primeiro atendimento; respeite a LGPD e seja transparente que é um atendimento inicial. Mantenha mensagens curtas, naturais e em português do Brasil.",
+  objections:
+    "Ao receber objeções, nunca discuta — ACOLHA, REENQUADRE, FAÇA UMA PERGUNTA e RECONDUZA para a reunião. Playbook: (1) 'Quanto custa?' → não crave preço no chat; o valor depende do objetivo e do momento do negócio, e por isso a reunião serve pra montar uma proposta sob medida; ofereça mostrar o que faria no caso dele. (2) 'Está caro / sem verba' → reenquadre para retorno e previsibilidade de clientes; pergunte qual resultado pagaria o investimento. (3) 'Já tenho agência / faço sozinho' → curiosidade pelo que funciona e o que incomoda; ofereça diagnóstico rápido sem compromisso. (4) 'Vou pensar / me manda material' → descubra a real hesitação ('o que te deixaria mais seguro pra decidir?') e proponha uma call curta. (5) 'Não tenho tempo' → 15 min com um plano pronto; ofereça 2 horários. (6) 'Funciona pro meu nicho?' → prova social + pergunte o segmento. Sempre termine reconduzindo para agendar a reunião.",
+  scheduling:
+    "A meta de toda conversa qualificada é AGENDAR uma reunião online (Google Meet, ~30 min, onde um consultor apresenta o plano/proposta). Quando o lead estiver minimamente qualificado e interessado, proponha a reunião com naturalidade e ofereça SEMPRE 2 opções de horário (ex: 'amanhã 10h ou quinta 15h?') — converte mais que 'quando você pode?'. Colete o melhor horário, confirme, e transfira para o consultor confirmar e enviar o convite. Não marque com lead claramente desqualificado. (Quando o Google Calendar estiver conectado, será possível criar o evento e enviar o convite direto.)",
+  faq:
+    "Use este conhecimento para responder com segurança e NUNCA invente além disto. Serviços: tráfego pago (Meta/Google Ads), gestão de redes sociais, sites/landing pages, branding, automação e IA. Diferencial: unir marketing + tecnologia + dados. A proposta e os valores são apresentados pelo consultor NA REUNIÃO (não no chat). [O usuário deve preencher aqui: faixas de preço de referência, prazos médios, cases/resultados, formas de pagamento.] Se perguntarem algo fora deste conhecimento, seja honesto e leve para a reunião.",
 };
 
 // Le todas as chaves do agente de uma vez. Tolerante: se a tabela ainda nao
@@ -117,6 +132,9 @@ export async function getAgentConfig(): Promise<AgentConfig> {
       stored.get("agent_qualification_goals") ?? AGENT_DEFAULTS.qualificationGoals,
     escalationRules: stored.get("agent_escalation_rules") ?? AGENT_DEFAULTS.escalationRules,
     guardrails: stored.get("agent_guardrails") ?? AGENT_DEFAULTS.guardrails,
+    objections: stored.get("agent_objections") ?? AGENT_DEFAULTS.objections,
+    scheduling: stored.get("agent_scheduling") ?? AGENT_DEFAULTS.scheduling,
+    faq: stored.get("agent_faq") ?? AGENT_DEFAULTS.faq,
   };
 }
 
