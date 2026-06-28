@@ -10,9 +10,17 @@ jest.mock("../config", () => ({
   },
 }));
 
-// Mock do repositorio: so precisamos espionar updateLeadFields.
+// Mock do repositorio: espionamos updateLeadFields; getLeadAttribution so e usado
+// por generateReply (nao testado aqui), basta um stub.
 jest.mock("../crm/leads", () => ({
   updateLeadFields: jest.fn(),
+  getLeadAttribution: jest.fn().mockResolvedValue(null),
+}));
+
+// Mock do email de confirmacao: agendar_reuniao dispara sendMeetingConfirmation
+// quando o lead tem email — espionamos sem montar/enviar HTML de verdade.
+jest.mock("../crm/meeting-email", () => ({
+  sendMeetingConfirmation: jest.fn().mockResolvedValue({ sent: true }),
 }));
 
 // Mock do db: agent.ts -> prompt.ts -> config.ts importa { supabase } de ../db.
@@ -30,10 +38,12 @@ jest.mock("../crm/calendar", () => ({
 import { applyTool } from "./agent";
 import { updateLeadFields } from "../crm/leads";
 import { createEvent, CalendarError } from "../crm/calendar";
+import { sendMeetingConfirmation } from "../crm/meeting-email";
 import { Lead } from "../types";
 
 const mockUpdate = updateLeadFields as jest.Mock;
 const mockCreateEvent = createEvent as jest.Mock;
+const mockSendConfirmation = sendMeetingConfirmation as jest.Mock;
 
 // Lead minimo de teste.
 const lead = { id: "lead-1", phone: "5511999990001" } as Lead;
@@ -83,9 +93,25 @@ function futureIso(): string {
   return new Date(Date.now() + 60 * 60_000).toISOString();
 }
 
-// agendar_reuniao com data futura cria o evento e marca o lead como qualificado.
-test("agendar_reuniao cria o evento e qualifica o lead", async () => {
-  mockCreateEvent.mockResolvedValue({ id: "evt-1", htmlLink: "https://cal/evt-1" });
+// atualizar_lead grava o email coletado (campo email) em updateLeadFields.
+test("atualizar_lead grava o email coletado", async () => {
+  const result = await applyTool(lead, "atualizar_lead", { email: " corretor@ex.com " });
+
+  expect(result.handoff).toBe(false);
+  expect(mockUpdate).toHaveBeenCalledWith(
+    lead.id,
+    expect.objectContaining({ email: "corretor@ex.com" })
+  );
+});
+
+// agendar_reuniao com data futura cria o evento, qualifica o lead, grava o link do
+// Meet no notes e dispara o email de confirmacao quando o lead tem email.
+test("agendar_reuniao cria o evento, registra o Meet e envia a confirmacao", async () => {
+  mockCreateEvent.mockResolvedValue({
+    id: "evt-1",
+    htmlLink: "https://cal/evt-1",
+    meetLink: "https://meet.google.com/abc-defg-hij",
+  });
   const leadComEmail = { id: "lead-1", phone: "5511999990001", email: "corretor@ex.com" } as Lead;
 
   const result = await applyTool(leadComEmail, "agendar_reuniao", { data_hora_iso: futureIso() });
@@ -96,11 +122,30 @@ test("agendar_reuniao cria o evento e qualifica o lead", async () => {
   expect(mockCreateEvent.mock.calls[0][0]).toEqual(
     expect.objectContaining({ attendees: ["corretor@ex.com"] })
   );
+  // notes recebe o link do Meet (preferido sobre htmlLink).
   expect(mockUpdate).toHaveBeenCalledWith(
     leadComEmail.id,
-    expect.objectContaining({ status: "qualificado" })
+    expect.objectContaining({
+      status: "qualificado",
+      notes: expect.stringContaining("https://meet.google.com/abc-defg-hij"),
+    })
+  );
+  // Email de confirmacao disparado com o link do Meet.
+  expect(mockSendConfirmation).toHaveBeenCalledWith(
+    leadComEmail,
+    expect.objectContaining({ meetLink: "https://meet.google.com/abc-defg-hij" })
   );
   expect(result.content).toMatch(/Reuniao criada/i);
+});
+
+// Sem email no lead, agenda mesmo assim mas NAO dispara o email de confirmacao.
+test("agendar_reuniao sem email do lead nao envia confirmacao", async () => {
+  mockCreateEvent.mockResolvedValue({ id: "evt-2", meetLink: "https://meet.google.com/x" });
+
+  const result = await applyTool(lead, "agendar_reuniao", { data_hora_iso: futureIso() });
+
+  expect(result.handoff).toBe(false);
+  expect(mockSendConfirmation).not.toHaveBeenCalled();
 });
 
 // agendar_reuniao com data no passado NAO chama o Google e pede reconfirmacao.

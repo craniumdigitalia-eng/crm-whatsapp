@@ -75,9 +75,13 @@ export interface CalendarEventResult {
   id: string;
   htmlLink?: string;
   hangoutLink?: string;
+  // Link da sala do Google Meet gerada para o evento (conferenceData). Pode vir
+  // do campo hangoutLink ou do primeiro entryPoint do tipo "video".
+  meetLink?: string;
 }
 
 // Cria um evento no calendario conectado. Lanca CalendarError se nao conectado/configurado.
+// Sempre solicita uma sala do Google Meet (conferenceData) — o link sai em meetLink.
 export async function createEvent(input: CalendarEventInput): Promise<CalendarEventResult> {
   const cfg = await getGoogleConfig();
   const token = await getAccessToken(cfg);
@@ -89,13 +93,24 @@ export async function createEvent(input: CalendarEventInput): Promise<CalendarEv
     location: input.location,
     start: { dateTime: toRfc3339(input.start), timeZone: tz },
     end: { dateTime: toRfc3339(input.end), timeZone: tz },
+    // Pede ao Google para criar uma sala do Meet junto com o evento. requestId
+    // unico por evento (idempotencia da criacao da conferencia).
+    conferenceData: {
+      createRequest: {
+        requestId: randomRequestId(),
+        conferenceSolutionKey: { type: "hangoutsMeet" },
+      },
+    },
   };
   if (input.attendees?.length) {
     event.attendees = input.attendees.map((email) => ({ email }));
   }
 
   // sendUpdates=all -> notifica os convidados por e-mail.
-  const url = `${CAL_API}/calendars/${encodeURIComponent(cfg.calendarId)}/events?sendUpdates=all`;
+  // conferenceDataVersion=1 -> obrigatorio para o Google processar o createRequest do Meet.
+  const url = `${CAL_API}/calendars/${encodeURIComponent(
+    cfg.calendarId
+  )}/events?sendUpdates=all&conferenceDataVersion=1`;
   let res: Response;
   try {
     res = await fetch(url, {
@@ -110,13 +125,27 @@ export async function createEvent(input: CalendarEventInput): Promise<CalendarEv
     id?: string;
     htmlLink?: string;
     hangoutLink?: string;
+    conferenceData?: { entryPoints?: Array<{ entryPointType?: string; uri?: string }> };
     error?: { message?: string };
   };
   if (!res.ok || !json.id) {
     const msg = json.error?.message ?? `Calendar API respondeu ${res.status}`;
     throw new CalendarError(`Google Calendar: ${msg}`, res.status || 500);
   }
-  return { id: json.id, htmlLink: json.htmlLink, hangoutLink: json.hangoutLink };
+  // Extrai o link do Meet: hangoutLink (atalho) ou o entryPoint de video.
+  const videoEntry = json.conferenceData?.entryPoints?.find(
+    (p) => p.entryPointType === "video" && p.uri
+  );
+  const meetLink = json.hangoutLink || videoEntry?.uri;
+  return { id: json.id, htmlLink: json.htmlLink, hangoutLink: json.hangoutLink, meetLink };
+}
+
+// requestId unico por createRequest do Meet. crypto.randomUUID quando disponivel;
+// fallback simples para ambientes sem WebCrypto.
+function randomRequestId(): string {
+  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  if (c?.randomUUID) return c.randomUUID();
+  return `meet-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 // Helper: agenda uma reuniao com um lead (ex.: quando ele qualifica).

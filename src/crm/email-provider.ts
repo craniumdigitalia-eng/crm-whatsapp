@@ -57,6 +57,59 @@ export class DevEmailProvider implements EmailProvider {
 }
 
 // ---------------------------------------------------------------------
+// Provider REAL: 'gmail'/'smtp' — envia de verdade via Gmail SMTP (nodemailer).
+// Requer EMAIL_USER (conta Gmail) e EMAIL_APP_PASSWORD (senha de app de 16 chars,
+// gerada em myaccount.google.com/apppasswords — NÃO a senha normal da conta).
+// Funciona em serverless (Vercel): é SMTP de saída (porta 465/SSL), sem precisar
+// de binário nativo nem de inbound. O transport é criado uma vez por instância.
+// ---------------------------------------------------------------------
+export class GmailSmtpProvider implements EmailProvider {
+  readonly name = "gmail";
+  // Lazy: o transport do nodemailer é criado no primeiro send (evita custo na
+  // construção e mantém o import fora do caminho do provider 'dev').
+  private transport?: import("nodemailer").Transporter;
+  constructor(
+    private readonly user: string,
+    private readonly appPassword: string,
+    private readonly from: string
+  ) {}
+
+  private async getTransport(): Promise<import("nodemailer").Transporter> {
+    if (this.transport) return this.transport;
+    const nodemailer = (await import("nodemailer")).default;
+    // service:'gmail' já resolve host smtp.gmail.com / porta 465 (SSL).
+    this.transport = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: this.user, pass: this.appPassword },
+    });
+    return this.transport;
+  }
+
+  async send(msg: EmailMessage): Promise<{ id: string }> {
+    if (!this.user || !this.appPassword) {
+      throw new Error("Gmail SMTP sem credenciais (EMAIL_USER / EMAIL_APP_PASSWORD).");
+    }
+    try {
+      const transport = await this.getTransport();
+      // Remetente: EMAIL_FROM se houver; senão a própria conta Gmail. O Gmail
+      // exige que o endereço de envio seja a conta autenticada.
+      const from = msg.from || this.from || this.user;
+      const info = await transport.sendMail({
+        from,
+        to: msg.to,
+        subject: msg.subject,
+        html: msg.html,
+        headers: msg.headers,
+      });
+      return { id: info.messageId };
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : String(e);
+      throw new Error(`Gmail SMTP: falha ao enviar para ${msg.to} — ${detail}`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------
 // ESQUELETO de provider real (Resend) — DEIXADO COMENTADO de propósito.
 // O provedor específico (Resend/SendGrid/Brevo/SES) será informado depois.
 // Para ativar: descomente, ajuste o endpoint/payload do ESP escolhido, e
@@ -88,12 +141,21 @@ export class DevEmailProvider implements EmailProvider {
 // ---------------------------------------------------------------------
 
 // Resolve o provider efetivo a partir da config (env/integrations_config).
-// Hoje só 'dev' está implementado; qualquer outro valor cai no 'dev' com um
-// aviso (fail-safe — não derruba o envio por falta de ESP). Plugue o real
-// adicionando um `case` aqui.
+// 'gmail'/'smtp' envia de verdade (nodemailer); 'dev' (ou faltando credencial)
+// só loga. Qualquer valor desconhecido cai no 'dev' com um aviso (fail-safe —
+// não derruba o envio por má configuração). Plugue outros ESP adicionando um `case`.
 export async function getEmailProvider(cfg?: EmailConfig): Promise<EmailProvider> {
   const c = cfg ?? (await getEmailConfig());
   switch (c.provider) {
+    case "gmail":
+    case "smtp":
+      if (!c.user || !c.appPassword) {
+        console.warn(
+          `[email] provider "${c.provider}" sem EMAIL_USER/EMAIL_APP_PASSWORD — usando 'dev' (só loga).`
+        );
+        return new DevEmailProvider(c.from || c.user);
+      }
+      return new GmailSmtpProvider(c.user, c.appPassword, c.from);
     // case "resend":
     //   if (!c.apiKey) break; // sem credencial -> cai no dev
     //   return new ResendProvider(c.apiKey, c.from);

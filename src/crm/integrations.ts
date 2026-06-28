@@ -27,10 +27,16 @@ export type IntegrationKey =
   | "google_refresh_token"
   | "google_calendar_id"
   // ===== Email Marketing (migration 007) =====
-  // ESP plugável: 'dev' (default, só loga) | 'resend' | 'sendgrid' | 'brevo' | 'ses' ...
+  // ESP plugável: 'dev' (default, só loga) | 'gmail'/'smtp' (nodemailer) | 'resend' | 'sendgrid' | ...
   | "email_provider"
   | "email_api_key"
-  | "email_from";
+  | "email_from"
+  // Gmail SMTP (provider 'gmail'/'smtp'): conta Gmail + senha de app de 16 chars.
+  | "email_user"
+  | "email_app_password"
+  // ===== Landing de corretores (email transacional de agendamento) =====
+  // URL da pagina de corretores linkada no email de confirmacao de reuniao.
+  | "corretor_landing_url";
 
 // Le um valor da tabela integrations_config. Tolerante: se a tabela ainda
 // nao existe (migration 003 nao aplicada), retorna undefined sem quebrar.
@@ -217,39 +223,62 @@ export async function getGoogleConnectionStatus(): Promise<{
 // =====================================================================
 
 export interface EmailConfig {
-  provider: string; // 'dev' (default) | 'resend' | 'sendgrid' | 'brevo' | 'ses' ...
-  apiKey: string; // credencial do ESP (vazio no provider 'dev')
-  from: string; // remetente "Nome <email@dominio>"
+  provider: string; // 'dev' (default) | 'gmail'/'smtp' | 'resend' | 'sendgrid' | 'brevo' | 'ses' ...
+  apiKey: string; // credencial do ESP (vazio no provider 'dev'/'gmail')
+  from: string; // remetente "Nome <email@dominio>" (default = user no Gmail)
+  user: string; // conta Gmail (provider 'gmail'/'smtp')
+  appPassword: string; // senha de app de 16 chars do Gmail (NUNCA vai ao browser)
 }
 
 export async function getEmailConfig(): Promise<EmailConfig> {
-  const [provider, apiKey, from] = await Promise.all([
+  const [provider, apiKey, from, user, appPassword] = await Promise.all([
     getConfigValue("email_provider"),
     getConfigValue("email_api_key"),
     getConfigValue("email_from"),
+    getConfigValue("email_user"),
+    getConfigValue("email_app_password"),
   ]);
   return {
     provider: (provider ?? config.emailProvider ?? "dev").toLowerCase(),
     apiKey: apiKey ?? config.emailApiKey,
     from: from ?? config.emailFrom,
+    user: user ?? config.emailUser,
+    appPassword: appPassword ?? config.emailAppPassword,
   };
 }
 
+// URL da pagina de corretores usada no email transacional de confirmacao de
+// reuniao. Editavel pela aba Integracoes (corretor_landing_url); default Cranium.
+export async function getCorretorLandingUrl(): Promise<string> {
+  return (await getConfigValue("corretor_landing_url")) ?? "https://craniumdigital.com.br";
+}
+
 // Status "seguro" para a UI: o provider e o remetente nao sao segredos;
-// a api key so e reportada como presente/ausente. configured = da pra enviar
-// de verdade ('dev' sempre pode "enviar" (loga); ESP real exige apiKey+from).
+// a api key / senha de app so sao reportadas como presente/ausente. configured =
+// da pra enviar de verdade: 'dev' sempre pode "enviar" (loga); 'gmail'/'smtp' exige
+// user + senha de app; demais ESP exigem apiKey + from.
 export async function getEmailConnectionStatus(): Promise<{
   provider: string;
   from: string;
+  user: string;
   hasApiKey: boolean;
+  hasAppPassword: boolean;
   configured: boolean;
 }> {
   const cfg = await getEmailConfig();
   const isDev = cfg.provider === "dev" || !cfg.provider;
+  const isGmail = cfg.provider === "gmail" || cfg.provider === "smtp";
+  const configured = isDev
+    ? true
+    : isGmail
+      ? Boolean(cfg.user && cfg.appPassword)
+      : Boolean(cfg.apiKey && cfg.from);
   return {
     provider: cfg.provider || "dev",
-    from: cfg.from,
+    from: cfg.from || cfg.user,
+    user: cfg.user,
     hasApiKey: Boolean(cfg.apiKey),
-    configured: isDev ? true : Boolean(cfg.apiKey && cfg.from),
+    hasAppPassword: Boolean(cfg.appPassword),
+    configured,
   };
 }

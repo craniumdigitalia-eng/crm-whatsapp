@@ -82,6 +82,10 @@ export const config = {
   emailProvider: process.env.EMAIL_PROVIDER ?? "dev",
   emailApiKey: process.env.EMAIL_API_KEY ?? "",
   emailFrom: process.env.EMAIL_FROM ?? "",
+  // Gmail SMTP (provider 'gmail'/'smtp' via nodemailer). EMAIL_USER = conta Gmail,
+  // EMAIL_APP_PASSWORD = senha de app de 16 caracteres (NAO a senha normal da conta).
+  emailUser: process.env.EMAIL_USER ?? "",
+  emailAppPassword: process.env.EMAIL_APP_PASSWORD ?? "",
   // URL publica base usada nos links/pixel de tracking dentro do email.
   // Vazio = derivar do request (origin) no momento do envio.
   appUrl: (process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, ""),

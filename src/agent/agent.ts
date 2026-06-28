@@ -3,8 +3,9 @@ import { config } from "../config";
 import { systemPrompt, buildSystemPrompt } from "./prompt";
 import type { AgentConfig } from "./config";
 import { Lead, Message, LeadStatus } from "../types";
-import { updateLeadFields } from "../crm/leads";
+import { updateLeadFields, getLeadAttribution } from "../crm/leads";
 import { createEvent, CalendarError } from "../crm/calendar";
+import { sendMeetingConfirmation } from "../crm/meeting-email";
 
 const client = new Anthropic({ apiKey: config.anthropicApiKey });
 
@@ -22,6 +23,11 @@ const tools = [
         service_interest: {
           type: "string",
           description: "Servico/produto que o lead deseja (ex: 'plano de saude familiar', 'seguro de vida').",
+        },
+        email: {
+          type: "string",
+          description:
+            "E-mail do lead, quando ele informar (ou confirmar). Use para salvar o e-mail que vai receber o convite/confirmacao da reuniao. Grave exatamente como o lead passou.",
         },
         budget: { type: "string", description: "Nocao de orcamento/valor informada pelo lead, se houver." },
         notes: {
@@ -110,10 +116,56 @@ function formatBR(date: Date): string {
   });
 }
 
+// Bloco de contexto especifico do lead, anexado ao system prompt. Informa ao
+// agente se ja temos e-mail e a ORIGEM do lead — base da regra de coleta de
+// e-mail antes de agendar. No dry-run (previa) nao toca no banco: usa so o lead
+// em memoria e nao assume origem de formulario.
+async function leadContextBlock(lead: Lead, dryRun?: boolean): Promise<string> {
+  const emailLinha = lead.email?.trim()
+    ? `E-mail no cadastro: ${lead.email.trim()}`
+    : `E-mail no cadastro: nenhum`;
+
+  // Origem: meta_lead_ads = veio do FORMULARIO (provavelmente ja temos e-mail).
+  // Tambem aproveita um e-mail vindo no form_data, caso o lead nao tenha email salvo.
+  let veioDeFormulario = false;
+  let emailFormulario: string | undefined;
+  if (!dryRun) {
+    try {
+      const attr = await getLeadAttribution(lead.id);
+      veioDeFormulario = attr?.source === "meta_lead_ads";
+      if (attr?.form_data) {
+        const hit = Object.entries(attr.form_data).find(
+          ([k, v]) => /e-?mail/i.test(k) && v && v.includes("@")
+        );
+        emailFormulario = hit?.[1];
+      }
+    } catch {
+      // tolerante: sem atribuicao, trata como WhatsApp/CTWA.
+    }
+  }
+
+  const origem = veioDeFormulario
+    ? "Origem: FORMULARIO (Meta Lead Ads) — em geral ja temos o e-mail dele; apenas CONFIRME antes de agendar."
+    : "Origem: WhatsApp/CTWA — pode nao ter e-mail; PERGUNTE o melhor e-mail antes de agendar se ainda nao tiver.";
+
+  const formularioLinha =
+    emailFormulario && !lead.email?.trim()
+      ? `\n- E-mail informado no formulario: ${emailFormulario} (confirme com o lead e salve via atualizar_lead)`
+      : "";
+
+  return `
+
+CONTEXTO DESTE LEAD (use para a COLETA DE E-MAIL antes de agendar)
+- ${emailLinha}${formularioLinha}
+- ${origem}
+- Antes de usar agendar_reuniao, garanta um e-mail valido do lead: se ja houver, confirme ("vou te enviar a confirmacao e o link no e-mail {email}, certo?"); se nao houver, peca ("me passa seu melhor e-mail pra eu te enviar o convite com o link da call?") e salve com atualizar_lead (campo email). So agende depois disso.`;
+}
+
 export async function applyTool(lead: Lead, name: string, input: any): Promise<ToolOutcome> {
   if (name === "atualizar_lead") {
     await updateLeadFields(lead.id, {
       service_interest: input.service_interest,
+      email: typeof input.email === "string" && input.email.trim() ? input.email.trim() : undefined,
       budget: input.budget,
       notes: input.notes,
       status: input.status as LeadStatus | undefined,
@@ -167,9 +219,10 @@ export async function applyTool(lead: Lead, name: string, input: any): Promise<T
         attendees: lead.email ? [lead.email] : undefined,
       });
       // Registra a reuniao no lead: status qualificado + linha de agendamento no resumo
-      // (preserva o resumo existente, sem duplicar a linha).
+      // (preserva o resumo existente, sem duplicar a linha). Prioriza o link do Meet.
       const quando = formatBR(start);
-      const link = event.hangoutLink || event.htmlLink;
+      const meetLink = event.meetLink || event.hangoutLink;
+      const link = meetLink || event.htmlLink;
       const meetingLine = `📅 Reuniao agendada para ${quando}${link ? ` — ${link}` : ""}`;
       // Anexa a linha ao resumo existente (sem duplicar se ja houver agendamento).
       const notes = !lead.notes
@@ -178,6 +231,17 @@ export async function applyTool(lead: Lead, name: string, input: any): Promise<T
           ? lead.notes
           : `${lead.notes}\n${meetingLine}`;
       await updateLeadFields(lead.id, { status: "qualificado", notes });
+
+      // Email TRANSACIONAL de confirmacao (marca Cranium, link do Meet). So envia
+      // se o lead tem email; falha de email NAO quebra o agendamento (apenas loga).
+      if (lead.email) {
+        await sendMeetingConfirmation(lead, {
+          meetLink,
+          startISO: start,
+          durationMin,
+        }).catch((e) => console.error("[agent] sendMeetingConfirmation:", (e as Error).message));
+      }
+
       return {
         handoff: false,
         content: `Reuniao criada no Google Calendar para ${quando} (${durationMin} min)${
@@ -221,7 +285,10 @@ export async function generateReply(
   let handoff = false;
 
   // Monta o system prompt uma vez (config override na previa, ou a config salva).
-  const system = opts.config ? buildSystemPrompt(opts.config) : await systemPrompt();
+  // Acrescenta o CONTEXTO DESTE LEAD (e-mail + origem) para a coleta de e-mail
+  // antes de agendar (confirmar se veio do formulario; perguntar se veio do WhatsApp).
+  const system = (opts.config ? buildSystemPrompt(opts.config) : await systemPrompt()) +
+    (await leadContextBlock(lead, opts.dryRun));
 
   // Loop agentic: executa ferramentas ate o modelo dar a resposta final.
   for (let i = 0; i < 5; i++) {
