@@ -45,6 +45,9 @@ export async function POST(req: Request) {
       agent_qualification_goals: body.qualificationGoals,
       agent_escalation_rules: body.escalationRules,
       agent_guardrails: body.guardrails,
+      agent_objections: body.objections,
+      agent_scheduling: body.scheduling,
+      agent_faq: body.faq,
     });
     const config = await getAgentConfig();
     return NextResponse.json({ ok: true, config });

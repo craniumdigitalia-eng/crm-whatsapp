@@ -1,9 +1,29 @@
 import cron from "node-cron";
 import { config } from "../config";
-import { Lead, AUTO_STATUSES } from "../types";
-import { addMessage, claimFollowUp, listFollowUpCandidates, setStatus } from "../crm/leads";
+import { Lead, AUTO_STATUSES, LeadStatus } from "../types";
+import {
+  addMessage,
+  claimFollowUp,
+  listFollowUpCandidates,
+  setStatus,
+  updateLeadFields,
+} from "../crm/leads";
 import { getDueFollowUps, markError, markSent } from "../crm/followup-schedule";
+import {
+  getCadence,
+  cadenceMessage,
+  brtHour,
+  brtDayStartMs,
+  elapsedBrtDays,
+  CLOSURE_NOTE,
+} from "./cadence";
 import { sendText } from "../whatsapp/evolution";
+
+// Estagios que entram na CADENCIA padrao: so leads aguardando resposta.
+// Note que AUTO_STATUSES inclui 'qualificado' (o agente ainda responde la),
+// mas um lead qualificado NAO deve receber a cadencia de retomada — ele segue
+// pela mao do agente/equipe. Por isso a cadencia mira so estes dois estagios.
+const CADENCE_STATUSES: LeadStatus[] = ["novo", "em_atendimento"];
 
 // Rotacao de mensagens de retomada. Como sao ate 30 follow-ups por lead,
 // variamos o texto ciclando por estas opcoes (e uma final na ultima tentativa).
@@ -34,32 +54,87 @@ export interface FollowUpResult {
 // Executa um ciclo de retomadas: busca candidatos, aplica claim atomico e envia via canal.
 // batchLimit: maximo de leads avaliados por ciclo (padrao: config.followupBatch).
 // Exportada para uso direto pela funcao serverless /api/cron/followup (Story 3.4).
+//
+// Duas modalidades:
+//  - CADENCIA padrao habilitada: o passo = follow_up_count (0-based); a mensagem
+//    e a do passo (com {nome} interpolado). O disparo so ocorre se:
+//      (a) elapsedDays (dias desde a criacao do lead) >= dueDay do passo;
+//      (b) a hora BRT atual >= hourBRT do passo;
+//      (c) o lead ainda nao recebeu follow-up HOJE (no maximo 1 toque/dia).
+//    Apos o ultimo toque sem resposta, o lead e encerrado (status 'perdido' +
+//    nota de encerramento). Maximo de toques = tamanho da cadencia. So leads em
+//    novo/em_atendimento aguardando resposta entram.
+//  - CADENCIA desabilitada: fallback para o comportamento ROTATION generico
+//    (config.followupMax / config.followupIntervalMs / AUTO_STATUSES).
+// Em ambas, o claim atomico e o reset ao responder (handler) sao preservados.
 export async function runFollowUpCheck(batchLimit = config.followupBatch): Promise<FollowUpResult> {
-  const leads = await listFollowUpCandidates(AUTO_STATUSES, config.followupMax, batchLimit);
+  const cadence = await getCadence();
+  const useCadence = cadence.enabled && cadence.steps.length > 0;
+
+  // Em modo cadencia, o limite de toques e o tamanho da cadencia e so leads
+  // aguardando resposta (novo/em_atendimento) entram. No fallback, mantem o
+  // comportamento original (AUTO_STATUSES + followupMax).
+  const maxCount = useCadence ? cadence.steps.length : config.followupMax;
+  const statuses = useCadence ? CADENCE_STATUSES : AUTO_STATUSES;
+  const leads = await listFollowUpCandidates(statuses, maxCount, batchLimit);
 
   const now = Date.now();
   const result: FollowUpResult = { sent: 0, skipped: 0, errors: 0 };
 
+  // Em modo cadencia: a hora local (BRT) deste ciclo e o corte da meia-noite BRT
+  // de hoje. Constantes do ciclo, calculadas uma vez (servidor roda em UTC).
+  const nowDate = new Date(now);
+  const hourNowBRT = useCadence ? brtHour(nowDate) : 0;
+  const todayStartMs = useCadence ? brtDayStartMs(nowDate) : 0;
+
   for (const lead of leads) {
+    const stage = lead.follow_up_count; // toques ja enviados (pre-claim)
+
+    // Intervalo e texto dependem da modalidade. Em cadencia, o passo `stage`
+    // define a mensagem, o dia minimo (dueDay) e a hora minima; o "1 toque/dia"
+    // vem do corte BRT.
+    let intervalMs: number;
+    let text: string;
+    if (useCadence) {
+      const step = cadence.steps[stage];
+      const msg = cadenceMessage(cadence.steps, stage, lead.name);
+      if (!step || msg === null) {
+        // Passo fora da cadencia (lead ja recebeu todos os toques). Guarda defensiva.
+        result.skipped++;
+        continue;
+      }
+      // Gate de DIA: so dispara quando ja se passaram dueDay dias desde a criacao.
+      if (elapsedBrtDays(lead.created_at, nowDate) < step.dueDay) {
+        result.skipped++;
+        continue;
+      }
+      // Gate de HORA: so dispara a partir da hora (BRT) prevista para o passo.
+      if (hourNowBRT < step.hourBRT) {
+        result.skipped++;
+        continue;
+      }
+      // Intervalo = tempo desde a meia-noite BRT de hoje. Combinado com o claim
+      // atomico (last_message_at < meia-noite de hoje), garante no maximo 1 toque
+      // por dia: so e elegivel se o ultimo contato foi ANTES de hoje.
+      intervalMs = now - todayStartMs;
+      text = msg;
+    } else {
+      intervalMs = config.followupIntervalMs;
+      text = followUpText(stage, maxCount, lead);
+    }
+
     const last = new Date(lead.last_message_at!).getTime();
-    if (now - last < config.followupIntervalMs) {
-      // Otimizacao: evita round-trip de claim desnecessario para leads ainda dentro do intervalo.
+    if (now - last < intervalMs) {
+      // Otimizacao: evita round-trip de claim desnecessario para leads ainda dentro do intervalo
+      // (em cadencia: leads ja contatados hoje).
       result.skipped++;
       continue;
     }
 
-    // Texto calculado com o contador pre-claim (stage = numero de retomadas ja enviadas).
-    const text = followUpText(lead.follow_up_count, config.followupMax, lead);
-
     // Claim atomico: incrementa follow_up_count somente se o lead ainda esta elegivel.
     // Protege contra: lead respondeu entre a leitura e o envio (last_direction vira 'in');
     //                 dois processos de cron rodando em paralelo sobre o mesmo lead.
-    const claimed = await claimFollowUp(
-      lead.id,
-      lead.follow_up_count,
-      config.followupMax,
-      config.followupIntervalMs
-    );
+    const claimed = await claimFollowUp(lead.id, stage, maxCount, intervalMs);
     if (!claimed) {
       console.log(
         `[followup] Claim falhou para ${lead.phone} — lead respondeu ou concorrencia detectada.`
@@ -68,27 +143,31 @@ export async function runFollowUpCheck(batchLimit = config.followupBatch): Promi
       continue;
     }
 
-    const newCount = lead.follow_up_count + 1;
-    const isLast = newCount >= config.followupMax;
+    const newCount = stage + 1;
+    const isLast = newCount >= maxCount;
 
     try {
       await sendText(lead.phone, text);
       await addMessage(lead.id, "out", text);
-      console.log(`[followup] Retomada #${newCount}/${config.followupMax} para ${lead.phone}`);
+      console.log(`[followup] Retomada #${newCount}/${maxCount} para ${lead.phone}`);
       result.sent++;
     } catch (err) {
       console.error(`[followup] Falha ao enviar retomada para ${lead.phone}:`, err);
       result.errors++;
     }
 
-    // Ao atingir o limite de retomadas, transita para perdido.
+    // Ao atingir o limite de toques, encerra o lead (transita para perdido).
     // Ocorre mesmo em caso de falha de envio: o counter ja foi incrementado e
     // o lead nao sera selecionado em ciclos futuros (follow_up_count < max deixa de ser verdadeiro).
+    // Em cadencia, grava a nota de encerramento automatico (sem mais mensagens).
     if (isLast) {
-      await setStatus(lead.id, "perdido");
-      console.log(
-        `[followup] Lead ${lead.phone} atingiu ${config.followupMax} retomadas → perdido.`
-      );
+      if (useCadence) {
+        await updateLeadFields(lead.id, { status: "perdido", notes: CLOSURE_NOTE });
+        console.log(`[followup] Lead ${lead.phone} concluiu a cadencia (${maxCount} toques) → encerrado.`);
+      } else {
+        await setStatus(lead.id, "perdido");
+        console.log(`[followup] Lead ${lead.phone} atingiu ${maxCount} retomadas → perdido.`);
+      }
     }
   }
 

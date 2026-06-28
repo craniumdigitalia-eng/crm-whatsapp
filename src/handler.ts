@@ -8,6 +8,7 @@ import {
   setStatus,
 } from "./crm/leads";
 import { generateReply } from "./agent/agent";
+import { getCadence } from "./followup/cadence";
 import { AUTO_STATUSES, Lead, Message } from "./types";
 
 // Processa uma mensagem recebida do lead: registra, e (se for o caso) responde com a IA.
@@ -24,7 +25,16 @@ export async function handleInbound(msg: InboundMessage): Promise<void> {
     return;
   }
 
-  await resetFollowUp(lead.id); // lead respondeu -> zera follow-up
+  // Lead respondeu -> sai da cadencia (last_direction vira 'in', deixa de ser
+  // candidato no scheduler). No modelo de CADENCIA (agendamento absoluto por
+  // dueDay), PRESERVAMOS o follow_up_count: a cadencia apenas PAUSA e retoma no
+  // toque certo se a conversa esfriar — zera-lo reiniciaria do dia 1 (toques da
+  // fase 1) de forma errada. No fallback (ROTATION), zeramos como antes para o
+  // lead reiniciar a contagem de retomadas.
+  const cadence = await getCadence();
+  if (!(cadence.enabled && cadence.steps.length > 0)) {
+    await resetFollowUp(lead.id);
+  }
 
   // Recarrega para pegar status atual.
   const fresh = await getLead(lead.id);

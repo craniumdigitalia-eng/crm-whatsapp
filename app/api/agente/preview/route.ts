@@ -38,6 +38,9 @@ export async function POST(req: Request) {
       qualificationGoals: c.qualificationGoals?.trim() || AGENT_DEFAULTS.qualificationGoals,
       escalationRules: c.escalationRules?.trim() || AGENT_DEFAULTS.escalationRules,
       guardrails: c.guardrails?.trim() || AGENT_DEFAULTS.guardrails,
+      objections: c.objections?.trim() || AGENT_DEFAULTS.objections,
+      scheduling: c.scheduling?.trim() || AGENT_DEFAULTS.scheduling,
+      faq: c.faq?.trim() || AGENT_DEFAULTS.faq,
     };
 
     const now = new Date().toISOString();

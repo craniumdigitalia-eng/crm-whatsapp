@@ -14,24 +14,25 @@ const tools = [
   {
     name: "atualizar_lead",
     description:
-      "Registra ou atualiza informacoes de qualificacao do lead no CRM. Use sempre que descobrir o servico desejado, orcamento, ou quando o resumo da qualificacao (notes) precisar ser atualizado.",
+      "Registra ou atualiza os dados do lead no CRM. Use A CADA resposta do lead que traga informacao nova: servico/interesse, orcamento, e SEMPRE atualizando o resumo (notes) com o que foi dito. Tambem ajuste o status conforme o desfecho da conversa.",
     input_schema: {
       type: "object",
       properties: {
         service_interest: {
           type: "string",
-          description: "Servico/projeto que o lead deseja (ex: 'site institucional', 'trafego pago').",
+          description: "Servico/produto que o lead deseja (ex: 'plano de saude familiar', 'seguro de vida').",
         },
-        budget: { type: "string", description: "Nocao de orcamento informada pelo lead, se houver." },
+        budget: { type: "string", description: "Nocao de orcamento/valor informada pelo lead, se houver." },
         notes: {
           type: "string",
           description:
-            "Resumo conciso e estruturado da qualificacao do lead, no formato definido nas instrucoes. REESCREVA o resumo inteiro (estado atual) a cada atualizacao — nao anexe nem empilhe historico.",
+            "Resumo conciso e estruturado da qualificacao do lead, no formato definido nas instrucoes (servico, objetivo, situacao atual, proximo passo). REESCREVA o resumo inteiro (estado atual) a cada atualizacao — nao anexe nem empilhe historico. Ao agendar uma reuniao, inclua a linha 'Reuniao agendada' com o horario combinado.",
         },
         status: {
           type: "string",
-          enum: ["em_atendimento", "qualificado"],
-          description: "Atualize para 'qualificado' quando ja entendeu o servico e tem nocao de objetivo ou orcamento.",
+          enum: ["em_atendimento", "qualificado", "perdido"],
+          description:
+            "Ajuste conforme o desfecho: 'qualificado' quando entendeu o servico e tem nocao de objetivo ou orcamento (use tambem ao AGENDAR uma reuniao, registrando 'Reuniao agendada' no notes); 'perdido' quando o lead disser claramente que NAO tem interesse.",
         },
       },
     },

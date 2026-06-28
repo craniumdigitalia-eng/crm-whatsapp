@@ -38,6 +38,15 @@ interface LeadRow {
   status: LeadStatus;
 }
 
+// Espelha src/followup/cadence.ts (CadenceStep) — um passo da cadencia padrao.
+// dueDay = dia (a partir da criacao do lead) em que o toque pode sair; hourBRT =
+// hora (0-23, horario de Brasilia) minima do disparo na rodada do cron.
+interface CadenceStep {
+  dueDay: number;
+  hourBRT: number;
+  message: string;
+}
+
 const STATUS_PILL: Record<ScheduleStatus, { label: string; cls: string }> = {
   pendente: { label: 'Pendente', cls: 'fup-pill--pending' },
   enviado: { label: 'Enviado', cls: 'fup-pill--sent' },
@@ -121,6 +130,12 @@ export default function FollowupsModule() {
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Cadencia padrao (configuravel).
+  const [cadSteps, setCadSteps] = useState<CadenceStep[]>([]);
+  const [cadEnabled, setCadEnabled] = useState(true);
+  const [cadDefaults, setCadDefaults] = useState<CadenceStep[]>([]);
+  const [cadSaving, setCadSaving] = useState(false);
+
   function flash(kind: 'ok' | 'err', text: string) {
     setMsg({ kind, text });
     if (kind === 'ok') setTimeout(() => setMsg(null), 4000);
@@ -147,13 +162,94 @@ export default function FollowupsModule() {
     }
   }, []);
 
+  const loadCadence = useCallback(async () => {
+    try {
+      const data = await apiCall<{ steps: CadenceStep[]; enabled: boolean; defaults: CadenceStep[] }>(
+        '/api/followups/cadence'
+      );
+      setCadSteps(data.steps);
+      setCadEnabled(data.enabled);
+      setCadDefaults(data.defaults);
+    } catch (e) {
+      flash('err', `Falha ao carregar a cadencia: ${(e as Error).message}`);
+    }
+  }, []);
+
   useEffect(() => {
     void (async () => {
       setLoading(true);
-      await Promise.all([loadFollowups(), loadLeads()]);
+      await Promise.all([loadFollowups(), loadLeads(), loadCadence()]);
       setLoading(false);
     })();
-  }, [loadFollowups, loadLeads]);
+  }, [loadFollowups, loadLeads, loadCadence]);
+
+  // ---- Edicao local dos passos da cadencia ----
+  function updateStep(i: number, patch: Partial<CadenceStep>) {
+    setCadSteps((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+  }
+  function addStep() {
+    // Novo toque alguns dias apos o ultimo, herdando a hora (ou 8h).
+    setCadSteps((prev) => {
+      const last = prev[prev.length - 1];
+      return [
+        ...prev,
+        { dueDay: (last?.dueDay ?? 0) + 3, hourBRT: last?.hourBRT ?? 8, message: '' },
+      ];
+    });
+  }
+  function removeStep(i: number) {
+    setCadSteps((prev) => prev.filter((_, idx) => idx !== i));
+  }
+  function moveStep(i: number, dir: -1 | 1) {
+    setCadSteps((prev) => {
+      const j = i + dir;
+      if (j < 0 || j >= prev.length) return prev;
+      const next = [...prev];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  }
+  function restoreDefaults() {
+    setCadSteps(cadDefaults.map((s) => ({ ...s })));
+    setCadEnabled(true);
+    flash('ok', 'Padrao restaurado nos campos. Clique em "Salvar cadencia" para aplicar.');
+  }
+
+  async function saveCadence() {
+    // Validacao espelhando o servidor: ao menos 1 passo; dia >= 1; hora 0-23; mensagem nao vazia.
+    const steps = cadSteps.map((s) => ({
+      dueDay: Number(s.dueDay),
+      hourBRT: Number(s.hourBRT),
+      message: s.message.trim(),
+    }));
+    if (steps.length === 0) return flash('err', 'Adicione ao menos um toque a cadencia.');
+    for (let i = 0; i < steps.length; i++) {
+      if (!Number.isInteger(steps[i].dueDay) || steps[i].dueDay < 1) {
+        return flash('err', `Toque ${i + 1}: o dia precisa ser um numero inteiro maior que zero.`);
+      }
+      if (!Number.isInteger(steps[i].hourBRT) || steps[i].hourBRT < 0 || steps[i].hourBRT > 23) {
+        return flash('err', `Toque ${i + 1}: a hora precisa estar entre 0 e 23.`);
+      }
+      if (!steps[i].message) {
+        return flash('err', `Toque ${i + 1}: escreva a mensagem.`);
+      }
+    }
+
+    setCadSaving(true);
+    try {
+      const data = await apiCall<{ steps: CadenceStep[]; enabled: boolean; defaults: CadenceStep[] }>(
+        '/api/followups/cadence',
+        { method: 'POST', body: JSON.stringify({ steps, enabled: cadEnabled }) }
+      );
+      setCadSteps(data.steps);
+      setCadEnabled(data.enabled);
+      flash('ok', 'Cadencia salva!');
+    } catch (err) {
+      flash('err', `Nao foi possivel salvar a cadencia: ${(err as Error).message}`);
+    } finally {
+      setCadSaving(false);
+    }
+  }
 
   // Resultados do seletor de lead (filtra por nome/telefone).
   const leadResults = useMemo(() => {
@@ -227,6 +323,150 @@ export default function FollowupsModule() {
           {msg.text}
         </div>
       )}
+
+      {/* ---------- Cadencia padrao (configuravel) ---------- */}
+      <div className="fup-card cad-card">
+        <div className="cad-head">
+          <div>
+            <h2 className="fup-card-title" style={{ marginBottom: 4 }}>
+              Cadencia padrao
+            </h2>
+            <p className="cad-sub">
+              Sequencia automatica de retomadas para todo lead novo que nao responde. Assim que o
+              lead responde, ele sai da cadencia e o agente assume (qualifica, agenda ou encerra).
+            </p>
+          </div>
+          <label className="cad-switch" title="Ativar ou desativar a cadencia padrao">
+            <input
+              type="checkbox"
+              checked={cadEnabled}
+              onChange={(e) => setCadEnabled(e.target.checked)}
+            />
+            <span className="cad-switch-track" aria-hidden />
+            <span className="cad-switch-label">{cadEnabled ? 'Ativada' : 'Desativada'}</span>
+          </label>
+        </div>
+
+        <div className="cad-warn" role="note">
+          <strong>Como funciona:</strong> os toques seguem a ordem da lista. Cada um sai quando ja se
+          passaram &ldquo;Dia&rdquo; dias desde a entrada do lead, a partir da hora marcada (horario
+          de Brasilia), no maximo 1 por dia. O padrao cobre ~4 meses em 3 fases (semana 1 diaria,
+          resto do mes 1 a cada 3 dias, meses 2-4 a cada 6 dias). Apos o ultimo toque sem resposta, o
+          lead e <strong>encerrado automaticamente</strong> (perdido). O disparo depende da rodada do
+          cron.
+        </div>
+
+        {loading ? (
+          <p className="fup-empty">Carregando…</p>
+        ) : (
+          <>
+            <ol className="cad-steps">
+              {cadSteps.map((step, i) => (
+                <li key={i} className="cad-step">
+                  <div className="cad-step-head">
+                    <span className="cad-step-num">{i + 1}º toque</span>
+                    <div className="cad-step-reorder">
+                      <button
+                        type="button"
+                        className="cad-icon-btn"
+                        onClick={() => moveStep(i, -1)}
+                        disabled={i === 0}
+                        aria-label="Mover para cima"
+                        title="Mover para cima"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        className="cad-icon-btn"
+                        onClick={() => moveStep(i, 1)}
+                        disabled={i === cadSteps.length - 1}
+                        aria-label="Mover para baixo"
+                        title="Mover para baixo"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        className="cad-icon-btn cad-icon-btn--danger"
+                        onClick={() => removeStep(i)}
+                        aria-label="Remover passo"
+                        title="Remover passo"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="cad-step-body">
+                    <div className="cad-timing">
+                      <label className="cad-delay">
+                        <span>Dia</span>
+                        <div className="cad-delay-input">
+                          <input
+                            type="number"
+                            min={1}
+                            value={step.dueDay}
+                            onChange={(e) =>
+                              updateStep(i, { dueDay: e.target.value === '' ? 0 : Number(e.target.value) })
+                            }
+                          />
+                          <span>apos a entrada</span>
+                        </div>
+                      </label>
+                      <label className="cad-delay">
+                        <span>Hora (BRT)</span>
+                        <div className="cad-delay-input">
+                          <select
+                            value={step.hourBRT}
+                            onChange={(e) => updateStep(i, { hourBRT: Number(e.target.value) })}
+                          >
+                            {Array.from({ length: 24 }, (_, h) => (
+                              <option key={h} value={h}>
+                                {String(h).padStart(2, '0')}h
+                              </option>
+                            ))}
+                          </select>
+                          <span>horario de Brasilia</span>
+                        </div>
+                      </label>
+                    </div>
+                    <textarea
+                      className="cad-message"
+                      rows={3}
+                      placeholder="Mensagem do toque. Use {nome} para inserir o primeiro nome do lead."
+                      value={step.message}
+                      onChange={(e) => updateStep(i, { message: e.target.value })}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            {cadSteps.length === 0 && (
+              <p className="fup-empty">Nenhum passo. Adicione o primeiro toque da cadencia.</p>
+            )}
+
+            <button type="button" className="cad-add" onClick={addStep}>
+              + Adicionar passo
+            </button>
+
+            <div className="cad-actions">
+              <button type="button" className="btn btn-ghost" onClick={restoreDefaults}>
+                Restaurar padrao
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={saveCadence}
+                disabled={cadSaving}
+              >
+                {cadSaving ? 'Salvando…' : 'Salvar cadencia'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
 
       <div className="fup-note" role="note">
         <strong>Quando dispara:</strong> os agendados sao enviados na rodada diaria do cron

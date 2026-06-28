@@ -19,7 +19,7 @@ related: ["[[../project/visao-e-requisitos]]", "[[../shared-context]]"]
 | **Railway** | Hospeda a **Evolution API** (WhatsApp) — plano Hobby (~US$5/mês) | serviço "Evolution API" + Postgres + Redis · `https://evolution-api-production-d9f4.up.railway.app` (v2.3.7) | painel Railway → Variables (AUTHENTICATION_API_KEY) |
 | **Evolution** | Canal WhatsApp (envio/recebimento + QR) | instância **`cranium-crm`** (número Cranium/Pâmella 5521995197818) | `.env` (EVOLUTION_*) |
 | **Meta/Facebook** | Lead Ads (formulário) **via Make** (a configurar) | Business Manager do usuário | — (Make) |
-| **Make** | Ponte Facebook Lead Ads → `/api/leadgen` (a configurar) | conta Make do usuário | — |
+| **Make** | Ponte Facebook Lead Ads → `/api/leadgen` ✅ FUNCIONANDO (testado 2026-06-28: New Lead instant → HTTP POST) | conta Make do usuário | segredo `meta_make_secret` em integrations_config (header `x-make-secret`) |
 | **Google Calendar** | Agenda (a configurar) | — | — |
 | **GitHub** | Versionamento/backup do código | github.com/craniumdigitalia-eng/crm-whatsapp · branch `feat/portal-epic-5` | — (sem segredos) |
 | **Vercel** | Hospeda o PORTAL (produção) | projeto **`crm-cranium`** (time craniumdigitalia-engs-projects) · **https://crm-cranium.vercel.app** | env vars no painel Vercel (Production) |

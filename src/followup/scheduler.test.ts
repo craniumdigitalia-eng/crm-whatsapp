@@ -17,6 +17,7 @@ jest.mock("../crm/leads", () => ({
   claimFollowUp: jest.fn(),
   addMessage: jest.fn(),
   setStatus: jest.fn(),
+  updateLeadFields: jest.fn(),
 }));
 
 jest.mock("../whatsapp/evolution", () => ({
@@ -29,6 +30,19 @@ jest.mock("../crm/followup-schedule", () => ({
   getDueFollowUps: jest.fn(),
   markSent: jest.fn(),
   markError: jest.fn(),
+}));
+
+// Cadencia padrao — mockada DESABILITADA para que estes testes exercitem o
+// fallback ROTATION (config.followupMax=3 etc.), preservando suas asserts.
+// O mock tambem evita carregar src/db.ts (Supabase) via cadence.ts.
+// A modalidade cadencia tem cobertura propria em cadence.test.ts.
+jest.mock("./cadence", () => ({
+  getCadence: jest.fn().mockResolvedValue({ steps: [], enabled: false }),
+  cadenceMessage: jest.fn(),
+  brtHour: jest.fn(),
+  brtDayStartMs: jest.fn(),
+  elapsedBrtDays: jest.fn(),
+  CLOSURE_NOTE: "encerrado",
 }));
 
 import { runFollowUpCheck, runScheduledFollowUps } from "./scheduler";
