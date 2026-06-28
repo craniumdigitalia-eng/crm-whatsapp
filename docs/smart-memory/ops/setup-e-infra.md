@@ -20,7 +20,7 @@ related: ["[[../project/visao-e-requisitos]]", "[[../shared-context]]"]
 | **Evolution** | Canal WhatsApp (envio/recebimento + QR) | instância **`cranium-crm`** (número Cranium/Pâmella 5521995197818) | `.env` (EVOLUTION_*) |
 | **Meta/Facebook** | Lead Ads (formulário) **via Make** (a configurar) | Business Manager do usuário | — (Make) |
 | **Make** | Ponte Facebook Lead Ads → `/api/leadgen` ✅ FUNCIONANDO (testado 2026-06-28: New Lead instant → HTTP POST) | conta Make do usuário | segredo `meta_make_secret` em integrations_config (header `x-make-secret`) |
-| **Google Calendar** | Agenda (a configurar) | — | — |
+| **Google Calendar** | Agenda — ✅ CONECTADO + testado (2026-06-28). Projeto Google Cloud "SDR CRANIUM DIGITAL" (id 49808012291), Calendar API ativada, OAuth client Web, refresh_token salvo. Bruno cria evento via tool `agendar_reuniao`. | conta Google do usuário | GOOGLE_CLIENT_ID/SECRET na Vercel; refresh_token em integrations_config |
 | **GitHub** | Versionamento/backup do código | github.com/craniumdigitalia-eng/crm-whatsapp · branch `feat/portal-epic-5` | — (sem segredos) |
 | **Vercel** | Hospeda o PORTAL (produção) | projeto **`crm-cranium`** (time craniumdigitalia-engs-projects) · **https://crm-cranium.vercel.app** | env vars no painel Vercel (Production) |
 
