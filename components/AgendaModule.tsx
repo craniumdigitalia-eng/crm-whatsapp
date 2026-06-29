@@ -500,6 +500,33 @@ export default function AgendaModule() {
     }
   }
 
+  // --- remarcar evento por arraste (drag-to-reschedule) ---
+
+  async function handleReschedule(id: string, newStart: string, newEnd: string) {
+    // guarda original para revert em caso de falha da API
+    const original = events.find(ev => ev.id === id);
+    if (!original) return;
+
+    // atualização otimista — mostra no novo lugar imediatamente
+    setEvents(prev => prev.map(ev =>
+      ev.id === id ? { ...ev, start: newStart, end: newEnd } : ev,
+    ));
+
+    try {
+      await apiFetch(`/api/agenda/events/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start: newStart, end: newEnd }),
+      });
+    } catch (err) {
+      // revert — restaura posição original
+      setEvents(prev => prev.map(ev =>
+        ev.id === id ? { ...ev, start: original.start, end: original.end } : ev,
+      ));
+      throw err; // propaga para o grid exibir o toast de aviso
+    }
+  }
+
   const cells = view === 'month' ? monthCells(current) : weekCells(current);
   const periodLabel = formatPeriodLabel(view, current);
   const selectedLead = modal ? leads.find(l => l.id === formLeadId) : undefined;
@@ -613,6 +640,7 @@ export default function AgendaModule() {
           currentMonth={current.getMonth()}
           onDayClick={openCreate}
           onEventClick={openEdit}
+          onEventReschedule={handleReschedule}
         />
       ) : (
         <WeekGrid
@@ -620,6 +648,7 @@ export default function AgendaModule() {
           events={events}
           onSlotClick={openCreate}
           onEventClick={openEdit}
+          onEventReschedule={handleReschedule}
         />
       )}
 
@@ -853,11 +882,113 @@ interface MonthGridProps {
   currentMonth: number;
   onDayClick: (day: Date) => void;
   onEventClick: (ev: AgendaEvent) => void;
+  onEventReschedule: (id: string, newStart: string, newEnd: string) => Promise<void>;
 }
 
-function MonthGrid({ cells, events, currentMonth, onDayClick, onEventClick }: MonthGridProps) {
+function MonthGrid({ cells, events, currentMonth, onDayClick, onEventClick, onEventReschedule }: MonthGridProps) {
+  // suprime o click sintético que o browser dispara após pointerup de arraste
+  const suppressClick = useRef(false);
+
+  // estado mutável do drag (sem causar re-renders a cada move)
+  const dragRef = useRef<{
+    id: string;
+    ev: AgendaEvent;
+    startX: number;
+    startY: number;
+    dragging: boolean; // true após ultrapassar o threshold de 5 px
+  } | null>(null);
+
+  // índice da célula alvo durante o arraste
+  const [dragTargetIdx, setDragTargetIdx] = useState<number | null>(null);
+
+  // toast de erro exibido quando o PATCH falha e a posição é revertida
+  const [dragToast, setDragToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!dragToast) return;
+    const t = setTimeout(() => setDragToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [dragToast]);
+
+  // --- handlers de drag ---
+
+  function handleChipPointerDown(e: React.PointerEvent, ev: AgendaEvent) {
+    e.stopPropagation(); // não propaga para a célula (evitaria abrir modal de criar)
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    dragRef.current = {
+      id: ev.id,
+      ev,
+      startX: e.clientX,
+      startY: e.clientY,
+      dragging: false,
+    };
+  }
+
+  function handleChipPointerMove(e: React.PointerEvent) {
+    const dr = dragRef.current;
+    if (!dr) return;
+    if (!dr.dragging) {
+      if (Math.hypot(e.clientX - dr.startX, e.clientY - dr.startY) < 5) return;
+      dr.dragging = true;
+    }
+    // localiza a célula sob o ponteiro via DOM
+    // (setPointerCapture não interfere em elementsFromPoint)
+    const hit = document.elementsFromPoint(e.clientX, e.clientY);
+    const cellEl = hit.find(
+      (el): el is HTMLElement => !!(el as HTMLElement).dataset?.cellIndex,
+    ) as HTMLElement | undefined;
+    if (cellEl) {
+      const idx = parseInt(cellEl.dataset.cellIndex ?? '-1', 10);
+      if (idx >= 0) setDragTargetIdx(idx);
+    }
+  }
+
+  async function handleChipPointerUp(e: React.PointerEvent) {
+    const dr = dragRef.current;
+    dragRef.current = null;
+    if (!dr?.dragging) {
+      setDragTargetIdx(null);
+      return;
+    }
+    e.stopPropagation();
+    suppressClick.current = true;
+    const targetIdx = dragTargetIdx;
+    setDragTargetIdx(null);
+    if (targetIdx === null) return;
+    const targetDay = cells[targetIdx];
+    if (!targetDay) return;
+    // mantém horário e duração originais; muda apenas a data
+    const origStart  = new Date(dr.ev.start);
+    const origEnd    = new Date(dr.ev.end);
+    const durationMs = origEnd.getTime() - origStart.getTime();
+    const newStart   = new Date(targetDay);
+    newStart.setHours(origStart.getHours(), origStart.getMinutes(), origStart.getSeconds(), 0);
+    const newEnd = new Date(newStart.getTime() + durationMs);
+    try {
+      await onEventReschedule(dr.id, newStart.toISOString(), newEnd.toISOString());
+    } catch (err) {
+      setDragToast((err as Error).message ?? 'Falha ao mover. Posição original restaurada.');
+    }
+  }
+
+  function handleChipClick(e: React.MouseEvent, ev: AgendaEvent) {
+    e.stopPropagation();
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      return; // era arraste — não abre modal
+    }
+    onEventClick(ev);
+  }
+
   return (
     <div className="agd-month-wrap">
+      {/* toast de erro de arraste */}
+      {dragToast && (
+        <div className="agd-drag-toast" role="alert" aria-live="assertive">
+          {dragToast}
+        </div>
+      )}
+
       {/* nomes dos dias da semana */}
       <div className="agd-month-header" aria-hidden="true">
         {DIAS_SEMANA.map(d => (
@@ -868,15 +999,18 @@ function MonthGrid({ cells, events, currentMonth, onDayClick, onEventClick }: Mo
       {/* grid de células */}
       <div className="agd-month-grid" role="grid" aria-label="Calendário mensal">
         {cells.map((day, i) => {
-          const dayEvents = eventsOnDay(events, day);
+          const dayEvents  = eventsOnDay(events, day);
           const otherMonth = day.getMonth() !== currentMonth;
+          const isDragTarget = dragTargetIdx === i && dragRef.current !== null;
           return (
             <div
               key={i}
+              data-cell-index={i}
               className={[
                 'agd-month-cell',
-                otherMonth ? 'agd-month-cell--other' : '',
-                isToday(day) ? 'agd-month-cell--today' : '',
+                otherMonth   ? 'agd-month-cell--other'       : '',
+                isToday(day) ? 'agd-month-cell--today'       : '',
+                isDragTarget ? 'agd-month-cell--drag-target' : '',
               ].filter(Boolean).join(' ')}
               role="gridcell"
               tabIndex={0}
@@ -891,7 +1025,10 @@ function MonthGrid({ cells, events, currentMonth, onDayClick, onEventClick }: Mo
                     key={ev.id}
                     className="agd-event-chip"
                     style={{ '--agd-ev-bg': corDoEvento(ev) } as React.CSSProperties}
-                    onClick={e => { e.stopPropagation(); onEventClick(ev); }}
+                    onClick={e => handleChipClick(e, ev)}
+                    onPointerDown={e => handleChipPointerDown(e, ev)}
+                    onPointerMove={handleChipPointerMove}
+                    onPointerUp={handleChipPointerUp}
                     aria-label={`Evento: ${ev.summary}`}
                     title={ev.summary}
                   >
@@ -920,16 +1057,172 @@ interface WeekGridProps {
   events: AgendaEvent[];
   onSlotClick: (day: Date) => void;
   onEventClick: (ev: AgendaEvent) => void;
+  onEventReschedule: (id: string, newStart: string, newEnd: string) => Promise<void>;
 }
 
-function WeekGrid({ cells, events, onSlotClick, onEventClick }: WeekGridProps) {
+function WeekGrid({ cells, events, onSlotClick, onEventClick, onEventReschedule }: WeekGridProps) {
   const SLOT_START_MIN = HORAS[0] * 60;
-  const SLOT_END_MIN = (HORAS[HORAS.length - 1] + 1) * 60;
-  const PX_POR_MIN = PX_POR_HORA / 60;
-  const totalHeight = HORAS.length * PX_POR_HORA;
+  const SLOT_END_MIN   = (HORAS[HORAS.length - 1] + 1) * 60;
+  const PX_POR_MIN     = PX_POR_HORA / 60;
+  const totalHeight    = HORAS.length * PX_POR_HORA;
+
+  // ref para o container do corpo da grade (usado para calcular posições durante drag)
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  // suprime o click sintético que o browser dispara após pointerup de arraste
+  const suppressClick = useRef(false);
+
+  // estado mutável do drag — sem causar re-renders a cada move do ponteiro
+  const dragRef = useRef<{
+    id: string;
+    ev: AgendaEvent;
+    durationMin: number;    // duração original em minutos (constante durante drag)
+    height: number;         // altura em px (constante durante drag)
+    pointerOffsetY: number; // onde dentro do evento o ponteiro foi pressionado
+    startX: number;
+    startY: number;
+    dragging: boolean;      // true após ultrapassar o threshold de 5 px
+    gutterWidth: number;    // largura do eixo de horas em px
+    colWidth: number;       // largura de cada coluna de dia em px
+    bodyTop: number;        // top do corpo da grade (viewport)
+    bodyLeft: number;       // left do corpo da grade (viewport)
+  } | null>(null);
+
+  // preview visual do evento na posição-alvo durante o arraste
+  const [dragPreview, setDragPreview] = useState<{
+    id: string;
+    dayIndex: number; // coluna-alvo (0-6)
+    top: number;      // px a partir do topo da coluna
+    height: number;
+    color: string;
+    title: string;
+  } | null>(null);
+
+  // toast de erro exibido quando o PATCH falha e a posição é revertida
+  const [dragToast, setDragToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!dragToast) return;
+    const t = setTimeout(() => setDragToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [dragToast]);
+
+  // --- handlers de drag ---
+
+  function handleEventPointerDown(
+    e: React.PointerEvent,
+    ev: AgendaEvent,
+    top: number,
+    height: number,
+  ) {
+    e.stopPropagation(); // não propaga para a coluna de dia (evita abrir modal de criar)
+    const el = e.currentTarget as HTMLElement;
+    el.setPointerCapture(e.pointerId);
+    dragRef.current = {
+      id: ev.id,
+      ev,
+      durationMin: (new Date(ev.end).getTime() - new Date(ev.start).getTime()) / 60000,
+      height,
+      pointerOffsetY: e.clientY - el.getBoundingClientRect().top,
+      startX: e.clientX,
+      startY: e.clientY,
+      dragging: false,
+      gutterWidth: 0,
+      colWidth: 0,
+      bodyTop: 0,
+      bodyLeft: 0,
+    };
+  }
+
+  function handleEventPointerMove(e: React.PointerEvent) {
+    const dr = dragRef.current;
+    if (!dr) return;
+
+    // threshold de 5 px antes de ativar o arraste
+    if (!dr.dragging) {
+      if (Math.hypot(e.clientX - dr.startX, e.clientY - dr.startY) < 5) return;
+      dr.dragging = true;
+      const body = bodyRef.current;
+      if (!body) { dragRef.current = null; return; }
+      const rect     = body.getBoundingClientRect();
+      dr.bodyTop     = rect.top;
+      dr.bodyLeft    = rect.left;
+      const gutterEl = body.querySelector<HTMLElement>('.agd-week-time-axis');
+      dr.gutterWidth = gutterEl?.offsetWidth ?? 52;
+      dr.colWidth    = (rect.width - dr.gutterWidth) / cells.length;
+    }
+
+    // coluna-alvo pela posição horizontal do ponteiro
+    const relX      = e.clientX - dr.bodyLeft - dr.gutterWidth;
+    const newDayIdx = Math.max(0, Math.min(cells.length - 1, Math.floor(relX / dr.colWidth)));
+
+    // posição vertical com snap de 15 minutos
+    const relY       = e.clientY - dr.bodyTop - dr.pointerOffsetY;
+    const snappedMin = Math.round((relY / PX_POR_MIN) / 15) * 15;
+    const cappedMin  = Math.max(0, Math.min(
+      SLOT_END_MIN - SLOT_START_MIN - dr.durationMin,
+      snappedMin,
+    ));
+
+    setDragPreview({
+      id:       dr.id,
+      dayIndex: newDayIdx,
+      top:      cappedMin * PX_POR_MIN,
+      height:   dr.height,
+      color:    corDoEvento(dr.ev),
+      title:    dr.ev.summary,
+    });
+  }
+
+  async function handleEventPointerUp(e: React.PointerEvent) {
+    const dr = dragRef.current;
+    dragRef.current = null;
+
+    if (!dr?.dragging) {
+      // foi clique — deixa o click sintético do botão disparar normalmente
+      setDragPreview(null);
+      return;
+    }
+
+    e.stopPropagation();
+    suppressClick.current = true;
+
+    const preview = dragPreview;
+    setDragPreview(null);
+    if (!preview) return;
+
+    // computa novo start/end mantendo a duração original
+    const targetDay   = cells[preview.dayIndex];
+    const totalMinAbs = SLOT_START_MIN + preview.top / PX_POR_MIN;
+    const newStart    = new Date(targetDay);
+    newStart.setHours(Math.floor(totalMinAbs / 60), totalMinAbs % 60, 0, 0);
+    const newEnd = new Date(newStart.getTime() + dr.durationMin * 60000);
+
+    try {
+      await onEventReschedule(dr.id, newStart.toISOString(), newEnd.toISOString());
+    } catch (err) {
+      setDragToast((err as Error).message ?? 'Falha ao mover. Posição original restaurada.');
+    }
+  }
+
+  function handleEventClick(e: React.MouseEvent, ev: AgendaEvent) {
+    e.stopPropagation();
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      return; // era arraste — não abre modal
+    }
+    onEventClick(ev);
+  }
 
   return (
     <div className="agd-week-wrap">
+      {/* toast de erro de arraste (fora do grid do corpo para não afetar auto-placement) */}
+      {dragToast && (
+        <div className="agd-drag-toast" role="alert" aria-live="assertive">
+          {dragToast}
+        </div>
+      )}
+
       {/* cabeçalho com nomes dos dias */}
       <div className="agd-week-header">
         <div className="agd-week-gutter" aria-hidden="true"/>
@@ -946,8 +1239,8 @@ function WeekGrid({ cells, events, onSlotClick, onEventClick }: WeekGridProps) {
         ))}
       </div>
 
-      {/* corpo com eixo de horas e colunas de dias */}
-      <div className="agd-week-body">
+      {/* corpo: eixo de horas + colunas de dias */}
+      <div className="agd-week-body" ref={bodyRef}>
         {/* eixo de horas */}
         <div
           className="agd-week-time-axis"
@@ -992,35 +1285,56 @@ function WeekGrid({ cells, events, onSlotClick, onEventClick }: WeekGridProps) {
                 />
               ))}
 
+              {/* preview do evento sendo arrastado — aparece nesta coluna se for o alvo */}
+              {dragPreview?.dayIndex === i && (
+                <div
+                  className="agd-week-event agd-week-event--drag-preview"
+                  style={{
+                    top:    `${dragPreview.top}px`,
+                    height: `${dragPreview.height}px`,
+                    left:   '2px',
+                    right:  '2px',
+                    '--agd-ev-bg': dragPreview.color,
+                    pointerEvents: 'none',
+                  } as React.CSSProperties}
+                  aria-hidden="true"
+                >
+                  <span className="agd-week-event-title">{dragPreview.title}</span>
+                </div>
+              )}
+
               {/* eventos posicionados lado a lado quando sobrepostos */}
               {dayEvents.map(ev => {
-                const startDate = new Date(ev.start);
-                const endDate = new Date(ev.end);
-                const startMin = startDate.getHours() * 60 + startDate.getMinutes();
-                const endMin = endDate.getHours() * 60 + endDate.getMinutes();
+                const startDate    = new Date(ev.start);
+                const endDate      = new Date(ev.end);
+                const startMin     = startDate.getHours() * 60 + startDate.getMinutes();
+                const endMin       = endDate.getHours() * 60 + endDate.getMinutes();
                 const clampedStart = Math.max(startMin, SLOT_START_MIN);
-                const clampedEnd = Math.min(endMin, SLOT_END_MIN);
-                const top = (clampedStart - SLOT_START_MIN) * PX_POR_MIN;
-                const height = Math.max((clampedEnd - clampedStart) * PX_POR_MIN, 22);
-                const startLabel = `${padTime(startDate.getHours())}:${padTime(startDate.getMinutes())}`;
-
-                // posição horizontal: largura e deslocamento por coluna
+                const clampedEnd   = Math.min(endMin, SLOT_END_MIN);
+                const top          = (clampedStart - SLOT_START_MIN) * PX_POR_MIN;
+                const height       = Math.max((clampedEnd - clampedStart) * PX_POR_MIN, 22);
+                const startLabel   = `${padTime(startDate.getHours())}:${padTime(startDate.getMinutes())}`;
                 const { col, totalCols } = colLayout.get(ev.id) ?? { col: 0, totalCols: 1 };
-                const leftPct  = (col / totalCols) * 100;
-                const rightPct = ((totalCols - col - 1) / totalCols) * 100;
+                const leftPct    = (col / totalCols) * 100;
+                const rightPct   = ((totalCols - col - 1) / totalCols) * 100;
+                const isDragging = dragPreview?.id === ev.id;
 
                 return (
                   <button
                     key={ev.id}
-                    className="agd-week-event"
+                    className={`agd-week-event${isDragging ? ' agd-week-event--dragging' : ''}`}
                     style={{
-                      top: `${top}px`,
+                      top:    `${top}px`,
                       height: `${height}px`,
-                      left: `calc(${leftPct.toFixed(3)}% + 2px)`,
-                      right: `calc(${rightPct.toFixed(3)}% + 2px)`,
+                      left:   `calc(${leftPct.toFixed(3)}% + 2px)`,
+                      right:  `calc(${rightPct.toFixed(3)}% + 2px)`,
                       '--agd-ev-bg': corDoEvento(ev),
+                      cursor: isDragging ? 'grabbing' : 'grab',
                     } as React.CSSProperties}
-                    onClick={e => { e.stopPropagation(); onEventClick(ev); }}
+                    onClick={e => handleEventClick(e, ev)}
+                    onPointerDown={e => handleEventPointerDown(e, ev, top, height)}
+                    onPointerMove={handleEventPointerMove}
+                    onPointerUp={handleEventPointerUp}
                     aria-label={`${ev.summary} — ${startLabel}`}
                     title={`${ev.summary} (${startLabel})`}
                   >

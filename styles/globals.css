@@ -4937,6 +4937,52 @@ legend.agent-card-title { margin-bottom: 4px; }
 
 .agd-color-swatch:disabled { opacity: 0.45; cursor: not-allowed; }
 
+/* --- Drag-to-reschedule --- */
+
+/* Evento original vira "fantasma" durante o arraste */
+.agd-week-event--dragging {
+  opacity: 0.3;
+  filter: none !important;
+  cursor: grabbing !important;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Preview semitransparente na posição-alvo */
+.agd-week-event--drag-preview {
+  opacity: 0.85;
+  border: 2px dashed rgba(255, 255, 255, 0.65);
+  z-index: 3;
+  transition: none !important;
+  filter: brightness(0.9);
+}
+
+/* Célula do calendário mensal destacada como alvo de drop */
+.agd-month-cell--drag-target {
+  background: rgba(124, 58, 237, 0.08) !important;
+  outline: 2px dashed var(--brand-light);
+  outline-offset: -2px;
+}
+
+/* Toast de erro de arraste (posição fixa no rodapé da viewport) */
+.agd-drag-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  background: #fff;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-pill);
+  padding: 8px 20px;
+  font-size: 12.5px;
+  color: #DC2626;
+  box-shadow: var(--shadow-lg);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: agd-fade-in var(--dur-fast) var(--ease);
+}
+
 /* --- Responsivo --- */
 @media (max-width: 768px) {
   .agd-header {
