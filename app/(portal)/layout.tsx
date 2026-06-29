@@ -38,7 +38,7 @@ export default async function PortalLayout({
     <>
       <Sidebar user={sidebarUser} />
       <div className="main">
-        <Topbar />
+        <Topbar user={sidebarUser} />
         {children}
       </div>
     </>

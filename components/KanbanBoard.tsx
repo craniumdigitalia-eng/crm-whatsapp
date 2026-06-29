@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import ConversationDrawer from './ConversationDrawer';
 
 /* ============================================================
@@ -95,7 +96,7 @@ function LeadCard({
   onOpen,
 }: {
   lead: Lead;
-  onOpen: (id: string, el: HTMLElement) => void;
+  onOpen: (id: string, el: HTMLElement | null) => void;
 }) {
   const isAI  = AI_STAGES.has(lead.status);
   const color = avatarColor(lead.name);
@@ -416,7 +417,7 @@ function KanbanColumn({
 }: {
   stage: (typeof STAGES)[number];
   leads: Lead[];
-  onOpen: (id: string, el: HTMLElement) => void;
+  onOpen: (id: string, el: HTMLElement | null) => void;
   onAdd: (stageKey: string) => void;
 }) {
   return (
@@ -491,10 +492,15 @@ function KanbanSkeleton() {
    ============================================================ */
 
 export default function KanbanBoard() {
+  const searchParams = useSearchParams();
+
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterKey>('all');
+
+  // Filtro de etapa vindo da URL (?stage=<key>) — aplicado pelo filtro da topbar.
+  const [stageFilter, setStageFilter] = useState<string | null>(null);
 
   // Busca textual (nome ou telefone) — debounce leve para não filtrar a cada tecla.
   const [searchInput, setSearchInput] = useState('');
@@ -513,6 +519,28 @@ export default function KanbanBoard() {
   // Drawer state
   const [openLeadId, setOpenLeadId] = useState<string | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
+
+  /* Aplica filtro de etapa da URL (?stage=<key>). Valida que a key é STAGES válida. */
+  useEffect(() => {
+    const stageParam = searchParams.get('stage');
+    if (!stageParam) {
+      setStageFilter(null);
+      return;
+    }
+    const valido = STAGES.find((s) => s.key === stageParam);
+    setStageFilter(valido ? stageParam : null);
+  }, [searchParams]);
+
+  /* Abre o drawer ao receber ?lead=<id> na URL assim que os leads carregarem. */
+  useEffect(() => {
+    const leadParam = searchParams.get('lead');
+    if (!leadParam || loading || leads.length === 0) return;
+    const found = leads.find((l) => l.id === leadParam);
+    if (found) {
+      lastFocusedRef.current = null;
+      setOpenLeadId(leadParam);
+    }
+  }, [searchParams, loading, leads]);
 
   const loadLeads = useCallback(async () => {
     try {
@@ -597,8 +625,10 @@ export default function KanbanBoard() {
     setModalOpen(false);
   }, []);
 
-  /* Abre o drawer e registra o elemento gatilho para restaurar foco ao fechar (AC2). */
-  const handleOpenLead = useCallback((id: string, el: HTMLElement) => {
+  /* Abre o drawer e registra o elemento gatilho para restaurar foco ao fechar (AC2).
+     el pode ser null quando a abertura vem de URL (?lead=<id>) — nesse caso o foco
+     não é restaurado ao fechar. */
+  const handleOpenLead = useCallback((id: string, el: HTMLElement | null) => {
     lastFocusedRef.current = el;
     setOpenLeadId(id);
   }, []);
@@ -619,9 +649,12 @@ export default function KanbanBoard() {
     );
   }, []);
 
-  /* Filtragem combinada (AND): chip de estágio-tipo E busca textual E etiquetas. */
+  /* Filtragem combinada (AND): etapa URL E chip tipo E busca textual E etiquetas. */
   const query = search.trim().toLowerCase();
   const filtered = leads.filter((lead) => {
+    // Etapa da URL (?stage=<key>) — do filtro da topbar
+    if (stageFilter && lead.status !== stageFilter) return false;
+
     // Chip Todos / IA ativa / Humano
     if (filter === 'ia'    && !AI_STAGES.has(lead.status)) return false;
     if (filter === 'human' && lead.status !== 'humano')    return false;
