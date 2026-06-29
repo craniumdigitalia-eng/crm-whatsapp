@@ -4152,3 +4152,772 @@ legend.agent-card-title { margin-bottom: 4px; }
 }
 .dash-activity dt { font-size: 12.5px; color: var(--fg-muted); margin: 0; }
 .dash-activity dd { margin: 0; font-family: var(--font-mono); font-size: 13.5px; font-weight: 600; color: var(--neutral-dark); }
+
+/* ============================================================
+   Módulo de Agenda (/agenda) — Story 5.7
+   Prefixo agd-*. Paleta: brand-purple + brand-tint.
+   Reutiliza tokens do design system Cranium.
+   ============================================================ */
+
+/* --- Layout da página --- */
+.agd-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--off-white);
+}
+
+/* --- Cabeçalho --- */
+.agd-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.agd-header-left { flex: 1; min-width: 0; }
+
+.agd-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--neutral-dark);
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.agd-subtitle {
+  font-size: 13px;
+  color: var(--fg-muted);
+  margin: 0;
+}
+
+.agd-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* --- Toggle visão mês / semana --- */
+.agd-view-toggle {
+  display: flex;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: #fff;
+}
+
+.agd-view-btn {
+  padding: 5px 14px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  line-height: 1;
+}
+
+.agd-view-btn:focus-visible {
+  outline: 2px solid var(--brand-light);
+  outline-offset: -2px;
+}
+
+.agd-view-btn.active {
+  background: var(--brand-purple);
+  color: #fff;
+}
+
+.agd-view-btn:not(.active):hover {
+  background: var(--brand-tint);
+  color: var(--brand-purple);
+}
+
+/* --- Botão de atualizar --- */
+.agd-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Ícone girando durante carregamento */
+.agd-spin {
+  animation: agd-rotate 0.9s linear infinite;
+}
+
+@keyframes agd-rotate {
+  to { transform: rotate(360deg); }
+}
+
+/* --- Barra de navegação de período --- */
+.agd-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 24px;
+  flex-shrink: 0;
+  background: #fff;
+  border-bottom: 1px solid var(--neutral-mid);
+}
+
+.agd-nav-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  flex-shrink: 0;
+}
+
+.agd-nav-btn:hover {
+  border-color: var(--brand-light);
+  color: var(--brand-purple);
+  background: var(--brand-tint);
+}
+
+.agd-nav-btn:focus-visible {
+  outline: 2px solid var(--brand-light);
+  outline-offset: 2px;
+}
+
+.agd-nav-today {
+  padding: 4px 12px;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-pill);
+  background: #fff;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  flex-shrink: 0;
+}
+
+.agd-nav-today:hover {
+  border-color: var(--brand-purple);
+  color: var(--brand-purple);
+  background: var(--brand-tint);
+}
+
+.agd-nav-today:focus-visible {
+  outline: 2px solid var(--brand-light);
+  outline-offset: 2px;
+}
+
+.agd-period-label {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--neutral-dark);
+  letter-spacing: -0.02em;
+  margin: 0 0 0 6px;
+}
+
+/* --- Banner de erro --- */
+.agd-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 24px 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(239, 68, 68, 0.07);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #B91C1C;
+  font-size: 13px;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Visão Mensal
+   ============================================================ */
+
+.agd-month-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 12px 24px 16px;
+  gap: 0;
+}
+
+/* Nomes dos dias (Dom–Sáb) */
+.agd-month-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+
+.agd-month-day-name {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  padding: 4px 0;
+  user-select: none;
+}
+
+/* Grid 7×6 */
+.agd-month-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 2px;
+  overflow: hidden;
+}
+
+/* Célula de dia */
+.agd-month-cell {
+  background: #fff;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-sm);
+  padding: 7px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+  min-height: 0;
+  outline: none;
+}
+
+.agd-month-cell:hover {
+  border-color: rgba(167, 139, 250, 0.45);
+  box-shadow: var(--shadow-sm);
+}
+
+.agd-month-cell:focus-visible {
+  outline: 2px solid var(--brand-light);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+/* Dias de outro mês — mais opacos */
+.agd-month-cell--other {
+  background: var(--off-white);
+  opacity: 0.55;
+}
+
+/* Dia de hoje */
+.agd-month-cell--today {
+  border-color: rgba(124, 58, 237, 0.35);
+  background: rgba(237, 233, 254, 0.25);
+}
+
+.agd-month-date {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--neutral-dark);
+  line-height: 1;
+  flex-shrink: 0;
+  align-self: flex-start;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.agd-month-cell--today .agd-month-date {
+  background: var(--brand-purple);
+  color: #fff;
+}
+
+.agd-month-events {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  flex: 1;
+}
+
+/* Chip de evento na visão mensal */
+.agd-event-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 4px;
+  background: var(--brand-purple);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.4;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  transition: background var(--dur-fast) var(--ease);
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
+}
+
+.agd-event-chip:hover { background: var(--brand-purple-hover); }
+
+.agd-event-chip:focus-visible {
+  outline: 2px solid var(--brand-light);
+  outline-offset: 1px;
+}
+
+.agd-event-chip-time {
+  color: rgba(255, 255, 255, 0.75);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  flex-shrink: 0;
+}
+
+.agd-event-chip-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.agd-event-more {
+  font-size: 9.5px;
+  color: var(--brand-purple);
+  font-weight: 600;
+  padding: 1px 4px;
+  cursor: default;
+  user-select: none;
+}
+
+/* ============================================================
+   Visão Semanal
+   ============================================================ */
+
+.agd-week-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 12px 24px 16px;
+}
+
+/* Cabeçalho com nomes dos dias */
+.agd-week-header {
+  display: grid;
+  grid-template-columns: 52px repeat(7, 1fr);
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--neutral-mid);
+  background: #fff;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border: 1px solid var(--neutral-mid);
+}
+
+.agd-week-gutter {
+  border-right: 1px solid var(--neutral-mid);
+}
+
+.agd-week-head-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border-left: 1px solid var(--neutral-mid);
+  user-select: none;
+}
+
+.agd-week-head-cell--today {
+  background: rgba(237, 233, 254, 0.3);
+}
+
+.agd-week-head-dow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.agd-week-head-date {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--neutral-dark);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  line-height: 1;
+}
+
+.agd-week-head-date--today {
+  background: var(--brand-purple);
+  color: #fff;
+}
+
+/* Corpo scrollável */
+.agd-week-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 52px repeat(7, 1fr);
+  overflow-y: auto;
+  border: 1px solid var(--neutral-mid);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  background: #fff;
+}
+
+.agd-week-body::-webkit-scrollbar { width: 4px; }
+.agd-week-body::-webkit-scrollbar-thumb { background: rgba(167, 139, 250, 0.2); border-radius: 999px; }
+
+/* Eixo de horas */
+.agd-week-time-axis {
+  position: relative;
+  border-right: 1px solid var(--neutral-mid);
+  background: var(--off-white);
+  flex-shrink: 0;
+}
+
+.agd-week-time-slot {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 4px 8px 0 4px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--fg-muted);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+  box-sizing: border-box;
+  user-select: none;
+}
+
+/* Coluna de cada dia */
+.agd-week-day-col {
+  position: relative;
+  border-left: 1px solid var(--neutral-mid);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.agd-week-day-col:hover { background: rgba(237, 233, 254, 0.12); }
+
+.agd-week-day-col:focus-visible {
+  outline: 2px solid var(--brand-light);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+.agd-week-day-col--today { background: rgba(237, 233, 254, 0.18); }
+
+/* Linhas de hora dentro da coluna */
+.agd-week-hour-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(226, 232, 240, 0.55);
+  pointer-events: none;
+}
+
+/* Evento na visão semanal */
+.agd-week-event {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  border: none;
+  border-radius: 5px;
+  background: var(--brand-purple);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 6px;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  box-shadow: var(--shadow-sm);
+  z-index: 2;
+  transition: background var(--dur-fast) var(--ease);
+  line-height: 1.3;
+}
+
+.agd-week-event:hover { background: var(--brand-purple-hover); }
+
+.agd-week-event:focus-visible {
+  outline: 2px solid var(--brand-light);
+  outline-offset: 1px;
+}
+
+.agd-week-event-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agd-week-event-time {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* ============================================================
+   Modal de criação / edição
+   ============================================================ */
+
+.agd-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: agd-fade-in var(--dur-fast) var(--ease);
+}
+
+@keyframes agd-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.agd-modal {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: agd-modal-in var(--dur-mid) var(--ease);
+}
+
+@keyframes agd-modal-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.agd-modal::-webkit-scrollbar { width: 3px; }
+.agd-modal::-webkit-scrollbar-thumb { background: rgba(167, 139, 250, 0.18); border-radius: 999px; }
+
+.agd-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--neutral-mid);
+  flex-shrink: 0;
+}
+
+.agd-modal-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--neutral-dark);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.agd-modal-close {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-pill);
+  background: #fff;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  flex-shrink: 0;
+}
+
+.agd-modal-close:hover {
+  border-color: var(--brand-light);
+  color: var(--brand-purple);
+}
+
+.agd-modal-close:focus-visible {
+  outline: 2px solid var(--brand-light);
+  outline-offset: 2px;
+}
+
+.agd-modal-close:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Formulário */
+.agd-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px 20px;
+}
+
+.agd-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.agd-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  letter-spacing: 0.02em;
+}
+
+.agd-field input,
+.agd-field textarea,
+.agd-field select {
+  padding: 8px 11px;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--neutral-dark);
+  background: var(--off-white);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+
+.agd-field input:focus,
+.agd-field textarea:focus,
+.agd-field select:focus {
+  outline: none;
+  border-color: var(--brand-purple);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+  background: #fff;
+}
+
+.agd-field input:disabled,
+.agd-field textarea:disabled,
+.agd-field select:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.agd-field textarea { resize: vertical; min-height: 60px; }
+
+.agd-field select { appearance: auto; cursor: pointer; }
+
+/* Linha de campos (data + horários) */
+.agd-field-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 10px;
+}
+
+.agd-field--flex2 { /* campo de data ocupa coluna maior — definido no grid */ }
+
+.agd-field-hint {
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin-top: 1px;
+}
+
+/* Link do Google Meet */
+.agd-meet-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(37, 99, 235, 0.06);
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  color: #1D4ED8;
+}
+
+.agd-meet-link a {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1D4ED8;
+  text-decoration: none;
+}
+
+.agd-meet-link a:hover { text-decoration: underline; }
+
+/* Erro do formulário */
+.agd-form-error {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  color: #DC2626;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* Ações do modal */
+.agd-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.agd-modal-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Botão de excluir */
+.agd-btn-delete {
+  background: rgba(239, 68, 68, 0.08);
+  color: #DC2626;
+  border: 1px solid rgba(239, 68, 68, 0.22);
+}
+
+.agd-btn-delete:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #B91C1C;
+}
+
+/* --- Responsivo --- */
+@media (max-width: 768px) {
+  .agd-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .agd-header-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .agd-month-wrap,
+  .agd-week-wrap {
+    padding: 8px 12px 12px;
+  }
+  .agd-nav { padding: 8px 12px; }
+  .agd-week-header,
+  .agd-week-body { grid-template-columns: 44px repeat(7, 1fr); }
+  .agd-week-gutter { border-right: 1px solid var(--neutral-mid); }
+  .agd-field-row { grid-template-columns: 1fr 1fr; }
+  .agd-field-row .agd-field--flex2 { grid-column: 1 / -1; }
+}
