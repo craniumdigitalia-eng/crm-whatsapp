@@ -24,6 +24,7 @@ interface AgendaEvent {
   attendees?: string[];
   leadId?: string;
   leadName?: string;
+  colorId?: string; // "1"–"11" — paleta oficial do Google Calendar
 }
 
 interface LeadOption {
@@ -50,6 +51,29 @@ const MESES = [
 const HORAS = Array.from({ length: 16 }, (_, i) => i + 7);
 
 const PX_POR_HORA = 90; // altura de cada hora em pixels (visão semanal)
+
+// Paleta oficial do Google Calendar (colorId "1"–"11")
+const COR_AGENDA: Record<string, { nome: string; hex: string }> = {
+  '1':  { nome: 'Lavanda',    hex: '#7986CB' },
+  '2':  { nome: 'Sálvia',     hex: '#33B679' },
+  '3':  { nome: 'Uva',        hex: '#8E24AA' },
+  '4':  { nome: 'Flamingo',   hex: '#E67C73' },
+  '5':  { nome: 'Banana',     hex: '#F6BF26' },
+  '6':  { nome: 'Tangerina',  hex: '#F4511E' },
+  '7':  { nome: 'Pavão',      hex: '#039BE5' },
+  '8':  { nome: 'Grafite',    hex: '#616161' },
+  '9':  { nome: 'Mirtilo',    hex: '#3F51B5' },
+  '10': { nome: 'Manjericão', hex: '#0B8043' },
+  '11': { nome: 'Tomate',     hex: '#D50000' },
+};
+
+// cor padrão: Mirtilo (id 9) — mesmo azul que a IA usa no agendamento
+const COR_PADRAO = '9';
+
+// resolve o hex de um evento; eventos sem colorId recebem o padrão
+function corDoEvento(ev: AgendaEvent): string {
+  return COR_AGENDA[ev.colorId ?? COR_PADRAO]?.hex ?? COR_AGENDA[COR_PADRAO].hex;
+}
 
 // ---------- helpers de data ----------
 
@@ -177,6 +201,7 @@ export default function AgendaModule() {
   const [formDesc, setFormDesc] = useState('');
   const [formLeadId, setFormLeadId] = useState('');
   const [formAttendees, setFormAttendees] = useState('');
+  const [formColorId, setFormColorId] = useState(COR_PADRAO);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -274,6 +299,7 @@ export default function AgendaModule() {
     setFormDesc('');
     setFormLeadId('');
     setFormAttendees('');
+    setFormColorId(COR_PADRAO);
     setFormError(null);
     void ensureLeads();
   }
@@ -291,6 +317,7 @@ export default function AgendaModule() {
     setFormDesc(ev.description ?? '');
     setFormLeadId(ev.leadId ?? '');
     setFormAttendees((ev.attendees ?? []).join(', '));
+    setFormColorId(ev.colorId ?? COR_PADRAO);
     setFormError(null);
     void ensureLeads();
   }
@@ -330,6 +357,7 @@ export default function AgendaModule() {
       summary: formSummary.trim(),
       start: startISO,
       end: endISO,
+      colorId: formColorId,
       ...(formDesc.trim() ? { description: formDesc.trim() } : {}),
       ...(attendeesList.length ? { attendees: attendeesList } : {}),
       ...(formLeadId ? { leadId: formLeadId } : {}),
@@ -610,6 +638,16 @@ export default function AgendaModule() {
                 />
               </div>
 
+              {/* Cor do evento */}
+              <div className="agd-field">
+                <label>Cor</label>
+                <SeletorCor
+                  valor={formColorId}
+                  onChange={setFormColorId}
+                  disabled={saving || deleting}
+                />
+              </div>
+
               {/* Seletor de lead */}
               <div className="agd-field">
                 <label htmlFor="agd-lead">Lead vinculado</label>
@@ -701,6 +739,34 @@ export default function AgendaModule() {
   );
 }
 
+// ---------- SeletorCor ----------
+
+interface SeletorCorProps {
+  valor: string;
+  onChange: (id: string) => void;
+  disabled?: boolean;
+}
+
+function SeletorCor({ valor, onChange, disabled }: SeletorCorProps) {
+  return (
+    <div className="agd-color-picker" role="group" aria-label="Cor do evento">
+      {Object.entries(COR_AGENDA).map(([id, { nome, hex }]) => (
+        <button
+          key={id}
+          type="button"
+          className={`agd-color-swatch${valor === id ? ' active' : ''}`}
+          style={{ background: hex }}
+          aria-label={nome}
+          aria-pressed={valor === id}
+          onClick={() => onChange(id)}
+          disabled={disabled}
+          title={nome}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ---------- MonthGrid ----------
 
 interface MonthGridProps {
@@ -746,6 +812,7 @@ function MonthGrid({ cells, events, currentMonth, onDayClick, onEventClick }: Mo
                   <button
                     key={ev.id}
                     className="agd-event-chip"
+                    style={{ '--agd-ev-bg': corDoEvento(ev) } as React.CSSProperties}
                     onClick={e => { e.stopPropagation(); onEventClick(ev); }}
                     aria-label={`Evento: ${ev.summary}`}
                     title={ev.summary}
@@ -860,7 +927,7 @@ function WeekGrid({ cells, events, onSlotClick, onEventClick }: WeekGridProps) {
                   <button
                     key={ev.id}
                     className="agd-week-event"
-                    style={{ top: `${top}px`, height: `${height}px` }}
+                    style={{ top: `${top}px`, height: `${height}px`, '--agd-ev-bg': corDoEvento(ev) } as React.CSSProperties}
                     onClick={e => { e.stopPropagation(); onEventClick(ev); }}
                     aria-label={`${ev.summary} — ${startLabel}`}
                     title={`${ev.summary} (${startLabel})`}
