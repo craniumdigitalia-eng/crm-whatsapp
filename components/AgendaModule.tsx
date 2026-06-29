@@ -154,6 +154,84 @@ function eventsOnDay(events: AgendaEvent[], day: Date): AgendaEvent[] {
   return events.filter(ev => sameDay(new Date(ev.start), day));
 }
 
+// ---------- algoritmo de colunas para eventos sobrepostos ----------
+
+interface ColInfo {
+  col: number;       // índice da coluna (0-based)
+  totalCols: number; // nº de colunas no cluster
+}
+
+// verifica sobreposição estrita de horário (eventos adjacentes não colidem)
+function sobrepoem(a: AgendaEvent, b: AgendaEvent): boolean {
+  return new Date(a.start).getTime() < new Date(b.end).getTime()
+      && new Date(b.start).getTime() < new Date(a.end).getTime();
+}
+
+// distribui eventos em colunas lado a lado (estilo Google Calendar)
+// retorna mapa id → { col, totalCols }
+function distribuirColunas(eventos: AgendaEvent[]): Map<string, ColInfo> {
+  if (eventos.length === 0) return new Map();
+
+  // ordena por início; empate: evento mais longo vai primeiro
+  const sorted = [...eventos].sort((a, b) => {
+    const d = new Date(a.start).getTime() - new Date(b.start).getTime();
+    if (d !== 0) return d;
+    return (new Date(b.end).getTime() - new Date(b.start).getTime())
+         - (new Date(a.end).getTime() - new Date(a.start).getTime());
+  });
+
+  // agrupa em clusters por sobreposição transitiva
+  const visitados = new Set<string>();
+  const clusters: AgendaEvent[][] = [];
+
+  for (const ev of sorted) {
+    if (visitados.has(ev.id)) continue;
+    const cluster: AgendaEvent[] = [ev];
+    visitados.add(ev.id);
+    let i = 0;
+    while (i < cluster.length) {
+      for (const outro of sorted) {
+        if (!visitados.has(outro.id) && sobrepoem(cluster[i], outro)) {
+          cluster.push(outro);
+          visitados.add(outro.id);
+        }
+      }
+      i++;
+    }
+    clusters.push(cluster);
+  }
+
+  const mapa = new Map<string, ColInfo>();
+
+  for (const cluster of clusters) {
+    // atribui cada evento à primeira coluna sem colisão
+    const colunas: AgendaEvent[][] = [];
+    for (const ev of cluster) {
+      let alocado = false;
+      for (let c = 0; c < colunas.length; c++) {
+        if (!colunas[c].some(outro => sobrepoem(ev, outro))) {
+          colunas[c].push(ev);
+          mapa.set(ev.id, { col: c, totalCols: 0 }); // totalCols ajustado abaixo
+          alocado = true;
+          break;
+        }
+      }
+      if (!alocado) {
+        mapa.set(ev.id, { col: colunas.length, totalCols: 0 });
+        colunas.push([ev]);
+      }
+    }
+    // propaga o nº de colunas do cluster para todos os seus eventos
+    const total = colunas.length;
+    for (const ev of cluster) {
+      const info = mapa.get(ev.id)!;
+      mapa.set(ev.id, { col: info.col, totalCols: total });
+    }
+  }
+
+  return mapa;
+}
+
 function padTime(n: number): string {
   return String(n).padStart(2, '0');
 }
@@ -890,6 +968,9 @@ function WeekGrid({ cells, events, onSlotClick, onEventClick }: WeekGridProps) {
         {/* coluna de cada dia */}
         {cells.map((day, i) => {
           const dayEvents = eventsOnDay(events, day).filter(ev => !ev.allDay);
+          // calcula layout lado a lado para eventos sobrepostos
+          const colLayout = distribuirColunas(dayEvents);
+
           return (
             <div
               key={i}
@@ -911,7 +992,7 @@ function WeekGrid({ cells, events, onSlotClick, onEventClick }: WeekGridProps) {
                 />
               ))}
 
-              {/* eventos posicionados */}
+              {/* eventos posicionados lado a lado quando sobrepostos */}
               {dayEvents.map(ev => {
                 const startDate = new Date(ev.start);
                 const endDate = new Date(ev.end);
@@ -923,11 +1004,22 @@ function WeekGrid({ cells, events, onSlotClick, onEventClick }: WeekGridProps) {
                 const height = Math.max((clampedEnd - clampedStart) * PX_POR_MIN, 22);
                 const startLabel = `${padTime(startDate.getHours())}:${padTime(startDate.getMinutes())}`;
 
+                // posição horizontal: largura e deslocamento por coluna
+                const { col, totalCols } = colLayout.get(ev.id) ?? { col: 0, totalCols: 1 };
+                const leftPct  = (col / totalCols) * 100;
+                const rightPct = ((totalCols - col - 1) / totalCols) * 100;
+
                 return (
                   <button
                     key={ev.id}
                     className="agd-week-event"
-                    style={{ top: `${top}px`, height: `${height}px`, '--agd-ev-bg': corDoEvento(ev) } as React.CSSProperties}
+                    style={{
+                      top: `${top}px`,
+                      height: `${height}px`,
+                      left: `calc(${leftPct.toFixed(3)}% + 2px)`,
+                      right: `calc(${rightPct.toFixed(3)}% + 2px)`,
+                      '--agd-ev-bg': corDoEvento(ev),
+                    } as React.CSSProperties}
                     onClick={e => { e.stopPropagation(); onEventClick(ev); }}
                     aria-label={`${ev.summary} — ${startLabel}`}
                     title={`${ev.summary} (${startLabel})`}
