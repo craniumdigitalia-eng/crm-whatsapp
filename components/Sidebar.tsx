@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import AiToggle from './AiToggle';
 import LogoutButton from './LogoutButton';
 
 // Usuario logado, vindo do layout server (app/(portal)/layout.tsx). Story 5.2.
@@ -280,12 +281,9 @@ export default function Sidebar({ user }: { user: SidebarUser }) {
         ))}
       </nav>
 
-      {/* Bottom: IA status + user */}
+      {/* Bottom: IA toggle + user */}
       <div className="sidebar-bottom">
-        <div className="ai-status-bar" role="status" aria-live="polite">
-          <span className="ai-status-dot" aria-hidden="true" />
-          <span className="ai-status-text">IA ativa · respondendo</span>
-        </div>
+        <AiToggle />
         <div className="sidebar-user">
           <Link
             href="/config"

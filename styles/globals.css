@@ -2043,6 +2043,90 @@ body {
 }
 .integ-webhook-label { font-weight: 600; color: var(--fg); }
 
+/* ============================================================
+   AiToggle — interruptor liga/desliga do agente de IA (Sidebar)
+   ============================================================ */
+
+/* Wrapper: segura o button + msg de erro; herda o margin-bottom do bar */
+.ai-status-bar-wrap {
+  margin-bottom: 10px;
+}
+
+/* Quando o ai-status-bar é um <button> (AiToggle), sobrepõe estilos nativos */
+.ai-status-bar-wrap .ai-status-bar {
+  margin-bottom: 0;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* Foco visível no toggle */
+.ai-status-bar:focus-visible {
+  outline: 2px solid var(--brand-light);
+  outline-offset: 2px;
+}
+
+/* Estado OFF — cores apagadas */
+.ai-status-bar--off {
+  background: rgba(148, 163, 184, 0.07);
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+.ai-status-dot--off {
+  background: #94A3B8;
+  animation: none;
+}
+
+.ai-status-text--off {
+  color: #94A3B8;
+}
+
+/* Pílula estilo iOS */
+.ai-toggle-pill {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: #10B981;
+  position: relative;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.ai-toggle-pill--off {
+  background: rgba(148, 163, 184, 0.35);
+}
+
+.ai-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 14px; /* ON: thumb à direita */
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.22);
+  transition: left var(--dur-fast) var(--ease);
+}
+
+.ai-toggle-pill--off .ai-toggle-thumb {
+  left: 2px; /* OFF: thumb à esquerda */
+}
+
+/* Aviso curto de erro */
+.ai-toggle-error {
+  font-size: 10.5px;
+  color: #DC2626;
+  margin-top: 4px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  line-height: 1.4;
+}
+
 /* Faz um campo do grid ocupar a linha inteira (ex.: secret do Make). */
 .integ-field--full { grid-column: 1 / -1; }
 
