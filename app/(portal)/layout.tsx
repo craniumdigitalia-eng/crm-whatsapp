@@ -23,7 +23,7 @@ export default async function PortalLayout({
   // ler o proprio registro. Se a tabela ainda nao existe, caimos no fallback do email.
   const { data: profile } = await supabase
     .from('profiles')
-    .select('nome, email, role')
+    .select('nome, email, role, avatar_url')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -31,6 +31,7 @@ export default async function PortalLayout({
     nome: profile?.nome ?? user.email ?? 'Usuário',
     email: profile?.email ?? user.email ?? '',
     role: (profile?.role as 'admin' | 'atendente' | undefined) ?? 'atendente',
+    avatarUrl: (profile?.avatar_url as string | null | undefined) ?? null,
   };
 
   return (

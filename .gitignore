@@ -9,3 +9,4 @@ data/*.db
 data/
 .claude/agent-memory/
 *.tsbuildinfo
+.vercel

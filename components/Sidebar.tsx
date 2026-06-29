@@ -9,6 +9,7 @@ export interface SidebarUser {
   nome: string;
   email: string;
   role: 'admin' | 'atendente';
+  avatarUrl?: string | null;
 }
 
 const ROLE_LABELS: Record<SidebarUser['role'], string> = {
@@ -285,12 +286,25 @@ export default function Sidebar({ user }: { user: SidebarUser }) {
           <span className="ai-status-dot" aria-hidden="true" />
           <span className="ai-status-text">IA ativa · respondendo</span>
         </div>
-        <div className="sidebar-user" aria-label={`Usuário ${user.nome}`}>
-          <div className="user-avatar" aria-hidden="true">{initial}</div>
-          <div className="user-info">
-            <div className="user-name" title={user.email}>{user.nome}</div>
-            <div className="user-role">{ROLE_LABELS[user.role]}</div>
-          </div>
+        <div className="sidebar-user">
+          <Link
+            href="/config"
+            className="sidebar-user-link"
+            aria-label={`Configurações — ${user.nome}`}
+          >
+            <div className="user-avatar" aria-hidden="true">
+              {user.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={user.avatarUrl} alt="" className="user-avatar-img" />
+              ) : (
+                initial
+              )}
+            </div>
+            <div className="user-info">
+              <div className="user-name" title={user.email}>{user.nome}</div>
+              <div className="user-role">{ROLE_LABELS[user.role]}</div>
+            </div>
+          </Link>
           <LogoutButton />
         </div>
       </div>
