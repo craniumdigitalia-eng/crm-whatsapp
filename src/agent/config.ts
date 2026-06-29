@@ -163,3 +163,43 @@ export async function setAgentConfig(
 
 // Conveniencia para a UI: o nome da empresa (do env) usado nos textos.
 export const companyName = config.companyName;
+
+// =====================================================================
+// Interruptor global do agente de IA.
+// Mesmo padrao do CADENCE_ENABLED_KEY (followup/cadence.ts): valor 'true' |
+// 'false' na tabela integrations_config. Default = true (IA ligada) para
+// nao derrubar atendimento caso a chave ainda nao exista ou o banco falhe.
+// =====================================================================
+
+const AGENT_ENABLED_KEY = "agent_enabled"; // 'true' | 'false'
+
+export const AGENT_ENABLED_DEFAULT = true;
+
+// Le o flag liga/desliga do agente. Tolerante: se a tabela falhar ou a chave
+// nao existir, assume LIGADA — prioriza nao derrubar o atendimento.
+export async function getAgentEnabled(): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from("integrations_config")
+      .select("value")
+      .eq("key", AGENT_ENABLED_KEY)
+      .maybeSingle();
+    if (error) {
+      console.warn(`[agent/config] getAgentEnabled: ${error.message}`);
+      return AGENT_ENABLED_DEFAULT;
+    }
+    if (!data || data.value === null) return AGENT_ENABLED_DEFAULT;
+    return (data as { value: string }).value.trim() !== "false";
+  } catch (e) {
+    console.warn(`[agent/config] getAgentEnabled:`, e);
+    return AGENT_ENABLED_DEFAULT;
+  }
+}
+
+// Grava (upsert) o flag liga/desliga do agente.
+export async function setAgentEnabled(enabled: boolean): Promise<void> {
+  const { error } = await supabase
+    .from("integrations_config")
+    .upsert({ key: AGENT_ENABLED_KEY, value: enabled ? "true" : "false" }, { onConflict: "key" });
+  if (error) throw error;
+}

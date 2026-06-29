@@ -8,6 +8,7 @@ import {
   setStatus,
 } from "./crm/leads";
 import { generateReply } from "./agent/agent";
+import { getAgentEnabled } from "./agent/config";
 import { getCadence } from "./followup/cadence";
 import { AUTO_STATUSES, Lead, Message } from "./types";
 
@@ -34,6 +35,13 @@ export async function handleInbound(msg: InboundMessage): Promise<void> {
   const cadence = await getCadence();
   if (!(cadence.enabled && cadence.steps.length > 0)) {
     await resetFollowUp(lead.id);
+  }
+
+  // Interruptor global: se o agente estiver desligado, persiste a mensagem
+  // (o humano ve no CRM) mas nao gera nem envia resposta automatica.
+  if (!(await getAgentEnabled())) {
+    console.log("[handler] agente DESLIGADO, nao responde");
+    return;
   }
 
   // Recarrega para pegar status atual.
@@ -102,6 +110,13 @@ export async function iniciarAtendimento(
     return;
   }
   if (fresh.status === "novo") await setStatus(fresh.id, "em_atendimento");
+
+  // Interruptor global: se o agente estiver desligado, nao envia o opener.
+  // O lead ja foi criado/registrado pelo chamador; o humano ve no CRM.
+  if (!(await getAgentEnabled())) {
+    console.log("[handler] agente DESLIGADO, opener nao enviado");
+    return;
+  }
 
   try {
     // Historico sintetico (NAO persistido): da o contexto do anuncio ao agente.
