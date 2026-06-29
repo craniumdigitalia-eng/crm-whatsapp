@@ -179,6 +179,232 @@ function LeadCard({
 }
 
 /* ============================================================
+   NovoLeadModal sub-component
+   ============================================================ */
+
+interface NovoLeadModalProps {
+  open: boolean;
+  defaultStage: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function NovoLeadModal({ open, defaultStage, onClose, onSuccess }: NovoLeadModalProps) {
+  const [nome,      setNome]      = useState('');
+  const [telefone,  setTelefone]  = useState('');
+  const [interesse, setInteresse] = useState('');
+  const [etapa,     setEtapa]     = useState(defaultStage);
+  const [enviando,  setEnviando]  = useState(false);
+  const [erro,      setErro]      = useState<string | null>(null);
+  const [existiu,   setExistiu]   = useState(false);
+
+  const primeiroRef  = useRef<HTMLInputElement | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* Limpa o timer ao desmontar para não vazar side-effects. */
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    };
+  }, []);
+
+  /* Ao abrir: sincroniza etapa, limpa campos e move foco pro primeiro input. */
+  useEffect(() => {
+    if (!open) return;
+    setEtapa(defaultStage);
+    setNome('');
+    setTelefone('');
+    setInteresse('');
+    setErro(null);
+    setExistiu(false);
+    requestAnimationFrame(() => { primeiroRef.current?.focus(); });
+  }, [open, defaultStage]);
+
+  /* Fecha no Escape (AC — acessibilidade). */
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [open, onClose]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!telefone.trim()) { setErro('Telefone é obrigatório.'); return; }
+
+    setEnviando(true);
+    setErro(null);
+    setExistiu(false);
+
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: nome.trim() || undefined,
+          phone: telefone.trim(),
+          service_interest: interesse.trim() || undefined,
+          status: etapa,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+
+      const data = await res.json() as { existed?: boolean };
+
+      onSuccess(); // recarrega o kanban em ambos os casos
+
+      if (data.existed) {
+        /* Telefone já existia — mostra aviso leve e fecha em ~1.8 s. */
+        setExistiu(true);
+        setEnviando(false);
+        closeTimerRef.current = setTimeout(onClose, 1800);
+      } else {
+        onClose();
+      }
+    } catch (err) {
+      setErro((err as Error).message);
+      setEnviando(false);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <>
+      {/* Overlay — clique fora fecha */}
+      <div
+        className="novo-lead-overlay"
+        aria-hidden="true"
+        onClick={onClose}
+      />
+
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="novo-lead-titulo"
+        className="novo-lead-panel"
+      >
+        <div className="novo-lead-header">
+          <h2 id="novo-lead-titulo" className="novo-lead-titulo">Novo Lead</h2>
+          <button
+            type="button"
+            className="drawer-close"
+            aria-label="Fechar modal"
+            onClick={onClose}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6"  y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} noValidate className="novo-lead-form">
+          <div className="novo-lead-body">
+
+            <div className="novo-lead-field">
+              <label htmlFor="nl-nome" className="novo-lead-label">Nome</label>
+              <input
+                ref={primeiroRef}
+                id="nl-nome"
+                type="text"
+                className="novo-lead-input"
+                placeholder="Nome do lead"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                disabled={enviando}
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="novo-lead-field">
+              <label htmlFor="nl-telefone" className="novo-lead-label">
+                Telefone{' '}
+                <span className="novo-lead-required" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="nl-telefone"
+                type="tel"
+                className={`novo-lead-input${!telefone.trim() && erro ? ' novo-lead-input--error' : ''}`}
+                placeholder="55 11 99999-9999"
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
+                disabled={enviando}
+                required
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="novo-lead-field">
+              <label htmlFor="nl-interesse" className="novo-lead-label">Interesse</label>
+              <input
+                id="nl-interesse"
+                type="text"
+                className="novo-lead-input"
+                placeholder="Ex.: Tráfego pago, Site…"
+                value={interesse}
+                onChange={(e) => setInteresse(e.target.value)}
+                disabled={enviando}
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="novo-lead-field">
+              <label htmlFor="nl-etapa" className="novo-lead-label">Etapa</label>
+              <select
+                id="nl-etapa"
+                className="novo-lead-select"
+                value={etapa}
+                onChange={(e) => setEtapa(e.target.value)}
+                disabled={enviando}
+              >
+                {STAGES.map((s) => (
+                  <option key={s.key} value={s.key}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {existiu && (
+              <p className="novo-lead-aviso" role="status">
+                Esse telefone ja estava no funil — recarregando.
+              </p>
+            )}
+
+            {erro && (
+              <p className="novo-lead-erro" role="alert">{erro}</p>
+            )}
+
+          </div>
+
+          <div className="novo-lead-footer">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={onClose}
+              disabled={enviando}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={enviando}
+            >
+              {enviando ? 'Salvando…' : 'Criar lead'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  );
+}
+
+/* ============================================================
    KanbanColumn sub-component
    ============================================================ */
 
@@ -186,10 +412,12 @@ function KanbanColumn({
   stage,
   leads,
   onOpen,
+  onAdd,
 }: {
   stage: (typeof STAGES)[number];
   leads: Lead[];
   onOpen: (id: string, el: HTMLElement) => void;
+  onAdd: (stageKey: string) => void;
 }) {
   return (
     <div className="kanban-col" data-stage={stage.key}>
@@ -212,8 +440,10 @@ function KanbanColumn({
           <LeadCard key={lead.id} lead={lead} onOpen={onOpen} />
         ))}
         <button
+          type="button"
           className="col-add"
           aria-label={`Adicionar lead em ${stage.label}`}
+          onClick={() => onAdd(stage.key)}
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
                stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
@@ -275,6 +505,10 @@ export default function KanbanBoard() {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [tagMenuOpen, setTagMenuOpen] = useState(false);
   const tagFilterRef = useRef<HTMLDivElement | null>(null);
+
+  // Modal Novo Lead
+  const [modalOpen, setModalOpen]               = useState(false);
+  const [modalDefaultStage, setModalDefaultStage] = useState(STAGES[0].key);
 
   // Drawer state
   const [openLeadId, setOpenLeadId] = useState<string | null>(null);
@@ -351,6 +585,16 @@ export default function KanbanBoard() {
     setSelectedTagIds(prev =>
       prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
     );
+  }, []);
+
+  /* Abre o modal de criação de lead com a etapa pré-selecionada. */
+  const handleAbrirModal = useCallback((stageKey: string) => {
+    setModalDefaultStage(stageKey);
+    setModalOpen(true);
+  }, []);
+
+  const handleFecharModal = useCallback(() => {
+    setModalOpen(false);
   }, []);
 
   /* Abre o drawer e registra o elemento gatilho para restaurar foco ao fechar (AC2). */
@@ -558,7 +802,12 @@ export default function KanbanBoard() {
               Atualizar
             </button>
 
-            <button className="btn btn-primary" aria-label="Adicionar novo lead">
+            <button
+              type="button"
+              className="btn btn-primary"
+              aria-label="Adicionar novo lead"
+              onClick={() => handleAbrirModal(STAGES[0].key)}
+            >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
                 <line x1="12" y1="5" x2="12" y2="19"/>
@@ -596,6 +845,7 @@ export default function KanbanBoard() {
                 stage={stage}
                 leads={grouped[stage.key]}
                 onOpen={handleOpenLead}
+                onAdd={handleAbrirModal}
               />
             ))
           )}
@@ -609,6 +859,14 @@ export default function KanbanBoard() {
         onClose={handleCloseDrawer}
         onLeadUpdated={loadLeads}
         onOptimisticUpdate={handleOptimisticUpdate}
+      />
+
+      {/* Modal de criação de lead */}
+      <NovoLeadModal
+        open={modalOpen}
+        defaultStage={modalDefaultStage}
+        onClose={handleFecharModal}
+        onSuccess={loadLeads}
       />
     </>
   );

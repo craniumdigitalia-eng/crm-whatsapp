@@ -5004,3 +5004,145 @@ legend.agent-card-title { margin-bottom: 4px; }
   .agd-field-row { grid-template-columns: 1fr 1fr; }
   .agd-field-row .agd-field--flex2 { grid-column: 1 / -1; }
 }
+
+/* ============================================================
+   Modal Novo Lead (KanbanBoard — botão Novo Lead / Adicionar)
+   ============================================================ */
+
+.novo-lead-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 60;
+  animation: drawer-fade-in var(--dur-fast) var(--ease);
+}
+
+.novo-lead-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  animation: novo-lead-pop var(--dur-mid) var(--ease);
+}
+
+@keyframes novo-lead-pop {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+.novo-lead-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--neutral-mid);
+  flex-shrink: 0;
+}
+
+.novo-lead-titulo {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--neutral-dark);
+  letter-spacing: -0.02em;
+}
+
+.novo-lead-form { display: flex; flex-direction: column; }
+
+.novo-lead-body {
+  padding: 18px 20px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.novo-lead-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.novo-lead-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  letter-spacing: 0.01em;
+}
+
+.novo-lead-required {
+  color: var(--brand-purple);
+  margin-left: 1px;
+}
+
+.novo-lead-input,
+.novo-lead-select {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--neutral-mid);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--fg);
+  background: #fff;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+
+.novo-lead-input:focus,
+.novo-lead-select:focus {
+  outline: none;
+  border-color: var(--brand-purple);
+  box-shadow: 0 0 0 3px var(--brand-tint);
+}
+
+.novo-lead-input--error {
+  border-color: #DC2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.novo-lead-input:disabled,
+.novo-lead-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.novo-lead-input::placeholder { color: var(--fg-muted); }
+
+.novo-lead-aviso {
+  font-size: 12.5px;
+  color: var(--brand-purple);
+  background: var(--brand-tint);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+
+.novo-lead-erro {
+  font-size: 12.5px;
+  color: #DC2626;
+  background: #FEF2F2;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.novo-lead-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--neutral-mid);
+  margin-top: 4px;
+  flex-shrink: 0;
+}
