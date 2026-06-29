@@ -28,6 +28,7 @@ export async function PATCH(
       end?: unknown;
       description?: unknown;
       attendees?: unknown;
+      colorId?: unknown;
     };
 
     // Valida os campos opcionais presentes no body.
@@ -37,6 +38,7 @@ export async function PATCH(
       end?: string;
       description?: string;
       attendees?: string[];
+      colorId?: string;
     } = {};
 
     if (body.summary != null) {
@@ -68,6 +70,17 @@ export async function PATCH(
       patch.attendees = (body.attendees as unknown[])
         .map((a) => (typeof a === 'string' ? a.trim() : ''))
         .filter(Boolean);
+    }
+    if (body.colorId != null) {
+      const VALID_COLOR_IDS = new Set(['1','2','3','4','5','6','7','8','9','10','11']);
+      const v = String(body.colorId).trim();
+      if (!VALID_COLOR_IDS.has(v)) {
+        return NextResponse.json(
+          { error: 'colorId invalido — deve ser um valor entre "1" e "11"' },
+          { status: 400 }
+        );
+      }
+      patch.colorId = v;
     }
 
     const updated = await updateEvent(id, patch);

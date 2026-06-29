@@ -17,6 +17,7 @@ interface GoogleCalendarEventItem {
     entryPoints?: Array<{ entryPointType?: string; uri?: string }>;
   };
   attendees?: Array<{ email: string; responseStatus?: string }>;
+  colorId?: string; // cor do evento ("1".."11") — sincroniza com o Google Calendar
   extendedProperties?: {
     private?: Record<string, string>;
     shared?: Record<string, string>;
@@ -40,6 +41,7 @@ export interface AgendaEvent {
   meetLink?: string;
   htmlLink?: string;
   attendees?: string[];   // so os e-mails
+  colorId?: string;       // cor do evento no Google Calendar ("1".."11")
   leadId?: string;        // extendedProperties.private.leadId
   leadName?: string;      // resolvido pelo chamador via getLead
 }
@@ -234,6 +236,7 @@ function normalizeGoogleEvent(item: GoogleCalendarEventItem): AgendaEvent {
     ...(meetLink ? { meetLink } : {}),
     ...(item.htmlLink ? { htmlLink: item.htmlLink } : {}),
     ...(attendees.length ? { attendees } : {}),
+    ...(item.colorId ? { colorId: item.colorId } : {}),
     ...(leadId ? { leadId } : {}),
   };
 }
@@ -298,6 +301,7 @@ export interface AgendaEventPatch {
   end?: string;   // ISO 8601
   attendees?: string[]; // substitui a lista de convidados inteira
   timeZone?: string;    // default America/Sao_Paulo
+  colorId?: string;     // cor do evento no Google Calendar ("1".."11")
 }
 
 export async function updateEvent(id: string, patch: AgendaEventPatch): Promise<AgendaEvent> {
@@ -317,6 +321,9 @@ export async function updateEvent(id: string, patch: AgendaEventPatch): Promise<
   }
   if (patch.attendees !== undefined) {
     body.attendees = patch.attendees.map((email) => ({ email }));
+  }
+  if (patch.colorId !== undefined) {
+    body.colorId = patch.colorId;
   }
 
   // conferenceDataVersion=1 preserva o Meet existente; sendUpdates=all notifica convidados.

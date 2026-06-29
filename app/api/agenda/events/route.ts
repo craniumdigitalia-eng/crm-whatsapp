@@ -80,6 +80,7 @@ export async function POST(req: Request) {
       description?: unknown;
       attendees?: unknown;
       leadId?: unknown;
+      colorId?: unknown;
     };
 
     const summary = (body.summary ?? '').toString().trim();
@@ -87,6 +88,20 @@ export async function POST(req: Request) {
     const end = (body.end ?? '').toString().trim();
     const description = body.description ? body.description.toString().trim() : undefined;
     const leadIdRaw = body.leadId ? body.leadId.toString().trim() : undefined;
+
+    // Validacao de colorId: apenas "1".."11" (paleta nativa do Google Calendar).
+    const VALID_COLOR_IDS = new Set(['1','2','3','4','5','6','7','8','9','10','11']);
+    let colorId: string | undefined;
+    if (body.colorId != null) {
+      const v = String(body.colorId).trim();
+      if (!VALID_COLOR_IDS.has(v)) {
+        return NextResponse.json(
+          { error: 'colorId invalido — deve ser um valor entre "1" e "11"' },
+          { status: 400 }
+        );
+      }
+      colorId = v;
+    }
 
     // Validacoes obrigatorias.
     if (!summary) return NextResponse.json({ error: 'summary obrigatorio' }, { status: 400 });
@@ -143,6 +158,7 @@ export async function POST(req: Request) {
       start,
       end,
       attendees: attendees.length ? attendees : undefined,
+      ...(colorId ? { colorId } : {}),
       ...(Object.keys(extendedProperties).length ? { extendedProperties } : {}),
     });
 
@@ -156,6 +172,7 @@ export async function POST(req: Request) {
       ...(result.meetLink ? { meetLink: result.meetLink } : {}),
       ...(result.htmlLink ? { htmlLink: result.htmlLink } : {}),
       ...(attendees.length ? { attendees } : {}),
+      ...(colorId ? { colorId } : {}),
       ...(leadIdRaw ? { leadId: leadIdRaw } : {}),
       ...(leadName ? { leadName } : {}),
     };
