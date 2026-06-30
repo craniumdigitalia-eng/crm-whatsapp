@@ -91,6 +91,19 @@ function esc(str: string | null | undefined): string {
    LeadCard sub-component
    ============================================================ */
 
+// Prévia curta do "Resumo da IA" (campo notes) para mostrar no card do kanban.
+function resumoPreview(notes: string | null): string {
+  if (!notes) return '';
+  const txt = notes
+    .replace(/📋\s*Resumo\s*\(IA\):?/i, '')
+    .replace(/[••]/g, '')
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .join(' · ');
+  return txt.length > 120 ? txt.slice(0, 120).trimEnd() + '…' : txt;
+}
+
 function LeadCard({
   lead,
   onOpen,
@@ -160,6 +173,13 @@ function LeadCard({
         )}
         {/* Origem (Meta Lead Ads) será exibida aqui quando a integração existir — stories 5.10 / 5.14. */}
       </div>
+
+      {lead.notes && resumoPreview(lead.notes) && (
+        <div className="lead-card-summary" title={lead.notes ?? undefined}>
+          <span className="lead-card-summary-icon" aria-hidden="true">🧠</span>
+          <span className="lead-card-summary-text">{esc(resumoPreview(lead.notes))}</span>
+        </div>
+      )}
 
       <div className="lead-card-footer">
         {isAI && (
