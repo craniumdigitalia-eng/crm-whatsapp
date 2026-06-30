@@ -593,7 +593,13 @@ export default function ConversationDrawer({
                   )}
                 </div>
                 {lead.notes && (
-                  <div className="drawer-notes">{lead.notes}</div>
+                  <div className="drawer-ai-summary" aria-label="Resumo da IA">
+                    <div className="drawer-ai-summary-head">
+                      <span className="drawer-ai-summary-icon" aria-hidden="true">🧠</span>
+                      <span className="drawer-ai-summary-title">Resumo da IA</span>
+                    </div>
+                    <div className="drawer-ai-summary-body">{lead.notes}</div>
+                  </div>
                 )}
               </div>
 

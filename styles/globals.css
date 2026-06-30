@@ -1236,6 +1236,37 @@ body {
   border: 1px solid var(--border-dark);
 }
 
+/* Resumo da IA — destacado na ficha do lead */
+.drawer-ai-summary {
+  margin-top: 4px;
+  background: var(--brand-tint);
+  border: 1px solid var(--brand-light);
+  border-left: 3px solid var(--brand-purple);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.drawer-ai-summary-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.drawer-ai-summary-icon { font-size: 14px; line-height: 1; }
+.drawer-ai-summary-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--brand-purple);
+}
+.drawer-ai-summary-body {
+  font-size: 12.5px;
+  color: var(--brand-dark);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* Erro de ação */
 .drawer-action-error {
   margin: 10px 20px 0;
