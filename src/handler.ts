@@ -18,7 +18,10 @@ export async function handleInbound(msg: InboundMessage): Promise<void> {
     // Mensagem que SAIU do nosso numero: pode ser eco da propria IA/plataforma (ja gravada
     // com external_id) ou o HUMANO respondendo direto no WhatsApp (fora da plataforma).
     if (!msg.text) return;
-    const lead = await getOrCreateLead(msg.phone, msg.name);
+    // IMPORTANTE: NAO passar msg.name aqui. Em mensagem fromMe (enviada por nos),
+    // o pushName e o NOSSO perfil do WhatsApp, nao o do cliente. Passar isso
+    // sobrescreveria o nome do lead com o nome do atendente.
+    const lead = await getOrCreateLead(msg.phone);
     const nova = await addMessage(lead.id, "out", msg.text, msg.externalId || undefined);
     if (!nova) return; // eco de algo que NOS enviamos (dedup por external_id) — IA nao recua
     // Mensagem nova nao reconhecida: humano respondeu diretamente pelo WhatsApp → IA recua.
