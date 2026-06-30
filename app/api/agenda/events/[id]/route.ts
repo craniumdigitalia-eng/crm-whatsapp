@@ -29,6 +29,7 @@ export async function PATCH(
       description?: unknown;
       attendees?: unknown;
       colorId?: unknown;
+      leadId?: unknown;
     };
 
     // Valida os campos opcionais presentes no body.
@@ -39,6 +40,7 @@ export async function PATCH(
       description?: string;
       attendees?: string[];
       colorId?: string;
+      leadId?: string | null;
     } = {};
 
     if (body.summary != null) {
@@ -81,6 +83,39 @@ export async function PATCH(
         );
       }
       patch.colorId = v;
+    }
+    // Vinculo com lead: resolve e enriquece description/attendees igual ao POST de criacao.
+    if (body.leadId !== undefined) {
+      const leadIdRaw = body.leadId !== null ? String(body.leadId).trim() : null;
+      if (leadIdRaw) {
+        const lead = await getLead(leadIdRaw);
+        if (!lead) {
+          return NextResponse.json({ error: 'lead nao encontrado' }, { status: 404 });
+        }
+        const quem = lead.name?.trim() || `+${lead.phone}`;
+        // Enriquece description se nao vier uma explicita no body.
+        if (patch.description === undefined) {
+          patch.description = [
+            `Lead: ${quem}`,
+            `Telefone: ${lead.phone}`,
+            lead.service_interest ? `Interesse: ${lead.service_interest}` : '',
+            lead.notes ? `\n${lead.notes}` : '',
+          ]
+            .filter(Boolean)
+            .join('\n');
+        }
+        // Inclui e-mail do lead nos convidados se ainda nao estiver.
+        if (lead.email) {
+          const existentes = patch.attendees ?? [];
+          if (!existentes.includes(lead.email)) {
+            patch.attendees = [lead.email, ...existentes];
+          }
+        }
+        patch.leadId = leadIdRaw;
+      } else {
+        // leadId vazio ou null: limpa o vinculo.
+        patch.leadId = null;
+      }
     }
 
     const updated = await updateEvent(id, patch);

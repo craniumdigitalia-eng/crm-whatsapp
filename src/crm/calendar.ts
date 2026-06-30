@@ -302,6 +302,8 @@ export interface AgendaEventPatch {
   attendees?: string[]; // substitui a lista de convidados inteira
   timeZone?: string;    // default America/Sao_Paulo
   colorId?: string;     // cor do evento no Google Calendar ("1".."11")
+  // leadId: string nao-vazia vincula/troca o lead; string vazia ou null limpa o vinculo.
+  leadId?: string | null;
 }
 
 export async function updateEvent(id: string, patch: AgendaEventPatch): Promise<AgendaEvent> {
@@ -324,6 +326,11 @@ export async function updateEvent(id: string, patch: AgendaEventPatch): Promise<
   }
   if (patch.colorId !== undefined) {
     body.colorId = patch.colorId;
+  }
+  // Vinculo com lead: grava em extendedProperties.private.leadId.
+  // String nao-vazia vincula/troca; string vazia ou null limpa o vinculo.
+  if (patch.leadId !== undefined) {
+    body.extendedProperties = { private: { leadId: patch.leadId ?? "" } };
   }
 
   // conferenceDataVersion=1 preserva o Meet existente; sendUpdates=all notifica convidados.

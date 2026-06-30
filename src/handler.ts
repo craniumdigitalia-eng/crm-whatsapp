@@ -143,14 +143,14 @@ export async function iniciarAtendimento(
     console.log(`[handler] iniciarAtendimento: lead ${fresh.phone} em '${fresh.status}', opener ignorado.`);
     return;
   }
-  if (fresh.status === "novo") await setStatus(fresh.id, "em_atendimento");
-
   // Interruptor global: se o agente estiver desligado, nao envia o opener.
-  // O lead ja foi criado/registrado pelo chamador; o humano ve no CRM.
+  // O lead permanece "novo" para o humano pegar na fila.
   if (!(await getAgentEnabled())) {
     console.log("[handler] agente DESLIGADO, opener nao enviado");
     return;
   }
+
+  if (fresh.status === "novo") await setStatus(fresh.id, "em_atendimento");
 
   try {
     // Historico sintetico (NAO persistido): da o contexto do anuncio ao agente.

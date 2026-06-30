@@ -68,15 +68,21 @@ export async function POST(req: Request) {
     // getOrCreateLead faz upsert pelo telefone (idempotente, trata corridas).
     const lead = await getOrCreateLead(phone, nameTrimmed);
 
-    // Atualiza campos extras se fornecidos (update e noop se nada mudou).
-    if (serviceInterest !== undefined || status !== undefined) {
-      await updateLeadFields(lead.id, {
-        ...(serviceInterest !== undefined && { service_interest: serviceInterest }),
-        ...(status !== undefined && { status }),
-      });
-      // Reflete os campos atualizados no objeto retornado.
-      if (serviceInterest !== undefined) lead.service_interest = serviceInterest;
-      if (status !== undefined) lead.status = status;
+    if (!existed) {
+      // Lead recem-criado: aplica status e interesse se fornecidos.
+      if (serviceInterest !== undefined || status !== undefined) {
+        await updateLeadFields(lead.id, {
+          ...(serviceInterest !== undefined && { service_interest: serviceInterest }),
+          ...(status !== undefined && { status }),
+        });
+        // Reflete os campos atualizados no objeto retornado.
+        if (serviceInterest !== undefined) lead.service_interest = serviceInterest;
+        if (status !== undefined) lead.status = status;
+      }
+    } else if (nameTrimmed && !lead.name) {
+      // Lead existente sem nome: preenche o nome se vier um novo (nunca sobrescreve).
+      await updateLeadFields(lead.id, { name: nameTrimmed });
+      lead.name = nameTrimmed;
     }
 
     if (existed) {
