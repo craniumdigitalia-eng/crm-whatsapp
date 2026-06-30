@@ -28,6 +28,7 @@ interface Lead {
   created_at: string;
   updated_at: string;
   tags?: Tag[];
+  photo_url?: string | null;
 }
 
 type FilterKey = 'all' | 'ia' | 'human';
@@ -115,6 +116,10 @@ function LeadCard({
   const color = avatarColor(lead.name);
   const time  = relativeTime(lead.last_message_at);
 
+  // Foto de perfil do WhatsApp: cai nas iniciais se ausente ou imagem quebrada.
+  const [imgFailed, setImgFailed] = useState(false);
+  const hasPhoto = Boolean(lead.photo_url) && !imgFailed;
+
   const handleClick = (e: React.MouseEvent<HTMLElement>) => {
     onOpen(lead.id, e.currentTarget);
   };
@@ -138,10 +143,19 @@ function LeadCard({
       <div className="lead-card-head">
         <div
           className="lead-avatar"
-          style={{ background: color }}
+          style={{ background: hasPhoto ? 'transparent' : color }}
           aria-hidden="true"
         >
-          {initials(lead.name)}
+          {hasPhoto ? (
+            <img
+              src={lead.photo_url!}
+              alt=""
+              className="avatar-img"
+              onError={() => setImgFailed(true)}
+            />
+          ) : (
+            initials(lead.name)
+          )}
         </div>
         <div className="lead-card-info">
           <div className="lead-name">{esc(lead.name ?? 'Sem nome')}</div>

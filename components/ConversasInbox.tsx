@@ -39,6 +39,7 @@ interface Lead {
   created_at: string;
   updated_at: string;
   tags?: Tag[];
+  photo_url?: string | null;
 }
 
 interface Message {
@@ -106,6 +107,45 @@ function bubbleTime(iso: string): string {
 
 function timeMs(iso: string | null): number {
   return iso ? new Date(iso).getTime() : 0;
+}
+
+/* ---- LeadAvatar ----
+   Exibe a foto de perfil do WhatsApp quando disponível; cai nas
+   iniciais coloridas se photo_url estiver ausente ou a imagem falhar. */
+
+function LeadAvatar({
+  photoUrl,
+  name,
+  phone,
+  className,
+}: {
+  photoUrl?: string | null;
+  name: string | null;
+  phone: string;
+  className: string;
+}) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const color = avatarColor(name, phone);
+  const hasPhoto = Boolean(photoUrl) && !imgFailed;
+
+  return (
+    <span
+      className={className}
+      style={{ background: hasPhoto ? 'transparent' : color }}
+      aria-hidden="true"
+    >
+      {hasPhoto ? (
+        <img
+          src={photoUrl!}
+          alt=""
+          className="avatar-img"
+          onError={() => setImgFailed(true)}
+        />
+      ) : (
+        initials(name)
+      )}
+    </span>
+  );
 }
 
 // Thin wrapper de fetch: redireciona ao login em 401, lança em erro.
@@ -381,9 +421,12 @@ export default function ConversasInbox() {
                   aria-current={active ? 'true' : undefined}
                   aria-label={`Conversa com ${l.name ?? l.phone}`}
                 >
-                  <span className="conv-avatar" style={{ background: avatarColor(l.name, l.phone) }} aria-hidden="true">
-                    {initials(l.name)}
-                  </span>
+                  <LeadAvatar
+                    photoUrl={l.photo_url}
+                    name={l.name}
+                    phone={l.phone}
+                    className="conv-avatar"
+                  />
                   <span className="conv-item-main">
                     <span className="conv-item-top">
                       <span className="conv-item-name">{l.name ?? l.phone}</span>
@@ -437,9 +480,12 @@ export default function ConversasInbox() {
                   <polyline points="15 18 9 12 15 6" />
                 </svg>
               </button>
-              <span className="conv-chat-avatar" style={{ background: avatarColor(lead?.name ?? null, lead?.phone ?? '') }} aria-hidden="true">
-                {initials(lead?.name ?? null)}
-              </span>
+              <LeadAvatar
+                photoUrl={lead?.photo_url}
+                name={lead?.name ?? null}
+                phone={lead?.phone ?? ''}
+                className="conv-chat-avatar"
+              />
               <div className="conv-chat-id">
                 <span className="conv-chat-name">{lead ? (lead.name ?? lead.phone) : '—'}</span>
                 <span className="conv-chat-phone">

@@ -44,6 +44,7 @@ interface Lead {
   last_message_at: string | null;
   created_at: string;
   updated_at: string;
+  photo_url?: string | null;
   // Origem / atribuição (Story 5.14 — Meta Lead Ads). Opcionais.
   source?: string | null;
   form_id?: string | null;
@@ -82,6 +83,59 @@ interface ChecklistItem {
 
 // Paleta de cores para novas etiquetas (identidade Cranium roxo/violeta + apoios).
 const TAG_COLORS = ['#7C3AED', '#6D28D9', '#A78BFA', '#2563EB', '#059669', '#D97706', '#DC2626', '#475569'];
+
+/* ---- Helpers de avatar ---- */
+
+const AVATAR_COLORS = ['#7C3AED', '#5B21B6', '#6D28D9', '#4C1D95', '#8B5CF6'];
+
+function avatarColor(name: string | null, phone: string): string {
+  const seed = (name ?? phone) || '?';
+  return AVATAR_COLORS[seed.charCodeAt(0) % AVATAR_COLORS.length];
+}
+
+function initials(name: string | null): string {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/* ---- DrawerLeadAvatar ----
+   Exibe a foto de perfil do WhatsApp quando disponível; cai nas
+   iniciais coloridas se photo_url estiver ausente ou a imagem falhar. */
+
+function DrawerLeadAvatar({
+  photoUrl,
+  name,
+  phone,
+}: {
+  photoUrl?: string | null;
+  name: string | null;
+  phone: string;
+}) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const color = avatarColor(name, phone);
+  const hasPhoto = Boolean(photoUrl) && !imgFailed;
+
+  return (
+    <div
+      className="drawer-lead-avatar"
+      style={{ background: hasPhoto ? 'transparent' : color }}
+      aria-hidden="true"
+    >
+      {hasPhoto ? (
+        <img
+          src={photoUrl!}
+          alt=""
+          className="avatar-img"
+          onError={() => setImgFailed(true)}
+        />
+      ) : (
+        initials(name)
+      )}
+    </div>
+  );
+}
 
 /* ============================================================
    Props
@@ -530,6 +584,13 @@ export default function ConversationDrawer({
 
         {/* Cabeçalho */}
         <div className="drawer-header">
+          {lead && (
+            <DrawerLeadAvatar
+              photoUrl={lead.photo_url}
+              name={lead.name}
+              phone={lead.phone}
+            />
+          )}
           <div className="drawer-header-info">
             <span id="drawer-lead-name" className="drawer-lead-name">
               {lead ? (lead.name ?? lead.phone) : '—'}

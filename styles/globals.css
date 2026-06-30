@@ -5517,4 +5517,38 @@ legend.agent-card-title { margin-bottom: 4px; }
 
 .tb-avatar-item--perigo { color: #DC2626; }
 .tb-avatar-item--perigo:hover { background: #FEF2F2; }
+
+/* ---- Foto de perfil do WhatsApp no avatar do lead ---- */
+
+/* Garante recorte correto pela borda circular dos containers de avatar. */
+.conv-avatar,
+.conv-chat-avatar,
+.lead-avatar,
+.drawer-lead-avatar {
+  overflow: hidden;
+}
+
+/* Imagem de foto de perfil: preenche o círculo, herda o border-radius do container. */
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+}
+
+/* Container de avatar no header do drawer de ficha do lead. */
+.drawer-lead-avatar {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
 .tb-avatar-item:disabled { opacity: 0.6; cursor: progress; }
