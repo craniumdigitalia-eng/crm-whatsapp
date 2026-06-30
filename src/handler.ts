@@ -77,11 +77,32 @@ export async function handleInbound(msg: InboundMessage): Promise<void> {
     const result = await generateReply(fresh, history);
 
     if (result.reply) {
-      const sentId = await sendText(fresh.phone, result.reply);
-      await addMessage(fresh.id, "out", result.reply, sentId || undefined);
+      await enviarEmPartes(fresh.phone, fresh.id, result.reply);
     }
   } catch (err) {
     console.error(`[handler] Erro ao gerar/enviar resposta para ${fresh.phone}:`, err);
+  }
+}
+
+// Quebra a resposta da IA em mensagens curtas (separadas por linha em branco) e envia
+// cada parte como uma mensagem propria no WhatsApp, com um pequeno intervalo entre elas
+// (fica mais natural, como uma pessoa digitando). Cada parte e gravada com o external_id
+// do envio, para o eco fromMe continuar sendo deduplicado (mantem o recuo automatico da IA).
+async function enviarEmPartes(phone: string, leadId: string, texto: string): Promise<void> {
+  const partes = texto
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .slice(0, 4); // no maximo 4 mensagens, evita flood
+  const lista = partes.length > 0 ? partes : [texto.trim()];
+  for (let i = 0; i < lista.length; i++) {
+    const parte = lista[i];
+    if (!parte) continue;
+    const sentId = await sendText(phone, parte);
+    await addMessage(leadId, "out", parte, sentId || undefined);
+    if (i < lista.length - 1) {
+      await new Promise((r) => setTimeout(r, 600));
+    }
   }
 }
 
@@ -145,8 +166,7 @@ export async function iniciarAtendimento(
     ];
     const result = await generateReply(fresh, synthetic);
     if (result.reply) {
-      const sentId = await sendText(fresh.phone, result.reply);
-      await addMessage(fresh.id, "out", result.reply, sentId || undefined);
+      await enviarEmPartes(fresh.phone, fresh.id, result.reply);
     }
   } catch (err) {
     console.error(`[handler] iniciarAtendimento: erro ao abrir conversa com ${fresh.phone}:`, err);
