@@ -2,8 +2,9 @@ import { supabase } from "../db";
 import { Lead, Message, LeadStatus, LeadAttribution } from "../types";
 
 // Colunas explicitas — evita SELECT * e garante paridade com a interface Lead.
+// photo_url adicionado na migration 010.
 const LEAD_COLS =
-  "id,phone,name,email,status,service_interest,budget,notes,follow_up_count,last_direction,last_message_at,created_at,updated_at";
+  "id,phone,name,email,status,service_interest,budget,notes,photo_url,follow_up_count,last_direction,last_message_at,created_at,updated_at";
 const MSG_COLS = "id,lead_id,direction,body,external_id,created_at";
 // Colunas da migration 003 — selecionadas a parte (podem nao existir antes da migration).
 const ATTRIBUTION_COLS = "source,form_id,leadgen_id,ad_id,campaign_id,form_data";
@@ -193,6 +194,16 @@ export async function updateLeadFields(
 
 export async function setStatus(leadId: string, status: LeadStatus): Promise<void> {
   await updateLeadFields(leadId, { status });
+}
+
+// Salva a URL da foto de perfil do WhatsApp no lead.
+// Tolerante: se a coluna photo_url ainda nao existir (migration 010 pendente),
+// captura o erro 42703 e loga sem propagar — nao quebra o atendimento.
+export async function setLeadPhoto(id: string, url: string): Promise<void> {
+  const { error } = await supabase.from("leads").update({ photo_url: url }).eq("id", id);
+  if (error) {
+    console.warn(`[leads] setLeadPhoto(${id}): ${error.message}`);
+  }
 }
 
 // =====================================================================

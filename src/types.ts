@@ -30,6 +30,7 @@ export interface Lead {
   service_interest: string | null;
   budget: string | null;
   notes: string | null;
+  photo_url?: string | null; // URL da foto de perfil do WhatsApp (migration 010)
   follow_up_count: number;
   last_direction: "in" | "out" | null;
   last_message_at: string | null;

@@ -61,6 +61,30 @@ export async function sendText(phone: string, text: string): Promise<string | nu
   return (json?.key?.id as string) ?? null;
 }
 
+// Busca a URL da foto de perfil do WhatsApp de um contato via Evolution.
+// Tolerante: qualquer falha (rede, !res.ok, contato sem foto) retorna null, nunca lanca.
+// Branch Make (config.makeSendUrl): sem suporte — retorna null.
+export async function fetchProfilePictureUrl(phone: string): Promise<string | null> {
+  if (config.makeSendUrl) return null;
+  try {
+    const evo = await getEvolutionConfig();
+    const url = `${evo.url}/chat/fetchProfilePictureUrl/${evo.instance}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: evo.apiKey,
+      },
+      body: JSON.stringify({ number: phone }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json().catch(() => null);
+    return (json?.profilePictureUrl as string) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // Normaliza o payload do webhook da Evolution (evento messages.upsert).
 // A Evolution pode mandar um objeto ou uma lista em body.data.
 export function parseWebhook(body: any): InboundMessage[] {

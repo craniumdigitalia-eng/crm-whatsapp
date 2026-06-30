@@ -1,4 +1,4 @@
-import { InboundMessage, sendText } from "./whatsapp/evolution";
+import { InboundMessage, sendText, fetchProfilePictureUrl } from "./whatsapp/evolution";
 import {
   getOrCreateLead,
   addMessage,
@@ -6,6 +6,7 @@ import {
   resetFollowUp,
   getLead,
   setStatus,
+  setLeadPhoto,
 } from "./crm/leads";
 import { generateReply } from "./agent/agent";
 import { getAgentEnabled } from "./agent/config";
@@ -33,6 +34,16 @@ export async function handleInbound(msg: InboundMessage): Promise<void> {
   }
 
   const lead = await getOrCreateLead(msg.phone, msg.name);
+
+  // Busca e persiste a foto de perfil do WhatsApp — apenas quando ainda nao temos.
+  // Best-effort: erros nao bloqueiam o atendimento.
+  if (!lead.photo_url && isSendablePhone(msg.phone)) {
+    fetchProfilePictureUrl(msg.phone)
+      .then((fotoUrl) => {
+        if (fotoUrl) return setLeadPhoto(lead.id, fotoUrl);
+      })
+      .catch((err) => console.warn("[handler] busca foto perfil falhou:", err));
+  }
 
   // Guarda de dedupe: se o external_id ja foi processado, encerra sem reprocessar.
   // Protege contra reentregas do Make/Evolution sem disparar multiplas respostas.
