@@ -20,8 +20,8 @@ export async function POST(
     const body = await req.json().catch(() => ({})) as { text?: unknown };
     const text = (body.text ?? '').toString().trim();
     if (!text) return NextResponse.json({ error: 'texto vazio' }, { status: 400 });
-    await sendText(lead.phone, text);
-    await addMessage(id, 'out', text);
+    const sentId = await sendText(lead.phone, text);
+    await addMessage(id, 'out', text, sentId || undefined);
     if (lead.status !== 'humano') await setStatus(id, 'humano');
     return NextResponse.json({ ok: true });
   } catch (e) {

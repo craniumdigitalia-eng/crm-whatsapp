@@ -20,9 +20,12 @@ function hashExternalId(phone: string, text: string, epochMs: number): string {
     .digest("hex");
 }
 
-// Envia uma mensagem de texto. Se MAKE_SEND_URL estiver definido, usa o Make como canal;
-// caso contrario, fala direto com a Evolution API (fallback para dev local).
-export async function sendText(phone: string, text: string): Promise<void> {
+// Envia uma mensagem de texto. Retorna o key.id da mensagem enviada (Evolution) para
+// deduplicar o eco fromMe que a Evolution reenvia ao webhook. Retorna null no Make
+// (nao ha eco fromMe) ou se o parse da resposta falhar (nao quebra o envio).
+// Se MAKE_SEND_URL estiver definido, usa o Make como canal; caso contrario, fala
+// direto com a Evolution API (ADR-004).
+export async function sendText(phone: string, text: string): Promise<string | null> {
   if (config.makeSendUrl) {
     // Branch Make: POST {MAKE_SEND_URL} com { phone, text }
     const res = await fetch(config.makeSendUrl, {
@@ -34,7 +37,7 @@ export async function sendText(phone: string, text: string): Promise<void> {
       const body = await res.text().catch(() => "");
       throw new Error(`Make sendText falhou (${res.status}): ${body}`);
     }
-    return;
+    return null; // Make nao ecoa fromMe — sem id para dedup
   }
 
   // Canal Evolution (ADR-004). Credenciais via env + override da aba WhatsApp.
@@ -52,6 +55,10 @@ export async function sendText(phone: string, text: string): Promise<void> {
     const body = await res.text().catch(() => "");
     throw new Error(`Evolution sendText falhou (${res.status}): ${body}`);
   }
+  // Retorna key.id para que o eco fromMe seja deduplicado em addMessage.
+  // Tolerante: parse falha → null (nao quebra o envio; eco nao sera deduplicado).
+  const json = await res.json().catch(() => null);
+  return (json?.key?.id as string) ?? null;
 }
 
 // Normaliza o payload do webhook da Evolution (evento messages.upsert).

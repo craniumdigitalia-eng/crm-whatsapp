@@ -14,7 +14,20 @@ import { AUTO_STATUSES, Lead, Message } from "./types";
 
 // Processa uma mensagem recebida do lead: registra, e (se for o caso) responde com a IA.
 export async function handleInbound(msg: InboundMessage): Promise<void> {
-  if (msg.fromMe) return; // ignora mensagens enviadas por nos
+  if (msg.fromMe) {
+    // Mensagem que SAIU do nosso numero: pode ser eco da propria IA/plataforma (ja gravada
+    // com external_id) ou o HUMANO respondendo direto no WhatsApp (fora da plataforma).
+    if (!msg.text) return;
+    const lead = await getOrCreateLead(msg.phone, msg.name);
+    const nova = await addMessage(lead.id, "out", msg.text, msg.externalId || undefined);
+    if (!nova) return; // eco de algo que NOS enviamos (dedup por external_id) — IA nao recua
+    // Mensagem nova nao reconhecida: humano respondeu diretamente pelo WhatsApp → IA recua.
+    if (lead.status !== "humano") {
+      await setStatus(lead.id, "humano");
+      console.log(`[handler] Humano respondeu no WhatsApp; lead ${lead.phone} -> 'humano' (IA recuou).`);
+    }
+    return;
+  }
 
   const lead = await getOrCreateLead(msg.phone, msg.name);
 
@@ -64,8 +77,8 @@ export async function handleInbound(msg: InboundMessage): Promise<void> {
     const result = await generateReply(fresh, history);
 
     if (result.reply) {
-      await sendText(fresh.phone, result.reply);
-      await addMessage(fresh.id, "out", result.reply);
+      const sentId = await sendText(fresh.phone, result.reply);
+      await addMessage(fresh.id, "out", result.reply, sentId || undefined);
     }
   } catch (err) {
     console.error(`[handler] Erro ao gerar/enviar resposta para ${fresh.phone}:`, err);
@@ -132,8 +145,8 @@ export async function iniciarAtendimento(
     ];
     const result = await generateReply(fresh, synthetic);
     if (result.reply) {
-      await sendText(fresh.phone, result.reply);
-      await addMessage(fresh.id, "out", result.reply);
+      const sentId = await sendText(fresh.phone, result.reply);
+      await addMessage(fresh.id, "out", result.reply, sentId || undefined);
     }
   } catch (err) {
     console.error(`[handler] iniciarAtendimento: erro ao abrir conversa com ${fresh.phone}:`, err);
