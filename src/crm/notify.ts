@@ -53,15 +53,25 @@ export async function setNotifyConfig(cfg: NotifyConfig): Promise<void> {
   if (error) throw error;
 }
 
+// Garante o código do país (Brasil = 55). Se o número veio só com DDD+numero
+// (10 ou 11 dígitos), prefixa 55. Sem isso a Evolution responde "número não existe".
+function normalizarNumeroBr(n: string): string {
+  const d = n.replace(/\D/g, "");
+  if (d.startsWith("55") && d.length >= 12) return d;
+  if (d.length === 10 || d.length === 11) return "55" + d;
+  return d;
+}
+
 // Envia uma mensagem de texto ao número do operador. Best-effort — NUNCA lança.
 export async function notificarWhatsapp(text: string): Promise<void> {
   try {
     const cfg = await getNotifyConfig();
     if (!cfg.enabled || !cfg.whatsapp) return;
 
+    const numero = normalizarNumeroBr(cfg.whatsapp);
     // Import dinâmico evita import circular (notify ← sendText ← integrations ← ...).
     const { sendText } = await import("../whatsapp/evolution");
-    await sendText(cfg.whatsapp, text);
+    await sendText(numero, text);
   } catch (e) {
     // Best-effort: loga mas nunca propaga.
     console.warn("[notify] notificarWhatsapp falhou:", e instanceof Error ? e.message : e);
