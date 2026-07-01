@@ -678,6 +678,17 @@ function CampaignDetail({
           </div>
         )}
       </div>
+
+      {campaign.html && (
+        <div className="em-detail-preview">
+          <div className="em-meta-k" style={{ margin: '4px 0 8px' }}>Pré-visualização do e-mail</div>
+          <iframe
+            className="em-preview-frame"
+            srcDoc={campaign.html}
+            title="Pré-visualização do e-mail"
+          />
+        </div>
+      )}
     </div>
   );
 }
