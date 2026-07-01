@@ -1,6 +1,6 @@
 import { supabase } from "../db";
 import { Lead, LeadStatus } from "../types";
-import { getTemplate, getSuppressedSet, recordEvent } from "./email";
+import { getTemplate, getSuppressedSet } from "./email";
 import { getEmailProvider } from "./email-provider";
 
 // =====================================================================
@@ -99,19 +99,12 @@ export async function enviarEmailDeEtapa(
     const provider = await getEmailProvider();
     const { id: messageId } = await provider.send({ to: email, subject, html });
 
-    // Registra o evento de envio (best-effort — erro aqui não bloqueia o fluxo).
-    recordEvent("automation", email, "sent", {
-      lead_id: lead.id,
-      status,
-      template_id: templateId,
-      message_id: messageId,
-      provider: provider.name,
-    }).catch((e) => {
-      console.error(
-        "[email-automation] recordEvent:",
-        e instanceof Error ? e.message : e
-      );
-    });
+    // E-mail automático NÃO pertence a uma campanha, então não gravamos em
+    // email_events (campaign_id exige UUID). Apenas registramos no log.
+    console.log(
+      `[email-automation] enviado para ${email} (lead=${lead.id}, etapa="${status}", ` +
+        `template=${templateId}, msg=${messageId}, provider=${provider.name})`
+    );
   } catch (e) {
     console.error(
       `[email-automation] enviarEmailDeEtapa(lead=${lead.id}, status="${status}"):`,
