@@ -193,7 +193,27 @@ export async function updateLeadFields(
 }
 
 export async function setStatus(leadId: string, status: LeadStatus): Promise<void> {
+  // Import dinâmico evita import circular (email-automation → email → leads seria circular
+  // se leads importasse email-automation no topo do arquivo junto com updateLeadFields).
+  const { getEmailAutomation, enviarEmailDeEtapa } = await import("./email-automation");
+
+  const auto = await getEmailAutomation();
+
+  // Caminho rápido: automação desligada ou nenhum template mapeado para este estágio.
+  if (!auto.enabled || !auto.map[status]) {
+    await updateLeadFields(leadId, { status });
+    return;
+  }
+
+  // Automação aplicável: lê o estado atual para detectar transição real e ter o e-mail.
+  const antes = await getLead(leadId);
   await updateLeadFields(leadId, { status });
+
+  // Só dispara se houve mudança de estágio real e o lead tem e-mail.
+  if (antes && antes.status !== status && antes.email) {
+    // Best-effort: não bloqueia o fluxo principal se falhar/demorar.
+    await enviarEmailDeEtapa(antes, status, auto.map[status]);
+  }
 }
 
 // Salva a URL da foto de perfil do WhatsApp no lead.
