@@ -52,6 +52,18 @@ export async function getOrCreateLead(phone: string, name?: string): Promise<Lea
     return data as Lead;
   }
   if (error) throw error;
+
+  // Lead realmente inserido — notifica o operador. Best-effort (import dinâmico
+  // evita circular; nunca bloqueia nem lança).
+  void (async () => {
+    try {
+      const { notificarLeadNovo } = await import("./notify");
+      await notificarLeadNovo(created as Lead);
+    } catch (e) {
+      console.warn("[leads] getOrCreateLead: notificarLeadNovo falhou:", e instanceof Error ? e.message : e);
+    }
+  })();
+
   return created as Lead;
 }
 
@@ -200,7 +212,24 @@ export async function setStatus(leadId: string, status: LeadStatus): Promise<voi
   const auto = await getEmailAutomation();
 
   // Caminho rápido: automação desligada ou nenhum template mapeado para este estágio.
+  // Se o destino for 'humano', ainda precisamos ler o estado anterior para a notificação.
   if (!auto.enabled || !auto.map[status]) {
+    if (status === "humano") {
+      // Lê antes para detectar transição real (notificar só na primeira vez).
+      const antesRapido = await getLead(leadId);
+      await updateLeadFields(leadId, { status });
+      if (antesRapido && antesRapido.status !== "humano") {
+        void (async () => {
+          try {
+            const { notificarHumano } = await import("./notify");
+            await notificarHumano({ ...(antesRapido as Lead), status });
+          } catch (e) {
+            console.warn("[leads] setStatus(rápido): notificarHumano falhou:", e instanceof Error ? e.message : e);
+          }
+        })();
+      }
+      return;
+    }
     await updateLeadFields(leadId, { status });
     return;
   }
@@ -213,6 +242,20 @@ export async function setStatus(leadId: string, status: LeadStatus): Promise<voi
   if (antes && antes.status !== status && antes.email) {
     // Best-effort: não bloqueia o fluxo principal se falhar/demorar.
     await enviarEmailDeEtapa(antes, status, auto.map[status]);
+  }
+
+  // Notifica o operador quando o lead precisa de atendimento humano.
+  // Best-effort — import dinâmico evita circular; nunca bloqueia.
+  if (antes && antes.status !== "humano" && status === "humano") {
+    void (async () => {
+      try {
+        const { notificarHumano } = await import("./notify");
+        // Monta um lead com o status novo para a notificação ter o contexto correto.
+        await notificarHumano({ ...(antes as Lead), status });
+      } catch (e) {
+        console.warn("[leads] setStatus: notificarHumano falhou:", e instanceof Error ? e.message : e);
+      }
+    })();
   }
 }
 
