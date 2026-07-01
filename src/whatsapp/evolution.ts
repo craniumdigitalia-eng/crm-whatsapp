@@ -25,7 +25,9 @@ function hashExternalId(phone: string, text: string, epochMs: number): string {
 // (nao ha eco fromMe) ou se o parse da resposta falhar (nao quebra o envio).
 // Se MAKE_SEND_URL estiver definido, usa o Make como canal; caso contrario, fala
 // direto com a Evolution API (ADR-004).
-export async function sendText(phone: string, text: string): Promise<string | null> {
+// delayMs: se > 0, a Evolution mostra "digitando..." por esse tempo antes de
+// entregar a mensagem (presença composing). Deixa a IA parecer gente digitando.
+export async function sendText(phone: string, text: string, delayMs = 0): Promise<string | null> {
   if (config.makeSendUrl) {
     // Branch Make: POST {MAKE_SEND_URL} com { phone, text }
     const res = await fetch(config.makeSendUrl, {
@@ -49,7 +51,9 @@ export async function sendText(phone: string, text: string): Promise<string | nu
       "Content-Type": "application/json",
       apikey: evo.apiKey,
     },
-    body: JSON.stringify({ number: phone, text }),
+    body: JSON.stringify(
+      delayMs > 0 ? { number: phone, text, delay: delayMs } : { number: phone, text }
+    ),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");

@@ -112,12 +112,22 @@ async function enviarEmPartes(phone: string, leadId: string, texto: string): Pro
   for (let i = 0; i < lista.length; i++) {
     const parte = lista[i];
     if (!parte) continue;
-    const sentId = await sendText(phone, parte);
+    // Timing humano: "digitando..." por um tempo proporcional ao tamanho da
+    // mensagem antes de enviar (a Evolution mostra a presença durante o delay).
+    const delay = delayDigitacao(parte);
+    const sentId = await sendText(phone, parte, delay);
     await addMessage(leadId, "out", parte, sentId || undefined);
     if (i < lista.length - 1) {
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, 400));
     }
   }
+}
+
+// Tempo de "digitação" humano por mensagem: base + ~45ms por caractere,
+// limitado entre 1,4s e 6s. Mensagem curta digita rápido; longa, mais devagar.
+function delayDigitacao(texto: string): number {
+  const ms = 900 + texto.length * 45;
+  return Math.min(6000, Math.max(1400, ms));
 }
 
 // Telefone "real" (so digitos, com DDI/DDD) — distingue de marcadores sinteticos meta:xxx
