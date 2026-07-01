@@ -5635,3 +5635,130 @@ legend.agent-card-title { margin-bottom: 4px; }
   font-size: 13px;
   color: var(--fg-muted);
 }
+
+/* ============================================================
+   Automação por etapa do funil (EmailModule — aba Automações)
+   ============================================================ */
+
+/* Linha do interruptor mestre */
+.em-auto-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background: #fff;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+}
+
+.em-auto-toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.em-auto-toggle-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--neutral-dark);
+}
+
+.em-auto-toggle-sub {
+  font-size: 12.5px;
+  color: var(--fg-muted);
+}
+
+/* Pílula iOS (interruptor) — identidade roxa, acessível via role="switch" */
+.em-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 22px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-purple);
+  border: none;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.em-switch--off {
+  background: var(--neutral-mid);
+}
+
+.em-switch:focus-visible {
+  outline: 2px solid var(--brand-light);
+  outline-offset: 2px;
+}
+
+.em-switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 20px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.22);
+  transition: left var(--dur-fast) var(--ease);
+  pointer-events: none;
+}
+
+.em-switch--off .em-switch-thumb {
+  left: 3px;
+}
+
+/* Lista de etapas */
+.em-auto-stage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.em-auto-stage-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--dur-fast) var(--ease);
+}
+
+.em-auto-stage-row:focus-within {
+  border-color: var(--brand-light);
+}
+
+.em-auto-stage-label {
+  flex: 0 0 140px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.em-auto-stage-select {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--fg);
+  background: var(--off-white);
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+
+.em-auto-stage-select:focus {
+  outline: none;
+  border-color: var(--brand-light);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.18);
+}
+
+.em-auto-stage-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--surface-light);
+}

@@ -120,7 +120,7 @@ function fmtDate(iso: string): string {
   });
 }
 
-type Tab = 'campanhas' | 'listas' | 'templates' | 'provedor';
+type Tab = 'campanhas' | 'listas' | 'templates' | 'provedor' | 'automacoes';
 
 export default function EmailModule({ isAdmin }: { isAdmin: boolean }) {
   const [tab, setTab] = useState<Tab>('campanhas');
@@ -154,6 +154,7 @@ export default function EmailModule({ isAdmin }: { isAdmin: boolean }) {
             ['listas', 'Listas'],
             ['templates', 'Templates'],
             ['provedor', 'Provedor'],
+            ['automacoes', 'Automações'],
           ] as Array<[Tab, string]>
         ).map(([id, label]) => (
           <button
@@ -171,6 +172,7 @@ export default function EmailModule({ isAdmin }: { isAdmin: boolean }) {
       {tab === 'listas' && <ListsTab flash={flash} />}
       {tab === 'templates' && <TemplatesTab flash={flash} />}
       {tab === 'provedor' && <ProviderTab isAdmin={isAdmin} flash={flash} />}
+      {tab === 'automacoes' && <AutomacoesTab flash={flash} onGoToTemplates={() => setTab('templates')} />}
     </section>
   );
 }
@@ -1354,6 +1356,206 @@ function TemplateEditor({
       <button className="btn btn-primary" type="button" onClick={save} disabled={busy}>
         {busy ? 'Salvando…' : 'Salvar template'}
       </button>
+    </div>
+  );
+}
+
+/* ============================================================
+   Automação por etapa do funil
+   ============================================================ */
+
+const ETAPAS_FUNIL: Array<{ key: string; label: string }> = [
+  { key: 'novo',           label: 'Novo' },
+  { key: 'em_atendimento', label: 'Em atendimento' },
+  { key: 'qualificado',    label: 'Qualificado' },
+  { key: 'proposta',       label: 'Proposta' },
+  { key: 'fechado',        label: 'Fechado' },
+  { key: 'perdido',        label: 'Perdido' },
+  { key: 'humano',         label: 'Atend. humano' },
+];
+
+type AutoState = 'idle' | 'loading' | 'saving';
+
+function AutomacoesTab({
+  flash,
+  onGoToTemplates,
+}: {
+  flash: Flash;
+  onGoToTemplates: () => void;
+}) {
+  const [autoState, setAutoState] = useState<AutoState>('loading');
+  const [enabled, setEnabled] = useState(false);
+  const [map, setMap] = useState<Record<string, string>>({});
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  // Carrega configuração de automação e lista de templates ao montar
+  const load = useCallback(async () => {
+    setAutoState('loading');
+    try {
+      const [autoData, tplData] = await Promise.all([
+        apiCall<{ enabled: boolean; map: Record<string, string> }>('/api/email/automation'),
+        apiCall<{ templates: Template[] }>('/api/email/templates'),
+      ]);
+      setEnabled(autoData.enabled);
+      setMap(autoData.map ?? {});
+      setTemplates(tplData.templates);
+      setAutoState('idle');
+    } catch (e) {
+      flash('err', `Falha ao carregar automação: ${(e as Error).message}`);
+      setAutoState('idle');
+    }
+  }, [flash]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  function toggleEnabled() {
+    setEnabled((v) => !v);
+    setSaveMsg(null);
+  }
+
+  function setStageTemplate(etapa: string, templateId: string) {
+    setMap((prev) => {
+      const next = { ...prev };
+      if (templateId) {
+        next[etapa] = templateId;
+      } else {
+        delete next[etapa];
+      }
+      return next;
+    });
+    setSaveMsg(null);
+  }
+
+  async function salvar() {
+    setAutoState('saving');
+    setSaveMsg(null);
+    try {
+      await apiCall('/api/email/automation', {
+        method: 'POST',
+        body: JSON.stringify({ enabled, map }),
+      });
+      setAutoState('idle');
+      setSaveMsg('Automação salva.');
+      setTimeout(() => setSaveMsg(null), 4000);
+    } catch (e) {
+      setAutoState('idle');
+      flash('err', `Falha ao salvar automação: ${(e as Error).message}`);
+    }
+  }
+
+  if (autoState === 'loading') {
+    return (
+      <div className="em-section">
+        <p className="em-empty">Carregando…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="em-section">
+      <div className="em-section-head">
+        <h2 className="em-section-title">Automação por etapa</h2>
+      </div>
+
+      <p className="em-hint">
+        Quando um lead entra em uma etapa do funil, o e-mail escolhido é enviado automaticamente
+        (se o lead tiver e-mail cadastrado).
+      </p>
+
+      {/* Interruptor mestre */}
+      <div className="em-auto-toggle-row">
+        <div className="em-auto-toggle-info">
+          <span className="em-auto-toggle-title">Automação ativa</span>
+          <span className="em-auto-toggle-sub">
+            {enabled ? 'E-mails automáticos ligados' : 'E-mails automáticos desligados'}
+          </span>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          aria-label="Ligar ou desligar automação de e-mail"
+          className={`em-switch${enabled ? '' : ' em-switch--off'}`}
+          onClick={toggleEnabled}
+        >
+          <span className="em-switch-thumb" aria-hidden="true" />
+        </button>
+      </div>
+
+      {/* Aviso quando não há templates — com atalho para criá-los */}
+      {templates.length === 0 ? (
+        <div className="em-card">
+          <p className="em-empty" style={{ paddingBottom: 0 }}>
+            Crie um modelo de e-mail primeiro para usar a automação.
+          </p>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            style={{ marginTop: 12 }}
+            onClick={onGoToTemplates}
+          >
+            Ir para Templates
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* Uma linha por etapa do funil */}
+          <div
+            className="em-auto-stage-list"
+            role="list"
+            aria-label="Configuração de e-mail por etapa do funil"
+          >
+            {ETAPAS_FUNIL.map(({ key, label }) => {
+              const selectId = `em-auto-select-${key}`;
+              return (
+                <div key={key} className="em-auto-stage-row" role="listitem">
+                  <label htmlFor={selectId} className="em-auto-stage-label">
+                    {label}
+                  </label>
+                  <select
+                    id={selectId}
+                    className="em-auto-stage-select"
+                    value={map[key] ?? ''}
+                    onChange={(e) => setStageTemplate(key, e.target.value)}
+                    disabled={!enabled}
+                    aria-label={`Modelo de e-mail para a etapa ${label}`}
+                  >
+                    <option value="">Nenhum</option>
+                    {templates.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Feedback de sucesso inline */}
+          {saveMsg && (
+            <div
+              className="integ-banner integ-banner--ok"
+              role="status"
+              aria-live="polite"
+            >
+              {saveMsg}
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={salvar}
+            disabled={autoState === 'saving'}
+          >
+            {autoState === 'saving' ? 'Salvando…' : 'Salvar'}
+          </button>
+        </>
+      )}
     </div>
   );
 }
