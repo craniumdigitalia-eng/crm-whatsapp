@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
@@ -45,6 +45,62 @@ export default function ConfigModule({
   const [savingPwd, setSavingPwd] = useState(false);
 
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  // --- Notificações WhatsApp ---
+  const [notifEnabled,   setNotifEnabled]   = useState(false);
+  const [notifWhatsapp,  setNotifWhatsapp]  = useState('');
+  const [notifLoading,   setNotifLoading]   = useState(true);
+  const [notifSaving,    setNotifSaving]    = useState(false);
+  const [notifMsg,       setNotifMsg]       = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/notify', { signal: AbortSignal.timeout(5000) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const d = await res.json() as { enabled: boolean; whatsapp: string };
+        if (active) {
+          setNotifEnabled(d.enabled ?? false);
+          setNotifWhatsapp(d.whatsapp ?? '');
+        }
+      } catch {
+        /* erro silencioso — campos ficam no padrão vazio/off */
+      } finally {
+        if (active) setNotifLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  async function salvarNotificacoes(e: React.FormEvent) {
+    e.preventDefault();
+    const numero = notifWhatsapp.replace(/\D/g, '');
+    if (notifEnabled && numero.length < 10) {
+      setNotifMsg({ kind: 'err', text: 'Informe um número de WhatsApp com DDD (mínimo 10 dígitos).' });
+      return;
+    }
+    setNotifSaving(true);
+    setNotifMsg(null);
+    try {
+      const res = await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: notifEnabled, whatsapp: numero }),
+      });
+      if (!res.ok) {
+        const b = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(b.error ?? res.statusText);
+      }
+      setNotifWhatsapp(numero);
+      setNotifMsg({ kind: 'ok', text: 'Configuração salva.' });
+      setTimeout(() => setNotifMsg(null), 4000);
+    } catch (err) {
+      setNotifMsg({ kind: 'err', text: `Falha ao salvar: ${(err as Error).message}` });
+    } finally {
+      setNotifSaving(false);
+    }
+  }
 
   function flash(kind: 'ok' | 'err', text: string) {
     setMsg({ kind, text });
@@ -319,6 +375,79 @@ export default function ConfigModule({
               </button>
             </div>
           </form>
+        </section>
+
+        {/* ---------- Notificações WhatsApp ---------- */}
+        <section className="cfg-card cfg-card--full" aria-labelledby="cfg-notif-h">
+          <h2 className="cfg-card-title" id="cfg-notif-h">Notificações</h2>
+          <p className="cfg-card-hint">
+            Você recebe um aviso quando entra um lead novo ou quando um lead precisa de você
+            (atendimento humano).
+          </p>
+
+          {notifMsg && (
+            <div
+              className={`integ-banner ${notifMsg.kind === 'ok' ? 'integ-banner--ok' : 'integ-banner--err'}`}
+              role="status"
+              aria-live="polite"
+            >
+              {notifMsg.text}
+            </div>
+          )}
+
+          {notifLoading ? (
+            <div className="cfg-notif-loading">Carregando…</div>
+          ) : (
+            <form onSubmit={salvarNotificacoes}>
+              {/* Interruptor */}
+              <div className="cfg-notif-toggle-row">
+                <div className="cfg-notif-toggle-info">
+                  <span className="cfg-notif-toggle-title">Avisar no meu WhatsApp</span>
+                  <span className="cfg-notif-toggle-sub">
+                    Receba um aviso no WhatsApp quando houver algo que precise de você.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={notifEnabled}
+                  aria-label="Avisar no meu WhatsApp"
+                  className={`cfg-notif-switch${notifEnabled ? '' : ' cfg-notif-switch--off'}`}
+                  onClick={() => setNotifEnabled((v) => !v)}
+                >
+                  <span className="cfg-notif-switch-thumb" />
+                </button>
+              </div>
+
+              {/* Campo de número */}
+              <label className="cfg-field" style={{ marginTop: '14px' }}>
+                <span>Meu número de WhatsApp</span>
+                <input
+                  type="tel"
+                  value={notifWhatsapp}
+                  onChange={(e) => setNotifWhatsapp(e.target.value.replace(/\D/g, ''))}
+                  placeholder="11999990000"
+                  maxLength={15}
+                  inputMode="numeric"
+                  aria-describedby="cfg-notif-tel-note"
+                  disabled={!notifEnabled}
+                />
+                <small id="cfg-notif-tel-note" className="cfg-field-note">
+                  Somente números, com DDD. Ex: 11999990000
+                </small>
+              </label>
+
+              <div className="cfg-actions">
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={notifSaving}
+                >
+                  {notifSaving ? 'Salvando…' : 'Salvar'}
+                </button>
+              </div>
+            </form>
+          )}
         </section>
       </div>
     </section>

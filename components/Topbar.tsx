@@ -16,6 +16,8 @@ interface Lead {
   phone: string;
   status: string;
   service_interest: string | null;
+  last_message_at: string | null;
+  last_direction: 'in' | 'out' | null;
 }
 
 interface AgendaEvent {
@@ -94,9 +96,10 @@ export default function Topbar({ user }: { user: SidebarUser }) {
   const searchRef = useRef<HTMLDivElement>(null);
 
   // --- Notificações ---
-  const [notifOpen,    setNotifOpen]    = useState(false);
-  const [reunioes,     setReunioes]     = useState<AgendaEvent[]>([]);
-  const [leadsNovos,   setLeadsNovos]   = useState<Lead[]>([]);
+  const [notifOpen,         setNotifOpen]         = useState(false);
+  const [reunioes,          setReunioes]           = useState<AgendaEvent[]>([]);
+  const [leadsNovos,        setLeadsNovos]         = useState<Lead[]>([]);
+  const [leadsResponderam,  setLeadsResponderam]   = useState<Lead[]>([]);
   const notifRef = useRef<HTMLDivElement>(null);
 
   // --- Filtro de etapa ---
@@ -217,7 +220,27 @@ export default function Topbar({ user }: { user: SidebarUser }) {
       if (resLeads.status === 'fulfilled' && resLeads.value.ok) {
         const d = await resLeads.value.json() as { leads?: Lead[] };
         const leads = Array.isArray(d.leads) ? d.leads : [];
-        setLeadsNovos(leads.filter((l) => l.status === 'novo'));
+
+        // Leads novos: status 'novo', mais recentes primeiro.
+        setLeadsNovos(
+          leads
+            .filter((l) => l.status === 'novo')
+            .sort((a, b) =>
+              (b.last_message_at ?? '').localeCompare(a.last_message_at ?? ''),
+            )
+            .slice(0, 6),
+        );
+
+        // Responderam: última mensagem veio do lead (direction 'in'),
+        // independente do status, ordenados pelo mais recente.
+        setLeadsResponderam(
+          leads
+            .filter((l) => l.last_direction === 'in')
+            .sort((a, b) =>
+              (b.last_message_at ?? '').localeCompare(a.last_message_at ?? ''),
+            )
+            .slice(0, 6),
+        );
       }
     } catch {
       /* erro silencioso — badge simplesmente não aparece */
@@ -229,7 +252,8 @@ export default function Topbar({ user }: { user: SidebarUser }) {
     void fetchNotificacoes();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const hasNotif = (reunioes.length + leadsNovos.length) > 0;
+  const totalNotif = leadsNovos.length + leadsResponderam.length;
+  const hasNotif = totalNotif > 0;
 
   const avatarInicial = user.nome.charAt(0).toUpperCase();
 
@@ -315,7 +339,7 @@ export default function Topbar({ user }: { user: SidebarUser }) {
             className="icon-btn"
             aria-label={
               hasNotif
-                ? `Notificações (${reunioes.length + leadsNovos.length})`
+                ? `Notificações (${totalNotif})`
                 : 'Notificações'
             }
             aria-haspopup="true"
@@ -346,28 +370,15 @@ export default function Topbar({ user }: { user: SidebarUser }) {
             >
               <div className="tb-dropdown-header">Notificações</div>
 
-              {reunioes.length === 0 && leadsNovos.length === 0 ? (
+              {leadsNovos.length === 0 && leadsResponderam.length === 0 ? (
                 <div className="tb-dropdown-info">Tudo em dia ✓</div>
               ) : (
                 <>
-                  {reunioes.length > 0 && (
-                    <div className="tb-notif-secao">
-                      <div className="tb-notif-secao-label">Próximas reuniões</div>
-                      {reunioes.slice(0, 5).map((ev) => (
-                        <div key={ev.id} className="tb-notif-item">
-                          <span className="tb-notif-item-titulo">{ev.summary}</span>
-                          <span className="tb-notif-item-sub">
-                            {fmtEventDate(ev.start)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
+                  {/* Seção: leads novos */}
                   {leadsNovos.length > 0 && (
                     <div className="tb-notif-secao">
                       <div className="tb-notif-secao-label">Leads novos</div>
-                      {leadsNovos.slice(0, 5).map((lead) => (
+                      {leadsNovos.map((lead) => (
                         <button
                           key={lead.id}
                           className="tb-notif-item tb-notif-item--btn"
@@ -382,6 +393,49 @@ export default function Topbar({ user }: { user: SidebarUser }) {
                           </span>
                           <span className="tb-notif-item-sub">{lead.phone}</span>
                         </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Seção: responderam (última mensagem veio do lead) */}
+                  {leadsResponderam.length > 0 && (
+                    <div className="tb-notif-secao">
+                      <div className="tb-notif-secao-label">Responderam</div>
+                      {leadsResponderam.map((lead) => (
+                        <button
+                          key={lead.id}
+                          className="tb-notif-item tb-notif-item--btn"
+                          role="menuitem"
+                          onClick={() => {
+                            setNotifOpen(false);
+                            router.push(`/crm?lead=${lead.id}`);
+                          }}
+                        >
+                          <span className="tb-notif-item-titulo">
+                            {lead.name ?? 'Sem nome'}
+                          </span>
+                          <span className="tb-notif-item-sub">
+                            {lead.phone}
+                            {lead.last_message_at
+                              ? ` · ${fmtEventDate(lead.last_message_at)}`
+                              : ''}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Reuniões mantidas se houver */}
+                  {reunioes.length > 0 && (
+                    <div className="tb-notif-secao">
+                      <div className="tb-notif-secao-label">Próximas reuniões</div>
+                      {reunioes.slice(0, 5).map((ev) => (
+                        <div key={ev.id} className="tb-notif-item">
+                          <span className="tb-notif-item-titulo">{ev.summary}</span>
+                          <span className="tb-notif-item-sub">
+                            {fmtEventDate(ev.start)}
+                          </span>
+                        </div>
                       ))}
                     </div>
                   )}
