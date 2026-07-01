@@ -344,11 +344,29 @@ export async function generateReply(
     }
 
     // Resposta final: junta os blocos de texto.
-    const reply = response.content
+    let reply = response.content
       .filter((b): b is Anthropic.TextBlock => b.type === "text")
       .map((b) => b.text)
       .join("\n")
       .trim();
+
+    // Guarda: se o modelo encerrou o turno SÓ com ferramenta (ex.: registrou o lead
+    // com atualizar_lead) e não falou com o corretor, refaz o turno SEM ferramentas
+    // para garantir uma resposta em texto. Os dados já foram gravados no loop acima;
+    // aqui só forçamos a fala. Evita deixar o lead no vácuo após responder.
+    if (!reply) {
+      const fb = await client.messages.create({
+        model: config.agentModel,
+        max_tokens: 1024,
+        system,
+        messages: historyToMessages(history),
+      });
+      reply = fb.content
+        .filter((b): b is Anthropic.TextBlock => b.type === "text")
+        .map((b) => b.text)
+        .join("\n")
+        .trim();
+    }
     return { reply, handoff };
   }
 
