@@ -84,6 +84,18 @@ const STATUS_PILL: Record<CampaignStatus, { label: string; cls: string }> = {
 
 const LEAD_STATUSES = Object.keys(STATUS_LABELS) as LeadStatus[];
 
+// Temas para geração de pílula semanal com IA
+const TEMAS: Array<{ value: string; label: string }> = [
+  { value: '', label: 'Surpreenda-me' },
+  { value: 'Tráfego pago para corretor de plano de saúde', label: 'Tráfego pago para corretor de plano de saúde' },
+  { value: 'Atendimento com IA no WhatsApp', label: 'Atendimento com IA no WhatsApp' },
+  { value: 'Como escalar vendendo plano de saúde', label: 'Como escalar vendendo plano de saúde' },
+  { value: 'Follow-up: por que o lead some', label: 'Follow-up: por que o lead some' },
+  { value: 'Montar um funil previsível', label: 'Montar um funil previsível' },
+  { value: 'Parar de depender de indicação', label: 'Parar de depender de indicação' },
+  { value: 'Lista fria x lead que levanta a mão', label: 'Lista fria x lead que levanta a mão' },
+];
+
 async function apiCall<T = unknown>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...opts,
@@ -172,6 +184,7 @@ function CampaignsTab({ isAdmin, flash }: { isAdmin: boolean; flash: Flash }) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -208,9 +221,14 @@ function CampaignsTab({ isAdmin, flash }: { isAdmin: boolean; flash: Flash }) {
     <div className="em-section">
       <div className="em-section-head">
         <h2 className="em-section-title">Campanhas</h2>
-        <button className="btn btn-primary" type="button" onClick={() => setCreating(true)}>
-          + Nova campanha
-        </button>
+        <div className="em-section-actions">
+          <button className="btn btn-ghost" type="button" onClick={() => setGenerating(true)}>
+            Gerar pílula da semana (IA)
+          </button>
+          <button className="btn btn-primary" type="button" onClick={() => setCreating(true)}>
+            + Nova campanha
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -247,6 +265,18 @@ function CampaignsTab({ isAdmin, flash }: { isAdmin: boolean; flash: Flash }) {
           onSaved={() => {
             setCreating(false);
             void load();
+          }}
+        />
+      )}
+
+      {generating && (
+        <GeneratePillModal
+          flash={flash}
+          onClose={() => setGenerating(false)}
+          onGenerated={(campaign) => {
+            setGenerating(false);
+            void load();
+            setSelected(campaign.id);
           }}
         />
       )}
@@ -757,6 +787,7 @@ function ContactsPanel({
   const [csv, setCsv] = useState('');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
+  const [importing, setImporting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -831,9 +862,14 @@ function ContactsPanel({
         <button className="btn btn-ghost btn-sm" type="button" onClick={onBack}>
           ← Voltar
         </button>
-        <button className="btn btn-ghost btn-sm" type="button" onClick={deleteList}>
-          Excluir lista
-        </button>
+        <div className="em-section-actions">
+          <button className="btn btn-ghost btn-sm" type="button" onClick={() => setImporting(true)}>
+            Importar contatos
+          </button>
+          <button className="btn btn-ghost btn-sm" type="button" onClick={deleteList}>
+            Excluir lista
+          </button>
+        </div>
       </div>
 
       <h2 className="em-section-title">{list.name}</h2>
@@ -889,6 +925,282 @@ function ContactsPanel({
           ))}
         </div>
       )}
+
+      {importing && (
+        <ImportContactsModal
+          listId={list.id}
+          flash={flash}
+          onClose={() => setImporting(false)}
+          onImported={() => void load()}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   Modal — Importar contatos numa lista (Feature 1)
+   POST /api/email/lists/{id}/import  { text } → { added, invalid, duplicates, total }
+   ============================================================ */
+function ImportContactsModal({
+  listId,
+  flash,
+  onClose,
+  onImported,
+}: {
+  listId: string;
+  flash: Flash;
+  onClose: () => void;
+  onImported: () => void;
+}) {
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [resultado, setResultado] = useState<{
+    added: number;
+    invalid: number;
+    duplicates: number;
+    total: number;
+  } | null>(null);
+
+  // Fechar com Esc
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  // Lê arquivo .csv via FileReader e popula o textarea
+  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setText((ev.target?.result as string) ?? '');
+    reader.readAsText(file);
+    e.target.value = ''; // permite re-selecionar o mesmo arquivo
+  }
+
+  async function importar() {
+    if (!text.trim()) return;
+    setBusy(true);
+    setResultado(null);
+    try {
+      const r = await apiCall<{ added: number; invalid: number; duplicates: number; total: number }>(
+        `/api/email/lists/${listId}/import`,
+        { method: 'POST', body: JSON.stringify({ text }) }
+      );
+      setResultado(r);
+      onImported();
+    } catch (e) {
+      flash('err', `Falha ao importar: ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      className="em-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Importar contatos"
+      onClick={onClose}
+    >
+      <div className="em-modal" onClick={(ev) => ev.stopPropagation()}>
+        <div className="em-modal-head">
+          <h3>Importar contatos</h3>
+          <button className="em-modal-close" type="button" onClick={onClose} aria-label="Fechar">
+            ×
+          </button>
+        </div>
+
+        <div className="em-modal-body">
+          <p className="em-hint">
+            Cole os e-mails, um por linha, ou CSV: <code>email,nome</code>. Também é possível abrir um arquivo .csv.
+          </p>
+
+          <label className="em-field">
+            <span>Conteúdo</span>
+            <textarea
+              rows={8}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={'email,nome\nana@x.com,Ana\njoao@y.com,João\ncontato@empresa.com'}
+              // eslint-disable-next-line jsx-a11y/no-autofocus
+              autoFocus
+            />
+          </label>
+
+          <label className="em-field">
+            <span>Ou abrir arquivo .csv</span>
+            <input
+              type="file"
+              accept=".csv,.txt"
+              onChange={onFile}
+              className="em-import-file"
+            />
+          </label>
+
+          {resultado && (
+            <div className="em-import-result" role="status" aria-live="polite">
+              <span className="em-import-result-added">{resultado.added} adicionado(s)</span>
+              {resultado.invalid > 0 && (
+                <span className="em-import-result-warn">{resultado.invalid} inválido(s)</span>
+              )}
+              {resultado.duplicates > 0 && (
+                <span className="em-import-result-warn">{resultado.duplicates} duplicado(s)</span>
+              )}
+              <span className="em-import-result-total">de {resultado.total} linha(s)</span>
+            </div>
+          )}
+        </div>
+
+        <div className="em-modal-foot">
+          <button className="btn btn-ghost" type="button" onClick={onClose}>
+            Fechar
+          </button>
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={importar}
+            disabled={busy || !text.trim()}
+          >
+            {busy ? 'Importando…' : 'Importar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   Modal — Gerar pílula semanal com IA (Feature 2)
+   POST /api/email/generate  { theme?, audience? } → { campaign }
+   ============================================================ */
+function GeneratePillModal({
+  flash,
+  onClose,
+  onGenerated,
+}: {
+  flash: Flash;
+  onClose: () => void;
+  onGenerated: (campaign: Campaign) => void;
+}) {
+  const [theme, setTheme] = useState('');
+  const [listId, setListId] = useState('');
+  const [lists, setLists] = useState<EmailList[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  // Fechar com Esc
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !busy) onClose();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose, busy]);
+
+  // Carrega listas para seleção opcional de público
+  useEffect(() => {
+    void (async () => {
+      try {
+        const { lists: l } = await apiCall<{ lists: EmailList[] }>('/api/email/lists');
+        setLists(l);
+      } catch {
+        // silencioso — seletor de público fica vazio
+      }
+    })();
+  }, []);
+
+  async function gerar() {
+    setBusy(true);
+    try {
+      const body: { theme?: string; audience?: Audience } = {};
+      if (theme) body.theme = theme;
+      if (listId) body.audience = { type: 'list', list_id: listId };
+
+      const { campaign } = await apiCall<{ campaign: Campaign }>('/api/email/generate', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+
+      flash('ok', `Rascunho "${campaign.name}" gerado. Revise antes de enviar.`);
+      onGenerated(campaign);
+    } catch (e) {
+      flash('err', `Falha ao gerar pílula: ${(e as Error).message}`);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      className="em-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Gerar pílula da semana com IA"
+      onClick={() => !busy && onClose()}
+    >
+      <div className="em-modal" onClick={(ev) => ev.stopPropagation()}>
+        <div className="em-modal-head">
+          <h3>Gerar pílula da semana com IA</h3>
+          <button
+            className="em-modal-close"
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar"
+            disabled={busy}
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="em-modal-body">
+          <p className="em-hint">
+            A IA cria uma campanha completa com o tema escolhido e salva como{' '}
+            <strong>rascunho</strong>. Nada é enviado automaticamente — você revisa antes.
+          </p>
+
+          <label className="em-field">
+            <span>Tema</span>
+            <select value={theme} onChange={(e) => setTheme(e.target.value)}>
+              {TEMAS.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {lists.length > 0 && (
+            <label className="em-field">
+              <span>Público (opcional — pode definir depois)</span>
+              <select value={listId} onChange={(e) => setListId(e.target.value)}>
+                <option value="">— sem lista definida —</option>
+                {lists.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name} ({l.count})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <div className="em-generate-draft-note">
+            <span className={`em-pill ${STATUS_PILL.rascunho.cls}`}>Rascunho</span>
+            <span>A campanha gerada ficará em rascunho para sua revisão.</span>
+          </div>
+        </div>
+
+        <div className="em-modal-foot">
+          <button className="btn btn-ghost" type="button" onClick={onClose} disabled={busy}>
+            Cancelar
+          </button>
+          <button className="btn btn-primary" type="button" onClick={gerar} disabled={busy}>
+            {busy ? 'Gerando com IA…' : 'Gerar pílula'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

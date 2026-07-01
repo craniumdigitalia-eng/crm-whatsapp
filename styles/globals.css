@@ -5552,3 +5552,86 @@ legend.agent-card-title { margin-bottom: 4px; }
   letter-spacing: 0.02em;
 }
 .tb-avatar-item:disabled { opacity: 0.6; cursor: progress; }
+
+/* ============================================================
+   Email Marketing — Feature 1: Importar contatos
+                     Feature 2: Gerar pílula com IA
+   ============================================================ */
+
+/* Linha de ações agrupadas no cabeçalho de seção */
+.em-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Input file de importação — estilizado minimamente para combinar com o design */
+.em-import-file {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--fg-muted);
+  cursor: pointer;
+  padding: 6px 0;
+}
+.em-import-file::file-selector-button {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--neutral-mid);
+  background: #fff;
+  color: var(--fg);
+  cursor: pointer;
+  margin-right: 10px;
+  transition: border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.em-import-file::file-selector-button:hover {
+  border-color: var(--brand-light);
+  color: var(--brand-purple);
+}
+
+/* Banner de resultado da importação */
+.em-import-result {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+.em-import-result-added {
+  font-weight: 700;
+  color: #065f46;
+}
+.em-import-result-warn {
+  font-weight: 600;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+}
+.em-import-result-total {
+  color: var(--fg-muted);
+  margin-left: auto;
+}
+
+/* Nota de rascunho no modal de geração de pílula */
+.em-generate-draft-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 10px 14px;
+  background: var(--surface-light);
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--fg-muted);
+}
