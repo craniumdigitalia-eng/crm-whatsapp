@@ -6147,3 +6147,11 @@ legend.agent-card-title { margin-bottom: 4px; }
   padding: 2px 8px;
   vertical-align: middle;
 }
+
+/* Botão de excluir conversa (inbox) */
+.conv-btn--danger {
+  color: #B91C1C;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+}
+.conv-btn--danger:not(:disabled):hover { background: #FEE2E2; border-color: #f0a3a3; }

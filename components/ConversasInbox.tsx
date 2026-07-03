@@ -357,6 +357,26 @@ export default function ConversasInbox() {
     }
   }, [replyText, selectedId, fetchChat, fetchLeads]);
 
+  /* ---- Excluir conversa (lead + histórico, cascade) ---- */
+  const handleDelete = useCallback(async () => {
+    if (!selectedId || !lead) return;
+    const quem = lead.name ?? lead.phone;
+    if (!window.confirm(`Excluir a conversa com ${quem}? Isso apaga o contato e todo o histórico, e não dá pra desfazer.`)) return;
+    setActing('delete');
+    setActionError(null);
+    try {
+      await apiCall(`/api/leads/${selectedId}`, { method: 'DELETE' });
+      setLeads((prev) => prev.filter((l) => l.id !== selectedId));
+      setSelectedId(null);
+      setLead(null);
+      setMessages([]);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Erro ao excluir a conversa');
+    } finally {
+      setActing(null);
+    }
+  }, [selectedId, lead]);
+
   /* ---- Render ---- */
 
   const isHuman = lead?.status === 'humano';
@@ -522,6 +542,17 @@ export default function ConversasInbox() {
                       ))}
                     </select>
                   </>
+                )}
+                {lead && (
+                  <button
+                    className="conv-btn conv-btn--danger"
+                    disabled={busy}
+                    onClick={handleDelete}
+                    aria-label="Excluir esta conversa"
+                    title="Excluir conversa"
+                  >
+                    {acting === 'delete' ? 'Excluindo…' : 'Excluir'}
+                  </button>
                 )}
               </div>
             </header>

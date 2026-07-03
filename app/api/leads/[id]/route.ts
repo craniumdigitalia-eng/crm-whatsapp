@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth';
-import { getLead, getMessages, getLeadAttribution } from '@/src/crm/leads';
+import { getLead, getMessages, getLeadAttribution, deleteLead } from '@/src/crm/leads';
 
 // GET /api/leads/:id — detalhe do lead + histórico de conversa.
 // Migrado de api/leads/[id]/index.ts (Vercel handler) — Story 5.4.
@@ -22,6 +22,28 @@ export async function GET(
     return NextResponse.json({ lead: { ...lead, ...(attribution ?? {}) }, messages });
   } catch (e) {
     console.error('[api/leads/:id] GET:', e);
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : 'erro interno' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/leads/:id — exclui a conversa/lead e todo o histórico (cascade).
+// Ação destrutiva; a UI confirma antes.
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) return auth;
+  const { id } = await params;
+  if (!id) return NextResponse.json({ error: 'id invalido' }, { status: 400 });
+  try {
+    await deleteLead(id);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error('[api/leads/:id] DELETE:', e);
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'erro interno' },
       { status: 500 }

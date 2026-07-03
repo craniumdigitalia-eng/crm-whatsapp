@@ -76,6 +76,14 @@ export async function listLeads(): Promise<Lead[]> {
   return (data ?? []) as Lead[];
 }
 
+// Exclui um lead e TODO o seu rastro (mensagens, tags, atribuicao, checklist,
+// follow-up) via ON DELETE CASCADE das tabelas filhas. Acao destrutiva —
+// so exposta em rota autenticada com confirmacao na UI.
+export async function deleteLead(leadId: string): Promise<void> {
+  const { error } = await supabase.from("leads").delete().eq("id", leadId);
+  if (error) throw error;
+}
+
 export async function getMessages(leadId: string): Promise<Message[]> {
   const { data, error } = await supabase
     .from("messages")
