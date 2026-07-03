@@ -156,12 +156,63 @@ export async function addContacts(
     rows.push({ list_id: listId, email, name: c.name?.trim() || null });
   }
   if (rows.length === 0) return 0;
-  const { data, error } = await supabase
+
+  // O índice único é sobre a EXPRESSÃO (list_id, lower(email)), então o onConflict
+  // do Supabase (por nome de coluna) não casa. Fazemos o dedupe na mão: buscamos os
+  // que já existem na lista e inserimos só os novos.
+  const { data: existing } = await supabase
     .from("email_contacts")
-    .upsert(rows, { onConflict: "list_id,email", ignoreDuplicates: true })
-    .select("id");
+    .select("email")
+    .eq("list_id", listId)
+    .in("email", rows.map((r) => r.email));
+  const jaTem = new Set(((existing ?? []) as Array<{ email: string }>).map((r) => r.email.toLowerCase()));
+  const novos = rows.filter((r) => !jaTem.has(r.email));
+  if (novos.length === 0) return 0;
+
+  const { data, error } = await supabase.from("email_contacts").insert(novos).select("id");
   if (error) throw error;
   return data?.length ?? 0;
+}
+
+// =====================================================================
+// Lista automática: recebe os leads que vão chegando (Meta Lead Ads e
+// e-mails coletados pelo agente). O id da lista alvo fica em integrations_config.
+// =====================================================================
+const AUTO_LIST_KEY = "email_auto_list_id";
+
+export async function getAutoListId(): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from("integrations_config")
+      .select("value")
+      .eq("key", AUTO_LIST_KEY)
+      .maybeSingle();
+    const v = (data as { value: string | null } | null)?.value?.trim();
+    return v || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setAutoListId(listId: string | null): Promise<void> {
+  const { error } = await supabase
+    .from("integrations_config")
+    .upsert({ key: AUTO_LIST_KEY, value: listId ?? "" }, { onConflict: "key" });
+  if (error) throw error;
+}
+
+// Adiciona um e-mail na lista automática (se houver uma configurada). Best-effort:
+// NUNCA lança nem bloqueia o fluxo de chegada do lead. Idempotente via addContacts.
+export async function syncEmailToAutoList(email: string, name?: string | null): Promise<void> {
+  try {
+    const clean = (email ?? "").trim();
+    if (!isValidEmail(clean.toLowerCase())) return;
+    const listId = await getAutoListId();
+    if (!listId) return;
+    await addContacts(listId, [{ email: clean, name: name ?? null }]);
+  } catch (e) {
+    console.warn("[email] syncEmailToAutoList:", e instanceof Error ? e.message : e);
+  }
 }
 
 export async function deleteContact(id: string): Promise<void> {

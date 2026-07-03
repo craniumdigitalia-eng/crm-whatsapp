@@ -6104,3 +6104,46 @@ legend.agent-card-title { margin-bottom: 4px; }
 .meta-row-target td { font-weight: 800; background: var(--brand-tint); }
 .meta-up { color: #047857; font-variant-numeric: tabular-nums; }
 .meta-down { color: #B91C1C; font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   Lista automatica de leads (aba Email > Listas)
+   ============================================================ */
+.em-autolist-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  background: var(--brand-tint);
+  border: 1px solid rgba(124, 58, 237, 0.18);
+  border-radius: var(--radius-md);
+}
+.em-autolist-bar strong { color: var(--brand-dark); font-size: 14.5px; }
+.em-autolist-hint { margin: 3px 0 0; font-size: 12.5px; color: var(--fg-muted); }
+.em-autolist-select {
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--fg);
+  background: #fff;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-width: 200px;
+}
+.em-autolist-select:focus { outline: none; border-color: var(--brand-light); box-shadow: 0 0 0 3px rgba(167,139,250,0.18); }
+.em-auto-badge {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--brand-dark);
+  background: var(--brand-tint);
+  border: 1px solid rgba(124,58,237,0.25);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  vertical-align: middle;
+}

@@ -725,15 +725,30 @@ function ListsTab({ flash }: { flash: Flash }) {
   const [lists, setLists] = useState<EmailList[]>([]);
   const [newName, setNewName] = useState('');
   const [selected, setSelected] = useState<EmailList | null>(null);
+  const [autoListId, setAutoListId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const { lists } = await apiCall<{ lists: EmailList[] }>('/api/email/lists');
+      const [{ lists }, auto] = await Promise.all([
+        apiCall<{ lists: EmailList[] }>('/api/email/lists'),
+        apiCall<{ autoListId: string | null }>('/api/email/auto-list').catch(() => ({ autoListId: null })),
+      ]);
       setLists(lists);
+      setAutoListId(auto.autoListId ?? null);
     } catch (e) {
       flash('err', `Falha ao carregar listas: ${(e as Error).message}`);
     }
   }, [flash]);
+
+  async function changeAutoList(listId: string | null) {
+    try {
+      await apiCall('/api/email/auto-list', { method: 'PUT', body: JSON.stringify({ listId }) });
+      setAutoListId(listId);
+      flash('ok', listId ? 'Lista automática definida.' : 'Lista automática desativada.');
+    } catch (e) {
+      flash('err', `Falha ao salvar: ${(e as Error).message}`);
+    }
+  }
 
   useEffect(() => {
     void load();
@@ -784,6 +799,25 @@ function ListsTab({ flash }: { flash: Flash }) {
         </div>
       </div>
 
+      <div className="em-autolist-bar">
+        <div>
+          <strong>Lista que recebe os leads automaticamente</strong>
+          <p className="em-autolist-hint">
+            Todo lead que chega (Meta Lead Ads ou e-mail coletado pela IA) entra sozinho nesta lista.
+          </p>
+        </div>
+        <select
+          className="em-autolist-select"
+          value={autoListId ?? ''}
+          onChange={(e) => changeAutoList(e.target.value || null)}
+        >
+          <option value="">Nenhuma (desativado)</option>
+          {lists.map((l) => (
+            <option key={l.id} value={l.id}>{l.name}</option>
+          ))}
+        </select>
+      </div>
+
       {lists.length === 0 ? (
         <p className="em-empty">Nenhuma lista. Crie uma e importe contatos via CSV.</p>
       ) : (
@@ -791,7 +825,10 @@ function ListsTab({ flash }: { flash: Flash }) {
           {lists.map((l) => (
             <button key={l.id} className="em-row" type="button" onClick={() => setSelected(l)}>
               <div className="em-row-main">
-                <span className="em-row-name">{l.name}</span>
+                <span className="em-row-name">
+                  {l.name}
+                  {autoListId === l.id && <span className="em-auto-badge">recebe leads</span>}
+                </span>
                 <span className="em-row-sub">{l.count} contato(s)</span>
               </div>
               <span className="em-row-date">{fmtDate(l.created_at)}</span>

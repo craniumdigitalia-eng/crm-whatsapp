@@ -1,5 +1,21 @@
 import crypto from "crypto";
-import { getOrCreateLead, findLeadByPhone, findLeadByLeadgenId, setLeadAttribution } from "./leads";
+import { getOrCreateLead, findLeadByPhone, findLeadByLeadgenId, setLeadAttribution, updateLeadFields } from "./leads";
+
+// Extrai o e-mail das respostas do formulario do Meta (campo "email"/"e-mail" ou
+// qualquer valor que pareca um e-mail). Retorna undefined se nao achar.
+function emailFromFormData(formData: Record<string, string>): string | undefined {
+  for (const [k, v] of Object.entries(formData)) {
+    const val = (v ?? "").trim();
+    if (!val) continue;
+    if (/e-?mail/i.test(k) && val.includes("@")) return val;
+  }
+  // Fallback: primeiro valor que tenha cara de e-mail.
+  for (const v of Object.values(formData)) {
+    const val = (v ?? "").trim();
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) return val;
+  }
+  return undefined;
+}
 import { MetaConfig } from "./integrations";
 import { Lead } from "../types";
 
@@ -206,6 +222,14 @@ export async function upsertMakeLead(parsed: ParsedMakeLead): Promise<UpsertResu
     form_data: parsed.formData,
   });
 
+  // Salva o e-mail do formulario no lead (se veio e o lead ainda nao tem). Isso
+  // ja dispara a entrada na lista automatica de e-mail (via updateLeadFields).
+  const email = emailFromFormData(parsed.formData);
+  if (email && !lead.email) {
+    await updateLeadFields(lead.id, { email, name: parsed.name });
+    lead.email = email;
+  }
+
   return { lead, created: !existingByPhone };
 }
 
@@ -317,6 +341,14 @@ export async function upsertMetaLead(raw: MetaRawLead): Promise<UpsertResult> {
     campaign_id: raw.campaign_id ?? null,
     form_data: parsed.formData,
   });
+
+  // Salva o e-mail do formulario no lead (se veio e o lead ainda nao tem). Isso
+  // ja dispara a entrada na lista automatica de e-mail (via updateLeadFields).
+  const email = emailFromFormData(parsed.formData);
+  if (email && !lead.email) {
+    await updateLeadFields(lead.id, { email, name: parsed.name });
+    lead.email = email;
+  }
 
   return { lead, created: !existingByPhone };
 }

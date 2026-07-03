@@ -202,6 +202,23 @@ export async function updateLeadFields(
   if (Object.keys(patch).length === 0) return;
   const { error } = await supabase.from("leads").update(patch).eq("id", leadId);
   if (error) throw error;
+
+  // Se o e-mail foi setado, adiciona o lead na lista automática de e-mail (se houver
+  // uma configurada). Best-effort: import dinâmico evita circular, nunca bloqueia.
+  const emailSet = typeof patch.email === "string" && (patch.email as string).trim();
+  if (emailSet) {
+    void (async () => {
+      try {
+        const { syncEmailToAutoList } = await import("./email");
+        await syncEmailToAutoList(
+          (patch.email as string).trim(),
+          typeof patch.name === "string" ? (patch.name as string) : undefined
+        );
+      } catch (e) {
+        console.warn("[leads] syncEmailToAutoList falhou:", e instanceof Error ? e.message : e);
+      }
+    })();
+  }
 }
 
 export async function setStatus(leadId: string, status: LeadStatus): Promise<void> {
