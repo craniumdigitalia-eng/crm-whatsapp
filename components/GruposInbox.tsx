@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 /* ============================================================
-   Grupos — inbox estilo WhatsApp, só de grupos. Lista de grupos à
-   esquerda, conversa do grupo à direita (mensagens + responder).
-   O histórico é o que guardamos daqui pra frente (a Evolution não
-   persiste histórico de grupo). PT-BR.
+   Grupos — inbox estilo WhatsApp, só de grupos. Usa as MESMAS
+   classes visuais da aba Conversas (conv-*) para ficar idêntico
+   (roxo/violeta Cranium). Histórico guardado a partir de agora.
    ============================================================ */
 
 interface Group {
@@ -14,7 +13,6 @@ interface Group {
   name: string;
   size: number;
   demandsOpen: number;
-  demandsTotal: number;
   lastBody: string | null;
   lastAt: string | null;
   lastDirection: string | null;
@@ -44,6 +42,10 @@ function relTime(iso: string | null): string {
 function hhmm(iso: string): string {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
+const AVATAR_STYLE: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: 'linear-gradient(135deg,#7C3AED,#2D0F52)', color: '#fff', fontWeight: 700, fontSize: 14,
+};
 
 async function apiGet<T>(url: string): Promise<T> {
   const res = await fetch(url, { cache: 'no-store' });
@@ -87,11 +89,7 @@ export default function GruposInbox() {
     try {
       const data = await apiGet<{ messages: GMessage[] }>(`/api/groups/messages?jid=${encodeURIComponent(jid)}`);
       setMessages(data.messages ?? []);
-    } catch {
-      /* silencioso */
-    } finally {
-      setLoadingMsgs(false);
-    }
+    } catch { /* silencioso */ } finally { setLoadingMsgs(false); }
   }, []);
   useEffect(() => {
     if (!selJid) return;
@@ -100,7 +98,6 @@ export default function GruposInbox() {
     return () => clearInterval(i);
   }, [selJid, loadMessages]);
 
-  // Rola pro fim quando as mensagens mudam.
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
   }, [messages]);
@@ -112,86 +109,106 @@ export default function GruposInbox() {
 
   const selected = groups.find((g) => g.jid === selJid) ?? null;
 
-  const send = async () => {
+  const send = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     const text = reply.trim();
     if (!text || !selJid || sending) return;
     setSending(true);
-    const optimistic: GMessage = {
-      id: `tmp-${Date.now()}`,
-      direction: 'out',
-      sender_name: 'Você',
-      body: text,
-      created_at: new Date().toISOString(),
-    };
+    const optimistic: GMessage = { id: `tmp-${Date.now()}`, direction: 'out', sender_name: 'Você', body: text, created_at: new Date().toISOString() };
     setMessages((p) => [...p, optimistic]);
     setReply('');
     try {
       const res = await fetch('/api/groups/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jid: selJid, text }),
       });
       if (res.status === 401) { window.location.href = '/login'; return; }
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? res.statusText);
       await loadMessages(selJid, false);
       void loadGroups();
-    } catch (e) {
+    } catch (err) {
       setMessages((p) => p.filter((m) => m.id !== optimistic.id));
       setReply(text);
-      alert('Erro ao enviar: ' + (e as Error).message);
+      alert('Erro ao enviar: ' + (err as Error).message);
     } finally {
       setSending(false);
     }
   };
 
+  const shellClass = `conv-shell${selJid ? ' conv-shell--chat-open' : ''}`;
+
   return (
-    <section className={`grp-inbox${selJid ? ' has-selection' : ''}`}>
+    <div className={shellClass}>
       {/* Lista de grupos */}
-      <aside className="grp-list">
-        <div className="grp-list-head">
-          <h1 className="grp-list-title">Grupos</h1>
+      <aside className="conv-list" aria-label="Lista de grupos">
+        <div className="conv-list-head">
+          <h1 className="conv-list-title">Grupos</h1>
+        </div>
+
+        <div className="conv-search">
+          <svg className="conv-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
           <input
-            className="bi-leads-search"
             type="search"
+            className="conv-search-input"
             placeholder="Buscar grupo…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Buscar grupo"
           />
         </div>
-        {error && <div className="conv-error" role="alert">{error}</div>}
-        {loading && groups.length === 0 && <div className="grp-list-state">Carregando grupos…</div>}
-        <div className="grp-list-rows">
-          {filtered.map((g) => (
-            <button
-              key={g.jid}
-              className={`grp-row${g.jid === selJid ? ' is-active' : ''}`}
-              type="button"
-              onClick={() => setSelJid(g.jid)}
-            >
-              <div className="grp-avatar" aria-hidden="true">{initials(g.name)}</div>
-              <div className="grp-row-main">
-                <div className="grp-row-top">
-                  <span className="grp-row-name">{g.name}</span>
-                  <span className="grp-row-time">{relTime(g.lastAt)}</span>
-                </div>
-                <div className="grp-row-bottom">
-                  <span className="grp-row-preview">
-                    {g.lastBody ? (g.lastDirection === 'out' ? 'Você: ' : '') + g.lastBody : `${g.size} membros`}
+
+        <div className="conv-list-body" role="list">
+          {loading && groups.length === 0 ? (
+            <div className="conv-list-state" aria-busy="true">Carregando grupos…</div>
+          ) : error && groups.length === 0 ? (
+            <div className="conv-list-state" role="alert">{error}</div>
+          ) : filtered.length === 0 ? (
+            <div className="conv-list-state">{search ? 'Nenhum grupo encontrado.' : 'Nenhum grupo.'}</div>
+          ) : (
+            filtered.map((g) => {
+              const active = g.jid === selJid;
+              return (
+                <button
+                  key={g.jid}
+                  type="button"
+                  role="listitem"
+                  className={`conv-item${active ? ' active' : ''}`}
+                  onClick={() => setSelJid(g.jid)}
+                  aria-current={active ? 'true' : undefined}
+                  aria-label={`Grupo ${g.name}`}
+                >
+                  <div className="conv-avatar" style={AVATAR_STYLE} aria-hidden="true">{initials(g.name)}</div>
+                  <span className="conv-item-main">
+                    <span className="conv-item-top">
+                      <span className="conv-item-name">{g.name}</span>
+                      <span className="conv-item-time">{relTime(g.lastAt)}</span>
+                    </span>
+                    <span className="conv-item-bottom">
+                      <span className="conv-item-preview">
+                        {g.lastBody ? (g.lastDirection === 'out' ? 'Você: ' : '') + g.lastBody : `${g.size} membros`}
+                      </span>
+                    </span>
+                    {g.demandsOpen > 0 && (
+                      <span className="conv-item-tags">
+                        <span className="conv-ia-pill"><span className="conv-ia-dot" aria-hidden="true" />{g.demandsOpen} demanda{g.demandsOpen === 1 ? '' : 's'}</span>
+                      </span>
+                    )}
                   </span>
-                  {g.demandsOpen > 0 && <span className="grp-row-badge">{g.demandsOpen}</span>}
-                </div>
-              </div>
-            </button>
-          ))}
-          {!loading && filtered.length === 0 && <div className="grp-list-state">Nenhum grupo.</div>}
+                </button>
+              );
+            })
+          )}
         </div>
       </aside>
 
       {/* Conversa do grupo */}
-      <main className="grp-chat">
+      <section className="conv-chat" aria-label="Grupo selecionado">
         {!selected ? (
-          <div className="grp-chat-empty">Selecione um grupo para ver as mensagens.</div>
+          <div className="conv-empty">Selecione um grupo para ver as mensagens.</div>
         ) : (
           <>
             <header className="conv-chat-head">
@@ -199,50 +216,48 @@ export default function GruposInbox() {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}
                      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6" /></svg>
               </button>
-              <div className="grp-avatar" aria-hidden="true">{initials(selected.name)}</div>
+              <div className="conv-avatar conv-chat-avatar" style={AVATAR_STYLE} aria-hidden="true">{initials(selected.name)}</div>
               <div className="conv-chat-id">
                 <span className="conv-chat-name">{selected.name}</span>
                 <span className="conv-chat-phone">{selected.size} membros</span>
               </div>
             </header>
 
-            <div className="conv-chat-body grp-chat-body" ref={bodyRef} aria-label="Mensagens do grupo">
+            <div className="conv-chat-body" ref={bodyRef} aria-label="Mensagens do grupo" aria-live="polite">
               {loadingMsgs && messages.length === 0 ? (
                 <div className="conv-chat-state">Carregando…</div>
               ) : messages.length === 0 ? (
                 <div className="conv-chat-state">
-                  Sem mensagens ainda. As mensagens deste grupo aparecem aqui conforme chegam
-                  (o histórico começa a partir de agora).
+                  Sem mensagens ainda. As mensagens deste grupo aparecem aqui conforme chegam.
                 </div>
               ) : (
                 messages.map((m) => (
-                  <div key={m.id} className={`grp-bubble ${m.direction === 'out' ? 'grp-bubble--out' : 'grp-bubble--in'}`}>
+                  <div key={m.id} className={`conv-bubble conv-bubble--${m.direction}`}>
                     {m.direction === 'in' && m.sender_name && (
-                      <span className="grp-bubble-sender">{m.sender_name}</span>
+                      <div className="conv-bubble-sender">{m.sender_name}</div>
                     )}
-                    <span className="grp-bubble-text">{m.body}</span>
-                    <span className="grp-bubble-time">{hhmm(m.created_at)}</span>
+                    <div className="conv-bubble-body">{m.body}</div>
+                    <div className="conv-bubble-time">{hhmm(m.created_at)}</div>
                   </div>
                 ))
               )}
             </div>
 
-            <div className="grp-composer">
+            <form className="conv-reply" onSubmit={send}>
               <input
-                className="grp-composer-input"
+                className="conv-reply-input"
                 placeholder="Escreva uma mensagem para o grupo…"
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') send(); }}
                 disabled={sending}
               />
-              <button className="fin-btn" type="button" onClick={send} disabled={sending || !reply.trim()}>
-                {sending ? 'Enviando…' : 'Enviar'}
+              <button type="submit" className="conv-send" disabled={sending || !reply.trim()}>
+                {sending ? '...' : 'Enviar'}
               </button>
-            </div>
+            </form>
           </>
         )}
-      </main>
-    </section>
+      </section>
+    </div>
   );
 }

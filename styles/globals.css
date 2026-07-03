@@ -6340,3 +6340,11 @@ legend.agent-card-title { margin-bottom: 4px; }
   .grp-inbox.has-selection .grp-list { display: none; }
   .grp-inbox:not(.has-selection) .grp-chat { display: none; }
 }
+
+/* Nome do remetente dentro do balão de grupo (aba Grupos usa as classes conv-*) */
+.conv-bubble-sender {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--brand-purple);
+  margin-bottom: 2px;
+}
