@@ -9,6 +9,21 @@ import { STATUS_LABELS, type LeadStatus } from '@/src/types';
    Identidade Cranium (roxo/violeta, pill, cards).
    ============================================================ */
 
+// Ajusta a altura do iframe de prévia para a altura real do e-mail, mostrando-o
+// por inteiro sem barra de rolagem interna (o srcDoc é same-origin, então dá pra
+// ler o conteúdo). Um pequeno respiro no fim evita cortar a última linha.
+function fitPreviewFrame(e: React.SyntheticEvent<HTMLIFrameElement>) {
+  const f = e.currentTarget;
+  try {
+    const doc = f.contentDocument || f.contentWindow?.document;
+    if (!doc) return;
+    const h = Math.max(doc.documentElement?.scrollHeight || 0, doc.body?.scrollHeight || 0);
+    if (h > 0) f.style.height = `${h + 16}px`;
+  } catch {
+    /* cross-origin improvável no srcDoc; mantém o fallback do CSS */
+  }
+}
+
 // ---------- tipos do client (espelham src/crm/email.ts) ----------
 type CampaignStatus = 'rascunho' | 'enviando' | 'enviada' | 'erro';
 
@@ -686,6 +701,7 @@ function CampaignDetail({
             className="em-preview-frame"
             srcDoc={campaign.html}
             title="Pré-visualização do e-mail"
+            onLoad={fitPreviewFrame}
           />
         </div>
       )}
@@ -1361,7 +1377,7 @@ function TemplateEditor({
 
       <div className="em-field">
         <span>Pré-visualização</span>
-        <iframe className="em-preview-frame" srcDoc={html} title="Pré-visualização do template" />
+        <iframe className="em-preview-frame" srcDoc={html} title="Pré-visualização do template" onLoad={fitPreviewFrame} />
       </div>
 
       <button className="btn btn-primary" type="button" onClick={save} disabled={busy}>
