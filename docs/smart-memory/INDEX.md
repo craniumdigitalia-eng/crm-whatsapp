@@ -1,7 +1,7 @@
 ---
 title: Smart Memory Index
 type: index
-updated: 2026-06-30
+updated: 2026-07-03
 tags: [index]
 ---
 
@@ -14,6 +14,7 @@ MOC raiz (Map of Content). Todo arquivo novo em `docs/smart-memory/` deve ser re
 ## 🧭 Comece por aqui
 - [[shared-context]] — **status board do projeto (estado real, sempre atualizado)**
 - [[project/visao-e-requisitos]] — visão, requisitos e preferências (segundo cérebro)
+- [[changelog/2026-07-03-sessao-features]] — **sessão mais recente (1-3/jul)**: IA OpenAI, Financeiro, Metas, Demandas, Grupos, site-lead, incidente Evolution
 - [[changelog/2026-06-29-sessao-features]] — o que foi construído na sessão de 29-30/jun
 
 ## Projeto
@@ -35,11 +36,13 @@ MOC raiz (Map of Content). Todo arquivo novo em `docs/smart-memory/` deve ser re
 - [[decisions/ADR-002-webhook-processing]] — webhook síncrono (maxDuration 60s)
 - [[decisions/ADR-003-portal-nextjs]] — front em Next.js App Router (epic 5)
 - [[decisions/ADR-004-canal-whatsapp-qr-vs-make]] — canal WhatsApp Evolution + aquisição Meta Lead Ads
+- [[decisions/ADR-005-ia-openai-vs-anthropic]] — IA do agente migrada de Claude para OpenAI (GPT)
 
 ## Operações
 - [[ops/setup-e-infra]] — setup, credenciais e infraestrutura
 - [[ops/teams-log]] — times formados e seus objetivos
 - [[ops/delegation-log]] — histórico de delegações do lead
+- [[changelog/2026-07-03-sessao-features]] — changelog 1-3/jul (IA OpenAI, Financeiro/Metas, Demandas, Grupos, incidente chave Evolution)
 - [[changelog/2026-06-29-sessao-features]] — changelog da sessão de features (Agenda, topbar, Novo Lead, interruptor IA, handoff)
 
 ## Agentes
