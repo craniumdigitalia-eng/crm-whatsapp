@@ -5958,7 +5958,14 @@ legend.agent-card-title { margin-bottom: 4px; }
 /* ============================================================
    Financeiro (FinanceDashboard) — reaproveita .bi-* + estas .fin-*
    ============================================================ */
-.fin { display: block; }
+/* Mesmo container de página do BI: respeita o padding e o respiro da
+   plataforma (flex:1 + padding). Sem isso o conteúdo cola nas bordas. */
+.fin {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px 48px;
+  background: var(--off-white);
+}
 
 /* Acentos nos KPIs de alerta */
 .fin-card-warn { border-color: rgba(245, 158, 11, 0.4); }
