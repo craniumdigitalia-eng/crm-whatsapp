@@ -99,6 +99,23 @@ export async function fetchProfilePictureUrl(phone: string): Promise<string | nu
   }
 }
 
+// Estado da conexao da instancia: 'open' (conectado), 'connecting', 'close'
+// (desconectado) ou 'unreachable' (servidor fora/erro). Base do alerta de queda.
+export async function getEvolutionState(): Promise<string> {
+  if (config.makeSendUrl) return "open"; // canal Make, sem instancia Evolution
+  try {
+    const evo = await getEvolutionConfig();
+    const res = await fetch(`${evo.url}/instance/connectionState/${evo.instance}`, {
+      headers: { apikey: evo.apiKey },
+    });
+    if (!res.ok) return "unreachable";
+    const json = await res.json().catch(() => null);
+    return (json?.instance?.state as string) ?? "unreachable";
+  } catch {
+    return "unreachable";
+  }
+}
+
 export interface EvoGroup {
   jid: string;
   name: string;
