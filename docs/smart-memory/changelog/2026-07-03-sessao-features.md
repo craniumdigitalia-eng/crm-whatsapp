@@ -44,7 +44,8 @@ Tudo abaixo foi construído, buildado, **publicado em produção** (`crm-cranium
 - Botão "Excluir" no cabeçalho da conversa (aba Conversas): `deleteLead` + `DELETE /api/leads/:id` (cascade apaga mensagens/tags/atribuição).
 
 ## 9. Alerta de queda da Evolution
-- `checkEvolutionHealth` + cron `/api/cron/evolution-health` (a cada 10 min; aceita `?token=` para monitor externo). Avisa por **e-mail** (canal independente do WhatsApp) só na transição cai/volta. `alert_email` em `integrations_config`.
+- `checkEvolutionHealth` + endpoint `/api/cron/evolution-health` (aceita `Bearer CRON_SECRET` ou `?token={CRON_SECRET}`). Avisa por **e-mail** (canal independente do WhatsApp) só na transição cai/volta. `alert_email` em `integrations_config`.
+- **Vercel Hobby só permite cron 1x/dia**, então NÃO dá pra rodar a checagem a cada 10 min pela Vercel. Solução: **monitor externo grátis** (UptimeRobot / cron-job.org) batendo no endpoint com `?token={CRON_SECRET}` a cada ~10 min. (Ver incidente abaixo.)
 
 ---
 
@@ -53,3 +54,9 @@ Tudo abaixo foi construído, buildado, **publicado em produção** (`crm-cranium
 - **Causa**: `integrations_config.evolution_api_key` estava com uma chave **errada** (`CraniumAdm…`, 17 chars → 401). `getEvolutionConfig` usa o **banco primeiro** (DB `??` env), então a chave errada do banco derrubava tudo.
 - **Correção**: trocada no banco para a chave correta (`cranium-crm-evolution-2026-secret`, 33 chars → 200). Vale na hora (leitura em runtime), sem deploy.
 - **Aprendizado**: a config efetiva da Evolution vem do **banco**, não do env. Ao depurar 401/conexão, checar `integrations_config` antes do env. A instância também desconecta quando o Railway reinicia — reparear pelo QR na aba WhatsApp (por isso o alerta do item 9).
+
+## ⚠️ INCIDENTE — deploys falhando por cron no plano Hobby
+- **Sintoma**: depois de adicionar o cron `/api/cron/evolution-health` (`*/10 * * * *`), **todos os `vercel --prod` passaram a falhar** com `Hobby accounts are limited to daily cron jobs`. Produção ficou travada numa versão antiga (aba Grupos aparecia como cards em vez do inbox).
+- **Causa**: a conta Vercel é **Hobby**, que só permite cron **1x por dia** (por isso o cron de follow-up é `0 12 * * *`). Um schedule mais frequente **quebra o build**.
+- **Correção**: removido o cron `evolution-health` do `vercel.json`. O endpoint continua e é acionado por **monitor externo** (`?token={CRON_SECRET}`).
+- **Aprendizado**: no Hobby, nada de cron sub-diário no `vercel.json`. Se precisar de frequência, usar monitor externo grátis ou subir pro plano Pro.

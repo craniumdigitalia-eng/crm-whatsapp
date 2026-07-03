@@ -4,10 +4,6 @@
     {
       "path": "/api/cron/followup",
       "schedule": "0 12 * * *"
-    },
-    {
-      "path": "/api/cron/evolution-health",
-      "schedule": "*/10 * * * *"
     }
   ]
 }
