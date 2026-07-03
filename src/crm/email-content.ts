@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { config } from "../config";
 
 // =====================================================================
@@ -9,7 +9,7 @@ import { config } from "../config";
 // rodapé) — o mesmo padrão do e-mail de confirmação de reunião.
 // =====================================================================
 
-const client = new Anthropic({ apiKey: config.anthropicApiKey });
+const client = new OpenAI({ apiKey: config.openaiApiKey || "sk-missing-openai-key" });
 
 // ---- Identidade Cranium (email-safe) ----
 const BRAND = "#7C3AED";
@@ -174,17 +174,13 @@ Devolva SÓ um JSON puro (sem markdown, sem texto fora do JSON), exatamente nest
 }
 Regras: paragraphs deve ter de 2 a 4 itens, cada um curto (1 a 3 frases). Texto puro, sem HTML.`;
 
-  const response = await client.messages.create({
+  const response = await client.chat.completions.create({
     model: config.agentModel,
     max_tokens: 2048,
     messages: [{ role: "user", content: prompt }],
   });
 
-  const rawText = response.content
-    .filter((b): b is Anthropic.TextBlock => b.type === "text")
-    .map((b) => b.text)
-    .join("")
-    .trim();
+  const rawText = (response.choices[0]?.message?.content ?? "").trim();
 
   const jsonMatch = rawText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {

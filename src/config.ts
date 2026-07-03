@@ -19,8 +19,12 @@ const followupInterval = parseFloat(process.env.FOLLOWUP_INTERVAL ?? "24");
 export const config = {
   port: parseInt(process.env.PORT ?? "3000", 10),
 
-  anthropicApiKey: required("ANTHROPIC_API_KEY"),
-  agentModel: process.env.AGENT_MODEL ?? "claude-opus-4-8",
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  // Provedor de IA do agente = OpenAI (GPT). Chave da API em platform.openai.com.
+  openaiApiKey: required("OPENAI_API_KEY"),
+  // Modelo do agente. Default GPT (gpt-4o). Pode trocar por gpt-4o-mini (mais barato)
+  // ou gpt-4.1 (melhor seguimento de instrucao) via AGENT_MODEL.
+  agentModel: process.env.AGENT_MODEL ?? "gpt-4o",
 
   supabaseUrl: required("SUPABASE_URL"),
   supabaseServiceRoleKey: required("SUPABASE_SERVICE_ROLE_KEY"),

@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { config } from "../config";
 import { systemPrompt, buildSystemPrompt } from "./prompt";
 import type { AgentConfig } from "./config";
@@ -7,92 +7,102 @@ import { updateLeadFields, getLeadAttribution } from "../crm/leads";
 import { createEvent, CalendarError } from "../crm/calendar";
 import { sendMeetingConfirmation } from "../crm/meeting-email";
 
-const client = new Anthropic({ apiKey: config.anthropicApiKey });
+// Provedor de IA = OpenAI (GPT). Ferramentas via function calling do Chat Completions.
+// Fallback no apiKey evita o SDK lancar no build (env ausente); em runtime a env real e usada.
+const client = new OpenAI({ apiKey: config.openaiApiKey || "sk-missing-openai-key" });
 
-// Modelos que suportam adaptive thinking + effort (Opus 4.6+/Sonnet 4.6/Fable 5).
-const supportsEffort = /opus-4-(6|7|8)|sonnet-4-6|fable-5/.test(config.agentModel);
-
-const tools = [
+// Ferramentas (function calling da OpenAI). Mesmas capacidades de antes:
+// atualizar_lead / transferir_para_humano / agendar_reuniao.
+const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
-    name: "atualizar_lead",
-    description:
-      "Registra ou atualiza os dados do lead no CRM. Use A CADA resposta do lead que traga informacao nova: servico/interesse, orcamento, e SEMPRE atualizando o resumo (notes) com o que foi dito. Tambem ajuste o status conforme o desfecho da conversa.",
-    input_schema: {
-      type: "object",
-      properties: {
-        service_interest: {
-          type: "string",
-          description: "Servico/produto que o lead deseja (ex: 'plano de saude familiar', 'seguro de vida').",
-        },
-        email: {
-          type: "string",
-          description:
-            "E-mail do lead, quando ele informar (ou confirmar). Use para salvar o e-mail que vai receber o convite/confirmacao da reuniao. Grave exatamente como o lead passou.",
-        },
-        budget: { type: "string", description: "Nocao de orcamento/valor informada pelo lead, se houver." },
-        notes: {
-          type: "string",
-          description:
-            "Resumo conciso e estruturado da qualificacao do lead, no formato definido nas instrucoes (servico, objetivo, situacao atual, proximo passo). REESCREVA o resumo inteiro (estado atual) a cada atualizacao — nao anexe nem empilhe historico. Ao agendar uma reuniao, inclua a linha 'Reuniao agendada' com o horario combinado.",
-        },
-        status: {
-          type: "string",
-          enum: ["em_atendimento", "qualificado", "perdido"],
-          description:
-            "Ajuste conforme o desfecho: 'qualificado' quando entendeu o servico e tem nocao de objetivo ou orcamento (use tambem ao AGENDAR uma reuniao, registrando 'Reuniao agendada' no notes); 'perdido' quando o lead disser claramente que NAO tem interesse.",
+    type: "function",
+    function: {
+      name: "atualizar_lead",
+      description:
+        "Registra ou atualiza os dados do lead no CRM. Use A CADA resposta do lead que traga informacao nova: servico/interesse, orcamento, e SEMPRE atualizando o resumo (notes) com o que foi dito. Tambem ajuste o status conforme o desfecho da conversa.",
+      parameters: {
+        type: "object",
+        properties: {
+          service_interest: {
+            type: "string",
+            description: "Servico/produto que o lead deseja (ex: 'plano de saude familiar', 'seguro de vida').",
+          },
+          email: {
+            type: "string",
+            description:
+              "E-mail do lead, quando ele informar (ou confirmar). Use para salvar o e-mail que vai receber o convite/confirmacao da reuniao. Grave exatamente como o lead passou.",
+          },
+          budget: { type: "string", description: "Nocao de orcamento/valor informada pelo lead, se houver." },
+          notes: {
+            type: "string",
+            description:
+              "Resumo conciso e estruturado da qualificacao do lead, no formato definido nas instrucoes (servico, objetivo, situacao atual, proximo passo). REESCREVA o resumo inteiro (estado atual) a cada atualizacao — nao anexe nem empilhe historico. Ao agendar uma reuniao, inclua a linha 'Reuniao agendada' com o horario combinado.",
+          },
+          status: {
+            type: "string",
+            enum: ["em_atendimento", "qualificado", "perdido"],
+            description:
+              "Ajuste conforme o desfecho: 'qualificado' quando entendeu o servico e tem nocao de objetivo ou orcamento (use tambem ao AGENDAR uma reuniao, registrando 'Reuniao agendada' no notes); 'perdido' quando o lead disser claramente que NAO tem interesse.",
+          },
         },
       },
     },
   },
   {
-    name: "transferir_para_humano",
-    description:
-      "Transfere o atendimento para um especialista humano. Use quando o lead pedir falar com alguem, quiser proposta formal, demonstrar intencao clara de contratar, ou a conversa exigir um especialista.",
-    input_schema: {
-      type: "object",
-      properties: {
-        resumo: {
-          type: "string",
-          description:
-            "Resumo da qualificacao para o especialista que vai assumir, no mesmo formato estruturado do campo notes, com o Status indicando a transferencia. Vira o resumo (notes) do lead.",
+    type: "function",
+    function: {
+      name: "transferir_para_humano",
+      description:
+        "Transfere o atendimento para um especialista humano. Use quando o lead pedir falar com alguem, quiser proposta formal, demonstrar intencao clara de contratar, ou a conversa exigir um especialista.",
+      parameters: {
+        type: "object",
+        properties: {
+          resumo: {
+            type: "string",
+            description:
+              "Resumo da qualificacao para o especialista que vai assumir, no mesmo formato estruturado do campo notes, com o Status indicando a transferencia. Vira o resumo (notes) do lead.",
+          },
         },
+        required: ["resumo"],
       },
-      required: ["resumo"],
     },
   },
   {
-    name: "agendar_reuniao",
-    description:
-      "Cria a reuniao online no Google Calendar e envia o convite. Use SOMENTE depois que o lead CONFIRMAR um dia e horario especificos (nunca invente data/hora). Apos sucesso, confirme ao lead que enviou o convite. Se a ferramenta retornar erro, NAO prometa o agendamento — reconfirme o horario com o lead ou use transferir_para_humano.",
-    input_schema: {
-      type: "object",
-      properties: {
-        data_hora_iso: {
-          type: "string",
-          description:
-            "Data e hora de inicio da reuniao em ISO 8601 no horario de Brasilia (ex.: '2026-07-02T15:00:00-03:00'). Deve ser uma data/hora FUTURA e em horario comercial.",
+    type: "function",
+    function: {
+      name: "agendar_reuniao",
+      description:
+        "Cria a reuniao online no Google Calendar e envia o convite. Use SOMENTE depois que o lead CONFIRMAR um dia e horario especificos (nunca invente data/hora). Apos sucesso, confirme ao lead que enviou o convite. Se a ferramenta retornar erro, NAO prometa o agendamento — reconfirme o horario com o lead ou use transferir_para_humano.",
+      parameters: {
+        type: "object",
+        properties: {
+          data_hora_iso: {
+            type: "string",
+            description:
+              "Data e hora de inicio da reuniao em ISO 8601 no horario de Brasilia (ex.: '2026-07-02T15:00:00-03:00'). Deve ser uma data/hora FUTURA e em horario comercial.",
+          },
+          duracao_min: {
+            type: "number",
+            description:
+              "Duracao do BLOQUEIO na agenda em minutos (default 60). NAO reduza para 20: ao lead comunicamos uma call rapida de ~20 min, mas reservamos 60 min de margem. So altere se o lead pedir explicitamente uma reuniao mais longa.",
+          },
+          titulo: {
+            type: "string",
+            description: "Titulo opcional do evento. Se vazio, usa 'Reuniao Cranium × {nome do lead}'.",
+          },
+          observacoes: {
+            type: "string",
+            description: "Observacoes/contexto para a descricao do evento (ex.: resumo da qualificacao). Opcional.",
+          },
         },
-        duracao_min: {
-          type: "number",
-          description:
-            "Duracao do BLOQUEIO na agenda em minutos (default 60). NAO reduza para 20: ao lead comunicamos uma call rapida de ~20 min, mas reservamos 60 min de margem na agenda. So altere se o lead pedir explicitamente uma reuniao mais longa.",
-        },
-        titulo: {
-          type: "string",
-          description: "Titulo opcional do evento. Se vazio, usa 'Reuniao Cranium × {nome do lead}'.",
-        },
-        observacoes: {
-          type: "string",
-          description: "Observacoes/contexto para a descricao do evento (ex.: resumo da qualificacao). Opcional.",
-        },
+        required: ["data_hora_iso"],
       },
-      required: ["data_hora_iso"],
     },
   },
 ];
 
-function historyToMessages(history: Message[]): Anthropic.MessageParam[] {
-  // Mapeia o historico do CRM para o formato de mensagens da API.
+function historyToMessages(history: Message[]): OpenAI.Chat.Completions.ChatCompletionMessageParam[] {
+  // Mapeia o historico do CRM para o formato de mensagens da API (in=user, out=assistant).
   return history.map((m) => ({
     role: m.direction === "in" ? ("user" as const) : ("assistant" as const),
     content: m.body,
@@ -287,85 +297,76 @@ export async function generateReply(
   history: Message[],
   opts: GenerateOptions = {}
 ): Promise<AgentResult> {
-  // any[] porque o historico mistura mensagens de texto e blocos de conteudo (tool_use/thinking).
-  const messages: any[] = historyToMessages(history);
-  let handoff = false;
-
   // Monta o system prompt uma vez (config override na previa, ou a config salva).
   // Acrescenta o CONTEXTO DESTE LEAD (e-mail + origem) para a coleta de e-mail
   // antes de agendar (confirmar se veio do formulario; perguntar se veio do WhatsApp).
-  const system = (opts.config ? buildSystemPrompt(opts.config) : await systemPrompt()) +
+  const system =
+    (opts.config ? buildSystemPrompt(opts.config) : await systemPrompt()) +
     (await leadContextBlock(lead, opts.dryRun));
+
+  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: "system", content: system },
+    ...historyToMessages(history),
+  ];
+  let handoff = false;
 
   // Loop agentic: executa ferramentas ate o modelo dar a resposta final.
   for (let i = 0; i < 5; i++) {
-    const params: any = {
+    const response = await client.chat.completions.create({
       model: config.agentModel,
       max_tokens: 1024,
-      system,
-      tools,
       messages,
-    };
-    if (supportsEffort) {
-      params.thinking = { type: "adaptive" };
-      params.output_config = { effort: "low" };
-    }
+      tools,
+      tool_choice: "auto",
+    });
 
-    const response = await client.messages.create(params);
+    const msg = response.choices[0]?.message;
+    if (!msg) break;
 
-    if (response.stop_reason === "tool_use") {
-      const toolResults: Anthropic.ToolResultBlockParam[] = [];
-      for (const block of response.content) {
-        if (block.type === "tool_use") {
-          let content = "ok";
-          if (opts.dryRun) {
-            // Previa: nao grava no CRM nem cria evento real; so detecta o handoff
-            // e simula o resultado do agendamento para o fluxo continuar.
-            handoff = handoff || block.name === "transferir_para_humano";
-            if (block.name === "agendar_reuniao") {
-              content = "Reuniao simulada (previa) — em producao o evento seria criado no Google Calendar. Confirme ao lead.";
-            }
-          } else {
-            const result = await applyTool(lead, block.name, block.input);
-            handoff = handoff || result.handoff;
-            content = result.content;
-          }
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: block.id,
-            content,
-          });
+    if (msg.tool_calls && msg.tool_calls.length > 0) {
+      // Preserva a mensagem do assistente (com os tool_calls) e devolve um
+      // tool_result (role 'tool') para cada chamada.
+      messages.push(msg);
+      for (const tc of msg.tool_calls) {
+        if (tc.type !== "function") continue;
+        let args: any = {};
+        try {
+          args = JSON.parse(tc.function.arguments || "{}");
+        } catch {
+          args = {};
         }
+        let content = "ok";
+        if (opts.dryRun) {
+          // Previa: nao grava no CRM nem cria evento real; so detecta o handoff
+          // e simula o resultado do agendamento para o fluxo continuar.
+          handoff = handoff || tc.function.name === "transferir_para_humano";
+          if (tc.function.name === "agendar_reuniao") {
+            content =
+              "Reuniao simulada (previa) — em producao o evento seria criado no Google Calendar. Confirme ao lead.";
+          }
+        } else {
+          const result = await applyTool(lead, tc.function.name, args);
+          handoff = handoff || result.handoff;
+          content = result.content;
+        }
+        messages.push({ role: "tool", tool_call_id: tc.id, content });
       }
-      // Preserva o conteudo do assistente (inclui blocos de thinking) e devolve os resultados.
-      messages.push({ role: "assistant", content: response.content });
-      messages.push({ role: "user", content: toolResults });
       continue;
     }
 
-    // Resposta final: junta os blocos de texto.
-    let reply = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("\n")
-      .trim();
+    // Resposta final.
+    let reply = (msg.content ?? "").trim();
 
-    // Guarda: se o modelo encerrou o turno SÓ com ferramenta (ex.: registrou o lead
-    // com atualizar_lead) e não falou com o corretor, refaz o turno SEM ferramentas
-    // para garantir uma resposta em texto. Os dados já foram gravados no loop acima;
-    // aqui só forçamos a fala. Evita deixar o lead no vácuo após responder.
+    // Guarda: se o modelo encerrou o turno SO com ferramenta (sem falar com o
+    // lead), refaz o turno SEM ferramentas para garantir uma resposta em texto.
+    // Os dados ja foram gravados no loop acima; aqui so forcamos a fala.
     if (!reply) {
-      const fb = await client.messages.create({
+      const fb = await client.chat.completions.create({
         model: config.agentModel,
         max_tokens: 1024,
-        system,
-        messages: historyToMessages(history),
+        messages: [{ role: "system", content: system }, ...historyToMessages(history)],
       });
-      reply = fb.content
-        .filter((b): b is Anthropic.TextBlock => b.type === "text")
-        .map((b) => b.text)
-        .join("\n")
-        .trim();
+      reply = (fb.choices[0]?.message?.content ?? "").trim();
     }
     return { reply, handoff };
   }
