@@ -6155,3 +6155,80 @@ legend.agent-card-title { margin-bottom: 4px; }
   border: 1px solid #FECACA;
 }
 .conv-btn--danger:not(:disabled):hover { background: #FEE2E2; border-color: #f0a3a3; }
+
+/* ============================================================
+   Quadro de Demandas (DemandasBoard)
+   ============================================================ */
+.dem-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+@media (max-width: 900px) { .dem-board { grid-template-columns: 1fr; } }
+
+.dem-col {
+  background: #fff;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.dem-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+}
+.dem-head-aberta    { background: #3B82F6; }
+.dem-head-andamento { background: #F59E0B; }
+.dem-head-concluida { background: #10B981; }
+.dem-col-count {
+  font-size: 12.5px;
+  font-weight: 700;
+  background: rgba(255,255,255,.25);
+  border-radius: var(--radius-pill);
+  padding: 1px 9px;
+}
+.dem-col-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; min-height: 80px; }
+
+.dem-card {
+  background: var(--off-white);
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+.dem-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dem-cat {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--brand-dark);
+  background: var(--brand-tint);
+  border: 1px solid rgba(124,58,237,.2);
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+}
+.dem-summary { margin: 8px 0 6px; font-size: 14px; line-height: 1.45; color: var(--fg); }
+.dem-meta { font-size: 12px; color: var(--fg-muted); display: flex; flex-wrap: wrap; gap: 4px; }
+.dem-group { font-weight: 600; color: var(--fg); }
+.dem-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.dem-move {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--brand-dark);
+  background: #fff;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+.dem-move:hover { background: var(--brand-tint); }
+.dem-move--fwd { margin-left: auto; }

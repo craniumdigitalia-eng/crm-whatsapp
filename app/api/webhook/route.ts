@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { parseWebhook } from '@/src/whatsapp/evolution';
+import { parseWebhook, parseGroupWebhook } from '@/src/whatsapp/evolution';
 import { getEvolutionConfig } from '@/src/crm/integrations';
 import { handleInbound } from '@/src/handler';
+import { handleGroupMessage } from '@/src/crm/demands';
 
 // POST /api/webhook — ingresso de mensagens do WhatsApp via Evolution API (ADR-004).
 // A Evolution chama esta URL no evento `messages.upsert`. O payload e normalizado
@@ -52,11 +53,17 @@ export async function POST(req: Request) {
   // parseWebhook ignora grupos/status/mensagens sem texto -> pode retornar [].
   const body = await req.json().catch(() => ({}));
   const messages = parseWebhook(body);
+  const groupMessages = parseGroupWebhook(body);
 
   try {
     // Um payload messages.upsert pode trazer varias mensagens — processa todas.
     for (const msg of messages) {
       await handleInbound(msg);
+    }
+    // Mensagens de GRUPO -> quadro de Demandas (gatilho "demanda"). Nao passam
+    // pelo agente de leads (atendimento 1:1 fica separado).
+    for (const gm of groupMessages) {
+      await handleGroupMessage(gm);
     }
     // 200 sempre que a origem foi validada (mesmo com 0 mensagens uteis) —
     // evita reentregas em massa da Evolution.

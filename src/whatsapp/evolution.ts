@@ -10,6 +10,16 @@ export interface InboundMessage {
   externalId: string; // key.id da Evolution (ou ID repassado pelo Make) — base do dedupe
 }
 
+// Mensagem vinda de um GRUPO de WhatsApp (...@g.us). Usada pelo quadro de Demandas.
+export interface GroupMessage {
+  groupJid: string; // id do grupo (remoteJid, ...@g.us)
+  senderPhone: string; // participante que enviou (key.participant), so digitos
+  senderName?: string; // pushName do remetente
+  text: string;
+  fromMe: boolean;
+  externalId: string; // key.id
+}
+
 // Gera um external_id deterministico quando o Make nao fornece o wamid nativo.
 // Janela de 1 segundo (epoch_segundos) protege contra reentregas rapidas do Make.
 // Risco residual: mesma mensagem enviada duas vezes no mesmo segundo → falso positivo de dedupe.
@@ -89,6 +99,22 @@ export async function fetchProfilePictureUrl(phone: string): Promise<string | nu
   }
 }
 
+// Busca o nome/assunto de um grupo pela Evolution (best-effort; undefined se falhar).
+export async function fetchGroupSubject(groupJid: string): Promise<string | undefined> {
+  if (config.makeSendUrl) return undefined;
+  try {
+    const evo = await getEvolutionConfig();
+    const url = `${evo.url}/group/findGroupInfos/${evo.instance}?groupJid=${encodeURIComponent(groupJid)}`;
+    const res = await fetch(url, { headers: { apikey: evo.apiKey } });
+    if (!res.ok) return undefined;
+    const json = await res.json().catch(() => null);
+    const subject = json?.subject ?? (Array.isArray(json) ? json[0]?.subject : undefined);
+    return typeof subject === "string" && subject.trim() ? subject.trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // Normaliza o payload do webhook da Evolution (evento messages.upsert).
 // A Evolution pode mandar um objeto ou uma lista em body.data.
 export function parseWebhook(body: any): InboundMessage[] {
@@ -117,6 +143,43 @@ export function parseWebhook(body: any): InboundMessage[] {
     if (!text.trim()) continue;
 
     out.push({ phone, name: item.pushName, text: text.trim(), fromMe, externalId });
+  }
+  return out;
+}
+
+// Extrai as mensagens de GRUPO (...@g.us) de um payload messages.upsert da Evolution.
+// Espelha parseWebhook, mas guarda o grupo (remoteJid) e o remetente (key.participant).
+export function parseGroupWebhook(body: any): GroupMessage[] {
+  const out: GroupMessage[] = [];
+  const items = Array.isArray(body?.data) ? body.data : [body?.data];
+  for (const item of items) {
+    if (!item) continue;
+    const key = item.key ?? {};
+    const remoteJid: string = key.remoteJid ?? "";
+    if (!remoteJid.endsWith("@g.us")) continue;
+
+    const senderJid: string = key.participant ?? "";
+    const senderPhone = senderJid.split("@")[0] || "";
+    const fromMe: boolean = !!key.fromMe;
+    const externalId: string = key.id ?? "";
+
+    const msg = item.message ?? {};
+    const text: string =
+      msg.conversation ??
+      msg.extendedTextMessage?.text ??
+      msg.imageMessage?.caption ??
+      msg.videoMessage?.caption ??
+      "";
+    if (!text.trim()) continue;
+
+    out.push({
+      groupJid: remoteJid,
+      senderPhone,
+      senderName: item.pushName,
+      text: text.trim(),
+      fromMe,
+      externalId,
+    });
   }
   return out;
 }

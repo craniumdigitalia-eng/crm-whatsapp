@@ -75,6 +75,22 @@ const NAV_SECTIONS: Array<{ title: string; items: NavItemDef[] }> = [
         ),
       },
       {
+        href: '/demandas',
+        module: 'demandas',
+        label: 'Demandas',
+        ariaLabel: 'Demandas — quadro de pedidos dos grupos de clientes',
+        icon: (
+          <svg className="nav-icon" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+               aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/>
+          </svg>
+        ),
+      },
+      {
         href: '/followups',
         module: 'followups',
         label: 'Follow-up',
