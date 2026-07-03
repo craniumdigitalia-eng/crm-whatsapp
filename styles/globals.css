@@ -5837,3 +5837,120 @@ legend.agent-card-title { margin-bottom: 4px; }
   cursor: not-allowed;
   background: var(--surface-light);
 }
+
+/* ============================================================
+   Tabela de leads dentro do BI (BiLeadsTable)
+   ============================================================ */
+.bi-leads { margin-top: 22px; }
+
+.bi-leads-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.bi-leads-count {
+  font-size: 13px;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bi-leads-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 14px 0 6px;
+}
+.bi-leads-search {
+  flex: 1 1 240px;
+  min-width: 200px;
+  padding: 9px 13px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--fg);
+  background: #fff;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.bi-leads-search:focus {
+  outline: none;
+  border-color: var(--brand-light);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.18);
+}
+.bi-leads-select {
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--fg);
+  background: #fff;
+  border: 1px solid var(--neutral-mid);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.bi-leads-select:focus {
+  outline: none;
+  border-color: var(--brand-light);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.18);
+}
+
+.bi-leads-table-wrap {
+  overflow-x: auto;
+  margin-top: 10px;
+}
+.bi-leads-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.bi-leads-table thead th {
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--neutral-mid);
+  white-space: nowrap;
+}
+.bi-leads-row {
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+.bi-leads-row td {
+  padding: 11px 12px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+  vertical-align: middle;
+}
+.bi-leads-row:hover { background: var(--surface-light); }
+.bi-leads-row:focus-visible {
+  outline: 2px solid var(--brand-light);
+  outline-offset: -2px;
+  background: var(--surface-light);
+}
+
+.bi-leads-name-cell { display: flex; flex-direction: column; gap: 2px; min-width: 140px; }
+.bi-leads-name { font-weight: 600; color: var(--fg); }
+.bi-leads-phone { font-size: 12.5px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+
+.bi-lead-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--fg);
+}
+.bi-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #94A3B8;
+}
+
+.bi-leads-interest { color: var(--fg-muted); max-width: 220px; }
+.bi-leads-when { color: var(--fg-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bi-leads-fu { color: var(--fg-muted); text-align: center; font-variant-numeric: tabular-nums; }

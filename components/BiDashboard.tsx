@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { LeadStatus } from '@/src/types';
+import BiLeadsTable from './BiLeadsTable';
 
 /* ============================================================
    Métricas & BI (Story 5.6)
@@ -199,6 +200,8 @@ export default function BiDashboard() {
           </p>
         </>
       )}
+
+      <BiLeadsTable />
     </section>
   );
 }
