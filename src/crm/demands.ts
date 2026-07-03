@@ -64,6 +64,23 @@ export async function listDemands(): Promise<Demand[]> {
   }
 }
 
+// Contagem de demandas por grupo (para a aba Grupos): total e abertas.
+export async function getDemandCountsByGroup(): Promise<Record<string, { aberta: number; total: number }>> {
+  try {
+    const { data } = await supabase.from("demands").select("group_jid,status");
+    const map: Record<string, { aberta: number; total: number }> = {};
+    for (const r of (data ?? []) as { group_jid: string; status: string }[]) {
+      const m = map[r.group_jid] ?? { aberta: 0, total: 0 };
+      m.total++;
+      if (r.status === "aberta") m.aberta++;
+      map[r.group_jid] = m;
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 export async function updateDemandStatus(id: string, status: DemandStatus): Promise<void> {
   const { error } = await supabase
     .from("demands")

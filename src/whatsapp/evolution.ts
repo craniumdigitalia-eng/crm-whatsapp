@@ -99,6 +99,36 @@ export async function fetchProfilePictureUrl(phone: string): Promise<string | nu
   }
 }
 
+export interface EvoGroup {
+  jid: string;
+  name: string;
+  size: number;
+  pictureUrl?: string | null;
+}
+
+// Lista TODOS os grupos em que o numero (instancia) participa. Best-effort: [] em erro.
+export async function fetchAllGroups(): Promise<EvoGroup[]> {
+  if (config.makeSendUrl) return [];
+  try {
+    const evo = await getEvolutionConfig();
+    const url = `${evo.url}/group/fetchAllGroups/${evo.instance}?getParticipants=false`;
+    const res = await fetch(url, { headers: { apikey: evo.apiKey } });
+    if (!res.ok) return [];
+    const json = await res.json().catch(() => null);
+    const arr = Array.isArray(json) ? json : Array.isArray(json?.groups) ? json.groups : [];
+    return (arr as any[])
+      .map((g) => ({
+        jid: (g.id ?? g.jid ?? "").toString(),
+        name: ((g.subject ?? g.name ?? "") as string).trim() || "Grupo sem nome",
+        size: Number(g.size ?? (Array.isArray(g.participants) ? g.participants.length : 0)) || 0,
+        pictureUrl: (g.pictureUrl ?? g.profilePicUrl ?? null) as string | null,
+      }))
+      .filter((g) => g.jid.endsWith("@g.us"));
+  } catch {
+    return [];
+  }
+}
+
 // Busca o nome/assunto de um grupo pela Evolution (best-effort; undefined se falhar).
 export async function fetchGroupSubject(groupJid: string): Promise<string | undefined> {
   if (config.makeSendUrl) return undefined;
