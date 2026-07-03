@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import GruposList from '@/components/GruposList';
+import GruposInbox from '@/components/GruposInbox';
 
 export const metadata: Metadata = {
   title: 'Grupos — Cranium Digital',
 };
 
-// Aba Grupos: lista todos os grupos de WhatsApp da Cranium (via Evolution).
+// Aba Grupos: inbox estilo WhatsApp, só de grupos (lista + conversa + responder).
 export default function GruposPage() {
-  return <GruposList />;
+  return <GruposInbox />;
 }

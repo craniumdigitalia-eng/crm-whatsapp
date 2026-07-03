@@ -3,6 +3,7 @@ import { parseWebhook, parseGroupWebhook } from '@/src/whatsapp/evolution';
 import { getEvolutionConfig } from '@/src/crm/integrations';
 import { handleInbound } from '@/src/handler';
 import { handleGroupMessage } from '@/src/crm/demands';
+import { storeGroupMessage } from '@/src/crm/groupchat';
 
 // POST /api/webhook — ingresso de mensagens do WhatsApp via Evolution API (ADR-004).
 // A Evolution chama esta URL no evento `messages.upsert`. O payload e normalizado
@@ -60,9 +61,17 @@ export async function POST(req: Request) {
     for (const msg of messages) {
       await handleInbound(msg);
     }
-    // Mensagens de GRUPO -> quadro de Demandas (gatilho "demanda"). Nao passam
-    // pelo agente de leads (atendimento 1:1 fica separado).
+    // Mensagens de GRUPO: grava no historico (inbox da aba Grupos) e roteia para
+    // o quadro de Demandas (gatilho "demanda"). Nao passam pelo agente de leads.
     for (const gm of groupMessages) {
+      await storeGroupMessage({
+        externalId: gm.externalId,
+        groupJid: gm.groupJid,
+        direction: gm.fromMe ? 'out' : 'in',
+        senderPhone: gm.senderPhone,
+        senderName: gm.senderName,
+        body: gm.text,
+      });
       await handleGroupMessage(gm);
     }
     // 200 sempre que a origem foi validada (mesmo com 0 mensagens uteis) —
