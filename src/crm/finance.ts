@@ -1,6 +1,56 @@
 import { supabase } from "../db";
 
 // =====================================================================
+// Metas de crescimento (aba Metas). Salvas em integrations_config.
+//   newPerMonth  — novos clientes previstos por mês
+//   churnPerMonth— clientes que saem por mês
+//   newTicket    — ticket (mensalidade) esperado de cada novo cliente
+//   targetMonth  — até quando projetar (YYYY-MM)
+// =====================================================================
+export interface FinanceGoals {
+  newPerMonth: number;
+  churnPerMonth: number;
+  newTicket: number;
+  targetMonth: string; // "YYYY-MM"
+}
+
+const GOALS_KEY = "finance_goals";
+const GOALS_DEFAULT: FinanceGoals = {
+  newPerMonth: 8,
+  churnPerMonth: 4,
+  newTicket: 1297,
+  targetMonth: "2026-12",
+};
+
+export async function getGoals(): Promise<FinanceGoals> {
+  try {
+    const { data, error } = await supabase
+      .from("integrations_config")
+      .select("value")
+      .eq("key", GOALS_KEY)
+      .maybeSingle();
+    if (error || !data?.value) return { ...GOALS_DEFAULT };
+    const p = JSON.parse((data as { value: string }).value) as Partial<FinanceGoals>;
+    return {
+      newPerMonth: Number.isFinite(p.newPerMonth) ? Number(p.newPerMonth) : GOALS_DEFAULT.newPerMonth,
+      churnPerMonth: Number.isFinite(p.churnPerMonth) ? Number(p.churnPerMonth) : GOALS_DEFAULT.churnPerMonth,
+      newTicket: Number.isFinite(p.newTicket) ? Number(p.newTicket) : GOALS_DEFAULT.newTicket,
+      targetMonth: typeof p.targetMonth === "string" ? p.targetMonth : GOALS_DEFAULT.targetMonth,
+    };
+  } catch (e) {
+    console.warn("[finance] getGoals:", e);
+    return { ...GOALS_DEFAULT };
+  }
+}
+
+export async function setGoals(g: FinanceGoals): Promise<void> {
+  const { error } = await supabase
+    .from("integrations_config")
+    .upsert({ key: GOALS_KEY, value: JSON.stringify(g) }, { onConflict: "key" });
+  if (error) throw error;
+}
+
+// =====================================================================
 // Módulo Financeiro da Cranium (gestão do próprio negócio, não dos leads).
 // Clientes pagantes (MRR), receitas avulsas e despesas (fixas/variáveis).
 // Base do painel de fluxo de caixa + DRE por período.
