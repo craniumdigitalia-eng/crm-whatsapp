@@ -73,6 +73,10 @@ export const config = {
   // Token enviado pelo Make em cada POST /api/webhook — validado pela Story 3.3.
   makeWebhookSecret: process.env.MAKE_WEBHOOK_SECRET ?? "",
 
+  // Formulario do site -> CRM (POST /api/site-lead). Secret compartilhado que o
+  // backend do site envia no header "x-site-secret" (ou ?token=). Fail-closed em prod.
+  siteLeadSecret: process.env.SITE_LEAD_SECRET ?? "",
+
   // Vercel Cron: segredo exigido no header Authorization: Bearer {CRON_SECRET}.
   cronSecret: process.env.CRON_SECRET ?? "",
   // Numero maximo de leads processados por ciclo de cron — evita estourar timeout da funcao.
