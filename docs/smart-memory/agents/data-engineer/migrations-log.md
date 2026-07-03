@@ -37,9 +37,24 @@ As migrações do protótipo são incrementais e aplicadas automaticamente no st
 
 > Schema base em `supabase/schema.sql` inclui Wave 0 + Wave 1. Rodar no SQL Editor do Supabase assim que credenciais forem configuradas.
 
-## Próximas migrations Supabase planejadas
+## Migrations Supabase pendentes (fila de aplicação — 2026-06-28)
+
+Pré-condições já aplicadas: schema.sql base + migrations 002, 003, 004.
+
+| # | Arquivo | Status | Descrição | Dependência |
+|---|---------|--------|-----------|-------------|
+| 005 | `005-rls-business-tables.optional.sql` | **PENDENTE** | Enable RLS (sem policies) em leads/messages/tags/lead_tags/checklist_items/integrations_config — defense-in-depth | migrations 002, 003 aplicadas ✓ |
+| 006 | `006-profiles-role-lock.sql` | **PENDENTE** | Trigger anti-escalonamento de role em profiles | migration 004 aplicada ✓ |
+| 007 | `007-email-marketing.sql` | **PENDENTE** | Tabelas de email marketing (listas, contatos, templates, campanhas, eventos) | schema.sql base ✓ |
+| 008 | `008-followup-schedule.sql` | **PENDENTE** | Tabela `follow_up_schedule` — follow-up agendado por lead | schema.sql base ✓ |
+| 009 | `009-profile-settings.sql` | **PENDENTE** | `profiles.avatar_url` + bucket Storage `avatars` + policies de pasta-própria | migration 004 aplicada ✓ |
+
+Ordem recomendada de aplicação: 006 → 007 → 008 → 005 → 009 (005 e 009 independentes entre si; 006 deve fechar hardening antes do merge de Story 5.2).
+
+Validação estática de 005 e 009: ver `rls-ac3-validation.md` (2026-06-28).
+
+## Próximas migrations planejadas
 
 | Prioridade | Descrição | Motivo | Story |
 |------------|-----------|--------|-------|
-| Média | Habilitar RLS em `leads` e `messages` + policies iniciais | Segurança do dashboard com Supabase Auth | 4.2 |
 | Baixa | Adicionar `model`, `input_tokens`, `output_tokens` em `messages` | Observabilidade de custo por conversa | 4.5 |

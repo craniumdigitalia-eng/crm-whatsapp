@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Proposta · Cranium Digital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
+:root{
+  --deep-violet:#1A0A2E; --brand-dark:#2D0F52; --brand-purple:#7C3AED; --brand-light:#A78BFA;
+  --brand-tint:#EDE9FE; --off-white:#F8F7FF; --surface-light:#F5F3FF;
+  --neutral-dark:#0F172A; --neutral-mid:#E2E8F0; --fg-muted:#475569; --fg-on-dark:#EDE9FE; --fg-on-dark-muted:#C4B0F0;
+  --font-display:'Geist','Inter',system-ui,sans-serif; --font-body:'Geist','Inter',system-ui,sans-serif; --font-mono:'Geist Mono',ui-monospace,monospace;
+  --r-md:14px; --r-lg:20px; --r-xl:28px; --r-pill:999px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--font-body);color:var(--neutral-dark);background:var(--off-white);line-height:1.65;-webkit-font-smoothing:antialiased}
+.page{width:210mm;min-height:296mm;padding:20mm 20mm;margin:0 auto;page-break-after:always;position:relative;overflow:hidden}
+.page:last-child{page-break-after:auto}
+.page.light{background:var(--off-white)}
+.page.dark{background:var(--deep-violet);color:var(--fg-on-dark)}
+.page.dark::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(124,58,237,.12) 1px, transparent 1.4px);background-size:22px 22px;opacity:.6;pointer-events:none}
+.page.dark::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 70% 0%, rgba(45,15,82,.65), transparent 60%);pointer-events:none}
+.inner{position:relative;z-index:1}
+h1{font-family:var(--font-display);font-weight:600;font-size:50px;line-height:1.07;letter-spacing:-.02em;margin:0 0 18px}
+h2{font-family:var(--font-display);font-weight:500;font-size:32px;line-height:1.15;letter-spacing:-.02em;margin:0 0 16px}
+p{margin:0 0 14px;font-size:16px}
+.muted{color:var(--fg-muted)}
+.dark .muted{color:var(--fg-on-dark-muted)}
+.label{font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-purple);display:inline-block;margin-bottom:14px}
+.dark .label{color:var(--brand-light)}
+.wordmark{font-family:var(--font-display);font-weight:700;letter-spacing:.15em;text-transform:uppercase;display:inline-flex;align-items:center;gap:12px;font-size:18px}
+.wordmark img{width:32px;height:32px;object-fit:contain}
+.wordmark .suf{font-weight:400;font-size:.55em;text-transform:lowercase;letter-spacing:.10em;color:var(--brand-light);transform:translateY(1px)}
+.cover-hero{margin-top:90px;max-width:165mm}
+.cover .sub{font-size:18px;color:var(--fg-on-dark-muted);max-width:150mm}
+.pill{display:inline-block;border:1px solid rgba(167,139,250,.35);color:var(--brand-light);border-radius:var(--r-pill);padding:6px 16px;font-size:12.5px;font-weight:500;letter-spacing:.04em}
+.cover-foot{position:absolute;left:20mm;right:20mm;bottom:20mm;z-index:1;border-top:1px solid rgba(167,139,250,.22);padding-top:14px;display:flex;justify-content:space-between;align-items:flex-end;color:var(--fg-on-dark-muted);font-size:13px}
+.cover-foot strong{color:var(--fg-on-dark);font-weight:500}
+/* lista de entrega */
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:10px 28px;margin:6px 0 0}
+.checks div{position:relative;padding:8px 0 8px 30px;font-size:16px;border-bottom:1px solid var(--neutral-mid)}
+.checks div::before{content:"";position:absolute;left:0;top:14px;width:16px;height:16px;border-radius:5px;background:var(--brand-purple)}
+.checks div svg{position:absolute;left:3px;top:11px;width:10px;height:10px;color:#fff}
+/* comparacao simples */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}
+.compare .c{border-radius:var(--r-xl);padding:24px;text-align:center}
+.compare .sdr{background:#fff;border:1px solid var(--neutral-mid)}
+.compare .ia{background:var(--brand-dark);color:var(--fg-on-dark);border:1px solid rgba(167,139,250,.2);position:relative;overflow:hidden}
+.compare .ia::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(124,58,237,.16) 1px, transparent 1.4px);background-size:20px 20px;opacity:.5}
+.compare .c .in{position:relative;z-index:1}
+.compare .t{font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:500}
+.compare .sdr .t{color:var(--fg-muted)}
+.compare .ia .t{color:var(--brand-light)}
+.compare .big{font-family:var(--font-display);font-weight:700;font-size:46px;line-height:1;margin:10px 0 6px}
+.compare .sdr .big{color:var(--neutral-dark)}
+.compare .small{font-size:13.5px}
+.compare .sdr .small{color:var(--fg-muted)}
+.compare .ia .small{color:var(--fg-on-dark-muted)}
+.line{text-align:center;margin-top:18px;font-size:15px;color:var(--fg-muted)}
+.line strong{color:var(--brand-dark)}
+/* oferta */
+.offer{background:var(--brand-dark);color:var(--fg-on-dark);border:1px solid rgba(167,139,250,.2);border-radius:var(--r-xl);padding:34px;text-align:center;position:relative;overflow:hidden;margin-top:8px}
+.offer::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(124,58,237,.16) 1px, transparent 1.4px);background-size:22px 22px;opacity:.5}
+.offer .in{position:relative;z-index:1}
+.offer .lab{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-light);font-weight:500}
+.offer .num{font-family:var(--font-display);font-weight:700;font-size:72px;line-height:1;margin:10px 0}
+.offer .num small{font-size:22px;font-weight:500;color:var(--fg-on-dark-muted)}
+.offer .save{font-size:14px;color:var(--brand-light);margin-top:-2px}
+.offer .save s{color:var(--fg-on-dark-muted)}
+.offer .bk{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:16px}
+.offer .bk span{font-size:13px;color:var(--fg-on-dark-muted);border:1px solid rgba(167,139,250,.22);border-radius:var(--r-pill);padding:6px 14px}
+.offer .bk b{color:var(--fg-on-dark);font-family:var(--font-mono);font-weight:500;margin-left:4px}
+.offer .terms{display:flex;justify-content:center;flex-wrap:wrap;gap:8px 18px;margin-top:16px}
+.offer .terms span{display:flex;gap:8px;align-items:center;font-size:14px}
+.offer .terms span::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--brand-light)}
+.note{text-align:center;font-size:13px;color:var(--fg-muted);margin-top:16px;max-width:150mm;margin-left:auto;margin-right:auto}
+.cta{border:1.5px solid var(--brand-purple);border-radius:var(--r-lg);padding:20px;margin-top:22px;background:var(--surface-light);text-align:center}
+.cta h2{font-size:24px;margin-bottom:6px}
+.cta p{margin:0}
+.foot{position:absolute;left:20mm;right:20mm;bottom:13mm;z-index:1;border-top:1px solid var(--neutral-mid);padding-top:8px;display:flex;justify-content:space-between;color:var(--fg-muted);font-size:11px}
+@media print{ .page{margin:0} @page{size:A4;margin:0} }
+</style>
+</head>
+<body>
+
+<!-- CAPA -->
+<section class="page dark cover">
+  <div class="inner">
+    <div class="wordmark"><img src="cranium-brain.png" alt="" /> CRANIUM <span class="suf">digital</span></div>
+    <div class="cover-hero">
+      <span class="pill">Proposta</span>
+      <h1 style="margin-top:22px">Uma IA que atende seus leads. 24 horas por dia.</h1>
+      <p class="sub">Ela responde na hora, qualifica e agenda. Você só fecha. Tudo no seu WhatsApp e na sua marca, por uma fração do custo de um SDR.</p>
+    </div>
+  </div>
+  <div class="cover-foot">
+    <span><strong>Cranium Digital</strong><br>Criado por corretor, para corretor.</span>
+    <span>craniumdigital.ia@gmail.com</span>
+  </div>
+</section>
+
+<!-- O QUE RECEBE + COMPARAÇÃO -->
+<section class="page light">
+  <div class="inner">
+    <span class="label">O que você recebe</span>
+    <h2>Um sistema de vendas completo, com IA.</h2>
+    <div class="checks">
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Atendente de IA no WhatsApp, 24h</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>CRM em funil, com cada lead organizado</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Follow-up automático até o lead responder</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>E-mail marketing: campanhas e listas</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Agenda que marca a reunião sozinha</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Captação por anúncios no Instagram e Facebook</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Métricas do seu funil de vendas</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Você assume a conversa quando quiser</div>
+    </div>
+
+    <span class="label" style="margin-top:30px">Por que vale</span>
+    <h2>Menos que um SDR. E não dorme.</h2>
+    <div class="compare">
+      <div class="c sdr"><div class="in">
+        <div class="t">Um SDR contratado</div>
+        <div class="big">R$ 6.300<span style="font-size:16px">/mês</span></div>
+        <div class="small">Salário + encargos. Trabalha só no comercial, tira férias e falta.</div>
+      </div></div>
+      <div class="c ia"><div class="in">
+        <div class="t">A IA Cranium</div>
+        <div class="big">R$ 2.500<span style="font-size:16px">/mês</span></div>
+        <div class="small">Trabalha 24h por dia, todos os dias. Nunca falta, nunca para.</div>
+      </div></div>
+    </div>
+    <p class="line">Você troca um custo fixo de <strong>mais de R$ 6 mil</strong> por <strong>R$ 2.500</strong>, com a IA trabalhando o dobro do tempo. E libera o seu time para vender.</p>
+  </div>
+  <div class="foot"><span>Cranium Digital</span><span>02</span></div>
+</section>
+
+<!-- A OFERTA -->
+<section class="page light">
+  <div class="inner">
+    <span class="label">A proposta</span>
+    <h2>Simples assim.</h2>
+    <p class="muted">Sem teste, sem fidelidade, sem complicação. Você ativa, a IA começa a atender, e paga mês a mês. A plataforma fica no seu nome.</p>
+
+    <div class="offer">
+      <div class="in">
+        <div class="lab">Pacote completo · sistema com IA + gestão de tráfego pago</div>
+        <div class="num">R$ 3.500<small>/mês</small></div>
+        <div class="save">De <s>R$ 3.797</s> por R$ 3.500. Você economiza R$ 297 por mês no pacote.</div>
+        <div class="bk">
+          <span>Sistema com IA <b>R$ 2.500</b></span>
+          <span>Gestão de tráfego pago <b>R$ 1.297</b></span>
+        </div>
+        <div class="terms">
+          <span>Mês a mês</span>
+          <span>Sem fidelidade</span>
+          <span>Implantação inclusa</span>
+        </div>
+      </div>
+    </div>
+    <p class="note">A gestão do tráfego pago está inclusa no pacote. A verba investida nos anúncios e os custos de operação (IA, hospedagem e WhatsApp, ~R$ 300/mês) ficam no seu nome, com transparência total.</p>
+
+    <div class="cta">
+      <h2>Quer começar?</h2>
+      <p class="muted">Aprovando, conectamos o seu WhatsApp e em poucos dias a IA já está atendendo os seus leads.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Cranium Digital · craniumdigital.ia@gmail.com</span><span>03</span></div>
+</section>
+
+</body>
+</html>

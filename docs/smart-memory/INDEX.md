@@ -1,16 +1,22 @@
 ---
 title: Smart Memory Index
 type: index
-updated: 2026-06-25
+updated: 2026-06-30
 tags: [index]
 ---
 
 # crm-whatsapp (CRM ATENDIMENTO) — Smart Memory
 
-MOC raiz. Todo arquivo novo em `docs/smart-memory/` deve ser referenciado aqui.
+MOC raiz (Map of Content). Todo arquivo novo em `docs/smart-memory/` deve ser referenciado aqui.
+
+> Como abrir no Obsidian: abra a pasta `docs/smart-memory/` como **vault**. Os links `[[...]]` conectam tudo no grafo. Cada arquivo tem frontmatter (`title`, `type`, `tags`).
+
+## 🧭 Comece por aqui
+- [[shared-context]] — **status board do projeto (estado real, sempre atualizado)**
+- [[project/visao-e-requisitos]] — visão, requisitos e preferências (segundo cérebro)
+- [[changelog/2026-06-29-sessao-features]] — o que foi construído na sessão de 29-30/jun
 
 ## Projeto
-- 🧠 [[project/visao-e-requisitos]] — **VISÃO, REQUISITOS E PREFERÊNCIAS (segundo cérebro — comece por aqui)**
 - [[project/overview]] — contexto e objetivo
 - [[project/tech-stack]] — stack
 - [[project/architecture]] — padrão arquitetural
@@ -19,26 +25,31 @@ MOC raiz. Todo arquivo novo em `docs/smart-memory/` deve ser referenciado aqui.
 - `docs/design/kv/` — KV / design system da Cranium (tokens roxo/violeta, Geist, componentes)
 
 ## Stories
-- [[stories/BACKLOG]] — stories pendentes
+- [[stories/BACKLOG]] — backlog (stories pendentes)
 - `stories/active/` — em desenvolvimento
+- `stories/in-review/` — aguardando QA · [[stories/in-review/5.7-modulo-agendamento]]
 - `stories/done/` — concluídas
 
-## Decisões Arquiteturais
-- `decisions/` — ADRs numerados
-- [[decisions/ADR-001-serverless-vercel]] — abordagem serverless na Vercel (funções `/api` nativas; gate da 3.2)
-- [[decisions/ADR-002-webhook-processing]] — webhook síncrono vs fila (decidido: síncrono, maxDuration 60s; gate da 3.3)
-- [[decisions/ADR-003-portal-nextjs]] — front → Next.js App Router para o portal (accepted; epic 5)
-- [[decisions/ADR-004-canal-whatsapp-qr-vs-make]] — canal WhatsApp: FINAL Evolution auto-hospedada; Make dropado; Google Calendar direto; aquisição Meta Lead Ads (form) outbound-first (accepted; epic 5)
+## Decisões Arquiteturais (ADRs)
+- [[decisions/ADR-001-serverless-vercel]] — serverless na Vercel (funções `/api`)
+- [[decisions/ADR-002-webhook-processing]] — webhook síncrono (maxDuration 60s)
+- [[decisions/ADR-003-portal-nextjs]] — front em Next.js App Router (epic 5)
+- [[decisions/ADR-004-canal-whatsapp-qr-vs-make]] — canal WhatsApp Evolution + aquisição Meta Lead Ads
 
 ## Operações
-- [[ops/delegation-log]] — histórico de delegações do lead
+- [[ops/setup-e-infra]] — setup, credenciais e infraestrutura
 - [[ops/teams-log]] — times formados e seus objetivos
+- [[ops/delegation-log]] — histórico de delegações do lead
+- [[changelog/2026-06-29-sessao-features]] — changelog da sessão de features (Agenda, topbar, Novo Lead, interruptor IA, handoff)
 
 ## Agentes
 - [[agents/data-engineer/schema]] — schema atual (leads, messages, funil, gaps/riscos)
 - [[agents/data-engineer/migrations-log]] — log de migrations aplicadas e planejadas
-- [[agents/qa/results]] — histórico de veredictos
-- [[agents/qa/review-2026-06-26]] — review das features do portal (CRM, integrações, login) + veredicto de segurança
+- [[agents/data-engineer/rls-ac3-validation]] — validação estática das migrations 005 e 009
+- [[agents/data-engineer/migration-apply-order]] — ordem canônica 006→005→009 (smoke-checks e rollback)
+- [[agents/qa/results]] — histórico de veredictos (inclui a leva de features 29-30/jun)
+- [[agents/qa/review-2026-06-26]] — review das features do portal (CRM, integrações, login)
+- [[agents/qa/review-5.2-ac5-e-config]] — matriz de gates por endpoint + AC5 + review config/dashboard
 - [[agents/ux/components]] — specs de componentes
 - `agents/research/` — research reports
 

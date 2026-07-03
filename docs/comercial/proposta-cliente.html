@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Proposta · Cranium Digital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
+:root{
+  --deep-violet:#1A0A2E; --brand-dark:#2D0F52; --brand-purple:#7C3AED; --brand-light:#A78BFA;
+  --brand-tint:#EDE9FE; --off-white:#F8F7FF; --surface-light:#F5F3FF;
+  --neutral-dark:#0F172A; --neutral-mid:#E2E8F0; --neutral-soft:#C4B0F0;
+  --fg-muted:#475569; --fg-on-dark:#EDE9FE; --fg-on-dark-muted:#C4B0F0;
+  --font-display:'Geist','Inter',system-ui,sans-serif;
+  --font-body:'Geist','Inter',system-ui,sans-serif;
+  --font-mono:'Geist Mono',ui-monospace,monospace;
+  --r-md:14px; --r-lg:20px; --r-xl:28px; --r-pill:999px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--font-body);color:var(--neutral-dark);background:var(--off-white);line-height:1.7;-webkit-font-smoothing:antialiased}
+.page{width:210mm;min-height:296mm;padding:20mm 18mm;margin:0 auto;page-break-after:always;position:relative;overflow:hidden}
+.page:last-child{page-break-after:auto}
+.page.light{background:var(--off-white)}
+.page.dark{background:var(--deep-violet);color:var(--fg-on-dark)}
+/* grade neural sutil */
+.page.dark::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(rgba(124,58,237,.12) 1px, transparent 1.4px);
+  background-size:22px 22px;opacity:.6;pointer-events:none}
+.page.dark::after{content:"";position:absolute;inset:0;
+  background:radial-gradient(120% 80% at 70% 0%, rgba(45,15,82,.65), transparent 60%);pointer-events:none}
+.inner{position:relative;z-index:1}
+
+/* tipografia */
+h1{font-family:var(--font-display);font-weight:600;font-size:46px;line-height:1.08;letter-spacing:-.02em;margin:0 0 16px}
+h2{font-family:var(--font-display);font-weight:500;font-size:30px;line-height:1.18;letter-spacing:-.02em;margin:0 0 14px}
+h3{font-family:var(--font-display);font-weight:600;font-size:17px;line-height:1.25;margin:0 0 6px;letter-spacing:-.01em}
+p{margin:0 0 12px;font-size:15.5px}
+.muted{color:var(--fg-muted)}
+.on-dark .muted, .dark .muted{color:var(--fg-on-dark-muted)}
+.label{font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-purple);display:inline-block;margin-bottom:14px}
+.dark .label{color:var(--brand-light)}
+.mono{font-family:var(--font-mono)}
+
+/* wordmark */
+.wordmark{font-family:var(--font-display);font-weight:700;letter-spacing:.15em;text-transform:uppercase;display:inline-flex;align-items:center;gap:12px;font-size:18px}
+.wordmark img{width:30px;height:30px;object-fit:contain}
+.wordmark .suf{font-weight:400;font-size:.55em;text-transform:lowercase;letter-spacing:.10em;color:var(--brand-light);transform:translateY(1px)}
+
+/* capa */
+.cover-hero{margin-top:78px;max-width:165mm}
+.cover-hero h1{font-size:50px}
+.cover .sub{font-size:17px;color:var(--fg-on-dark-muted);max-width:150mm}
+.cover-foot{position:absolute;left:18mm;right:18mm;bottom:18mm;z-index:1;border-top:1px solid rgba(167,139,250,.22);padding-top:14px;display:flex;justify-content:space-between;align-items:flex-end;color:var(--fg-on-dark-muted);font-size:12.5px}
+.cover-foot strong{color:var(--fg-on-dark);font-weight:500}
+
+/* pills/labels */
+.pill{display:inline-block;border:1px solid rgba(167,139,250,.35);color:var(--brand-light);border-radius:var(--r-pill);padding:5px 14px;font-size:12px;font-weight:500;letter-spacing:.04em}
+
+/* cards */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.card{background:#fff;border:1px solid var(--neutral-mid);border-radius:var(--r-lg);padding:16px 18px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -10px rgba(124,58,237,.14)}
+.card .ic{width:30px;height:30px;color:var(--brand-purple);margin-bottom:8px}
+.card.accent{background:var(--brand-tint);border-color:rgba(124,58,237,.18);box-shadow:none}
+ul.clean{list-style:none;padding:0;margin:6px 0 0}
+ul.clean li{padding:6px 0 6px 24px;position:relative;font-size:14.5px;border-bottom:1px solid var(--neutral-mid)}
+ul.clean li:last-child{border-bottom:0}
+ul.clean li::before{content:"";position:absolute;left:0;top:13px;width:8px;height:8px;border-radius:2px;background:var(--brand-purple)}
+
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}
+.kpi{background:var(--brand-tint);border:1px solid rgba(124,58,237,.16);border-radius:var(--r-lg);padding:16px;text-align:center}
+.kpi .v{font-family:var(--font-display);font-weight:600;font-size:24px;color:var(--brand-dark);line-height:1.1}
+.kpi .k{font-size:12px;color:var(--fg-muted);margin-top:6px}
+
+/* fluxo */
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
+.flow .step{border:1px solid var(--neutral-mid);border-radius:var(--r-lg);padding:14px;background:#fff}
+.flow .n{font-family:var(--font-mono);font-weight:500;width:28px;height:28px;border-radius:8px;background:var(--brand-purple);color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:10px;font-size:14px}
+.flow .step strong{font-family:var(--font-display);font-size:14.5px}
+.flow .step div{font-size:12.5px;color:var(--fg-muted)}
+
+/* oferta */
+.offer{background:var(--brand-dark);color:var(--fg-on-dark);border:1px solid rgba(167,139,250,.18);border-radius:var(--r-xl);padding:26px}
+.offer .boxes{display:flex;gap:16px;margin-top:8px}
+.offer .box{flex:1;border-radius:var(--r-lg);padding:20px}
+.offer .b-test{background:#fff;color:var(--brand-dark)}
+.offer .b-test .lab{color:var(--brand-purple)}
+.offer .b-fee{background:rgba(167,139,250,.10);border:1px solid rgba(167,139,250,.22)}
+.offer .b-fee .lab{color:var(--brand-light)}
+.offer .lab{font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+.offer .num{font-family:var(--font-display);font-weight:700;font-size:40px;line-height:1;margin:4px 0 8px}
+.offer .num small{font-size:16px;font-weight:500}
+.offer .b-fee .num{font-family:var(--font-mono);font-weight:500}
+.offer .desc{font-size:13.5px}
+.offer .cover-note{color:var(--fg-on-dark-muted);font-size:12.5px;margin-top:16px;border-top:1px solid rgba(167,139,250,.2);padding-top:12px}
+
+.cta{border:1.5px solid var(--brand-purple);border-radius:var(--r-lg);padding:18px 20px;margin-top:18px;background:var(--surface-light)}
+.foot{position:absolute;left:18mm;right:18mm;bottom:12mm;z-index:1;border-top:1px solid var(--neutral-mid);padding-top:8px;display:flex;justify-content:space-between;color:var(--fg-muted);font-size:11px}
+.dark .foot{border-color:rgba(167,139,250,.2);color:var(--fg-on-dark-muted)}
+@media print{ .page{margin:0} @page{size:A4;margin:0} }
+</style>
+</head>
+<body>
+
+<!-- CAPA -->
+<section class="page dark cover">
+  <div class="inner">
+    <div class="wordmark"><img src="cranium-brain.png" alt="" /> CRANIUM <span class="suf">digital</span></div>
+    <div class="cover-hero">
+      <span class="pill">Proposta comercial</span>
+      <h1 style="margin-top:20px">Seu lead não pode esperar. A nossa IA não deixa.</h1>
+      <p class="sub">Uma inteligência artificial atende cada lead na hora, no seu WhatsApp. Qualifica, faz follow-up e agenda a reunião. Você entra para fechar.</p>
+    </div>
+  </div>
+  <div class="cover-foot">
+    <span><strong>Cranium Digital</strong><br>Inteligência de quem vive o mercado.</span>
+    <span>Criado por corretor, para corretor.<br>craniumdigital.ia@gmail.com</span>
+  </div>
+</section>
+
+<!-- CENÁRIO + SOLUÇÃO -->
+<section class="page light">
+  <div class="inner">
+    <span class="label">O cenário</span>
+    <h2>O que faz o corretor perder venda.</h2>
+    <div class="grid2">
+      <div class="card">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+        <h3>Depende de indicação</h3><p class="muted">Um mês bomba, outro seca. Sem previsibilidade de clientes novos.</p>
+      </div>
+      <div class="card">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+        <h3>Lista fria não converte</h3><p class="muted">Tempo gasto ligando para quem nunca pediu nada.</p>
+      </div>
+      <div class="card">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>
+        <h3>O lead esfria esperando</h3><p class="muted">Quem responde primeiro fecha. O atendimento manual não dá conta.</p>
+      </div>
+      <div class="card">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 9V7a2 2 0 0 0-2-2h-2a2 2 0 1 0-4 0H6a2 2 0 0 0-2 2v2a2 2 0 1 1 0 4v2a2 2 0 0 0 2 2h2a2 2 0 1 1 4 0h2a2 2 0 0 0 2-2v-2a2 2 0 1 1 0-4z"/></svg>
+        <h3>Falta método</h3><p class="muted">Sem funil, sem follow-up, sem controle de quem está em cada etapa.</p>
+      </div>
+    </div>
+
+    <span class="label" style="margin-top:26px">A solução</span>
+    <h2>Uma IA que atende e qualifica por você.</h2>
+    <p class="muted">A gente monta a sua máquina de vendas. Tráfego que atrai quem realmente quer plano. E uma IA que atende cada pessoa na hora, no seu WhatsApp, e organiza tudo num painel. Os leads são exclusivamente seus.</p>
+    <div class="kpis">
+      <div class="kpi"><div class="v">24h</div><div class="k">Atende sem parar, todo dia</div></div>
+      <div class="kpi"><div class="v">Segundos</div><div class="k">Primeira resposta ao lead</div></div>
+      <div class="kpi"><div class="v">Automático</div><div class="k">Follow-up até o lead responder</div></div>
+    </div>
+  </div>
+  <div class="foot"><span>Cranium Digital</span><span class="mono">02</span></div>
+</section>
+
+<!-- INCLUÍDO + COMO FUNCIONA -->
+<section class="page light">
+  <div class="inner">
+    <span class="label">Incluído na plataforma</span>
+    <h2>Tudo que você recebe.</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>Atendente de IA no WhatsApp</h3>
+        <ul class="clean"><li>Responde e acolhe o lead na hora</li><li>Qualifica: perfil, interesse, momento</li><li>Tom humano, mensagens curtas</li></ul>
+      </div>
+      <div class="card">
+        <h3>Follow-up automático</h3>
+        <ul class="clean"><li>Retoma quem não respondeu</li><li>Cadência inteligente até engajar</li><li>Recua quando você assume a conversa</li></ul>
+      </div>
+      <div class="card">
+        <h3>Funil e painel</h3>
+        <ul class="clean"><li>Kanban com cada lead na sua etapa</li><li>Ficha completa com resumo da IA</li><li>Métricas do funil</li></ul>
+      </div>
+      <div class="card">
+        <h3>Agenda e captação</h3>
+        <ul class="clean"><li>Agenda no Google, com link de reunião</li><li>Confirmação por e-mail automática</li><li>Captação por anúncios no Instagram e Facebook</li></ul>
+      </div>
+    </div>
+
+    <span class="label" style="margin-top:26px">Como funciona</span>
+    <h2>Do anúncio à reunião, no automático.</h2>
+    <div class="flow">
+      <div class="step"><div class="n">1</div><strong>O lead chega</strong><div>Anúncio ou WhatsApp</div></div>
+      <div class="step"><div class="n">2</div><strong>A IA atende</strong><div>Acolhe e qualifica</div></div>
+      <div class="step"><div class="n">3</div><strong>Agenda ou transfere</strong><div>Reunião ou humano</div></div>
+      <div class="step"><div class="n">4</div><strong>Você fecha</strong><div>Foco em vender</div></div>
+    </div>
+    <p class="muted" style="margin-top:18px">Tudo no seu número e na sua marca. Você acompanha cada conversa pelo painel e assume quando quiser. A IA recua na hora.</p>
+  </div>
+  <div class="foot"><span>Cranium Digital</span><span class="mono">03</span></div>
+</section>
+
+<!-- PROPOSTA -->
+<section class="page light">
+  <div class="inner">
+    <span class="label">A proposta</span>
+    <h2>Comece testando. Sem risco.</h2>
+    <p class="muted">Você usa a plataforma completa por três meses e vê o resultado na prática: leads sendo atendidos, qualificados e agendados. Depois do teste, uma mensalidade única mantém tudo funcionando.</p>
+
+    <div class="offer">
+      <div class="boxes">
+        <div class="box b-test">
+          <div class="lab">Teste e implantação</div>
+          <div class="num">3 meses</div>
+          <div class="desc">Uso completo da plataforma para validar os resultados.</div>
+        </div>
+        <div class="box b-fee">
+          <div class="lab">Depois do teste · manutenção</div>
+          <div class="num">R$&nbsp;2.000<small>/mês</small></div>
+          <div class="desc">Plataforma no ar, IA, integrações e suporte.</div>
+        </div>
+      </div>
+      <div class="cover-note">A mensalidade cobre tudo: hospedagem, banco de dados, a inteligência artificial do atendimento, as integrações (WhatsApp, Google, anúncios), atualizações e suporte contínuo.</div>
+    </div>
+
+    <h3 style="margin-top:24px">O que a mensalidade substitui.</h3>
+    <ul class="clean" style="max-width:150mm">
+      <li>Um SDR humano para atender e qualificar, com salário e encargos</li>
+      <li>Leads perdidos por demora na resposta</li>
+      <li>Falta de follow-up e de controle do funil</li>
+    </ul>
+    <p class="muted" style="margin-top:10px">Uma a duas vendas a mais por mês já pagam a mensalidade. O resto é margem.</p>
+
+    <div class="cta">
+      <h3>Próximo passo.</h3>
+      <p style="margin:0" class="muted">Aprovando a proposta, fazemos a implantação e conectamos o seu WhatsApp. Em poucos dias a IA já está atendendo os seus leads.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Cranium Digital · craniumdigital.ia@gmail.com</span><span class="mono">04</span></div>
+</section>
+
+</body>
+</html>

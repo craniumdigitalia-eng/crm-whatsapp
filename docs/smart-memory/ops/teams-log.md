@@ -78,3 +78,22 @@ Registro de todos os Agent Teams formados neste projeto. Lead (team-os) atualiza
 - **e2e validado:** crm-data 29/29 assertions + lead via HTTP (dashboard→API→Postgres). App roda 100% no Supabase.
 - **PR #2:** https://github.com/craniumdigitalia-eng/crm-whatsapp/pull/2 (branch feat/wave1-supabase, empilhado sobre feat/wave0-hardening / PR #1). Sem merge.
 - Próximo: Wave 2 (serverless Vercel) — alinhar estratégia do Make (ponte WhatsApp) com o usuário antes.
+
+## 2026-06-28 — Team reativado (modelo de time implícito) — fechar 5.2 + perfil/config
+
+**Objetivo:** Fechar a Story 5.2 (AC3 RLS + AC5 testes negativos) e registrar trabalho novo de perfil/config.
+**Lead:** team-os (skill). **Mecanismo:** build sem TeamCreate → time implícito (Agent run_in_background + SendMessage).
+**Composição (Wave 1, paralela):**
+- crm-data — validar RLS migration 005 (AC3) + revisar migration 009 (avatar/storage). NÃO aplica no banco (usuário aplica).
+- crm-qa — desenhar testes negativos (AC5) + review de segurança do trabalho de hoje + veredicto 5.2.
+
+**Trabalho novo desta sessão (lead, fora de story formal — candidato a Story 5.15 "Perfil & Configurações"):**
+- Tela `/config` (antes 404): trocar foto (Supabase Storage), nome de exibição, senha. Arquivos: `app/(portal)/config/page.tsx`, `components/ConfigModule.tsx`, `app/api/profile/route.ts`.
+- Dashboard home real em `/` (antes só redirect p/ kanban vazio): KPIs + funil + atividade + atalhos, reusa `/api/bi/metrics`. Arquivos: `app/(portal)/page.tsx`, `components/DashboardHome.tsx`.
+- Sidebar mostra foto + link p/ /config (`components/Sidebar.tsx`, `app/(portal)/layout.tsx`).
+- Migration `009-profile-settings.sql` (+ rollback): `profiles.avatar_url` + bucket Storage `avatars` + policies pasta-própria. **Pendente de aplicação pelo usuário.**
+- Build de produção PASSOU (next build, type-check + lint OK). Dev server validado em :3955.
+
+**Status:** ativo
+**Início:** 2026-06-28
+**Wave atual:** Wave 1 (crm-data + crm-qa em paralelo)

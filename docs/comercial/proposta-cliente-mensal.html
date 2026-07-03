@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Proposta · Plano mensal · Cranium Digital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
+:root{
+  --deep-violet:#1A0A2E; --brand-dark:#2D0F52; --brand-purple:#7C3AED; --brand-light:#A78BFA;
+  --brand-tint:#EDE9FE; --off-white:#F8F7FF; --surface-light:#F5F3FF;
+  --neutral-dark:#0F172A; --neutral-mid:#E2E8F0; --neutral-soft:#C4B0F0;
+  --fg-muted:#475569; --fg-on-dark:#EDE9FE; --fg-on-dark-muted:#C4B0F0;
+  --font-display:'Geist','Inter',system-ui,sans-serif;
+  --font-body:'Geist','Inter',system-ui,sans-serif;
+  --font-mono:'Geist Mono',ui-monospace,monospace;
+  --r-md:14px; --r-lg:20px; --r-xl:28px; --r-pill:999px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--font-body);color:var(--neutral-dark);background:var(--off-white);line-height:1.6;-webkit-font-smoothing:antialiased}
+.page{width:210mm;min-height:296mm;padding:17mm 18mm;margin:0 auto;page-break-after:always;position:relative;overflow:hidden}
+.page:last-child{page-break-after:auto}
+.page.light{background:var(--off-white)}
+.page.dark{background:var(--deep-violet);color:var(--fg-on-dark)}
+.page.dark::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(124,58,237,.12) 1px, transparent 1.4px);background-size:22px 22px;opacity:.6;pointer-events:none}
+.page.dark::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 70% 0%, rgba(45,15,82,.65), transparent 60%);pointer-events:none}
+.inner{position:relative;z-index:1}
+h1{font-family:var(--font-display);font-weight:600;font-size:46px;line-height:1.08;letter-spacing:-.02em;margin:0 0 16px}
+h2{font-family:var(--font-display);font-weight:500;font-size:30px;line-height:1.18;letter-spacing:-.02em;margin:0 0 12px}
+h3{font-family:var(--font-display);font-weight:600;font-size:17px;line-height:1.25;margin:0 0 6px;letter-spacing:-.01em}
+h4{font-family:var(--font-display);font-weight:600;font-size:14px;line-height:1.2;margin:0 0 2px;letter-spacing:-.01em}
+p{margin:0 0 12px;font-size:15.5px}
+.muted{color:var(--fg-muted)}
+.dark .muted{color:var(--fg-on-dark-muted)}
+.label{font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-purple);display:inline-block;margin-bottom:12px}
+.dark .label{color:var(--brand-light)}
+.mono{font-family:var(--font-mono)}
+.wordmark{font-family:var(--font-display);font-weight:700;letter-spacing:.15em;text-transform:uppercase;display:inline-flex;align-items:center;gap:12px;font-size:18px}
+.wordmark img{width:30px;height:30px;object-fit:contain}
+.wordmark .suf{font-weight:400;font-size:.55em;text-transform:lowercase;letter-spacing:.10em;color:var(--brand-light);transform:translateY(1px)}
+.cover-hero{margin-top:78px;max-width:165mm}
+.cover-hero h1{font-size:50px}
+.cover .sub{font-size:17px;color:var(--fg-on-dark-muted);max-width:150mm}
+.cover-foot{position:absolute;left:18mm;right:18mm;bottom:18mm;z-index:1;border-top:1px solid rgba(167,139,250,.22);padding-top:14px;display:flex;justify-content:space-between;align-items:flex-end;color:var(--fg-on-dark-muted);font-size:12.5px}
+.cover-foot strong{color:var(--fg-on-dark);font-weight:500}
+.pill{display:inline-block;border:1px solid rgba(167,139,250,.35);color:var(--brand-light);border-radius:var(--r-pill);padding:5px 14px;font-size:12px;font-weight:500;letter-spacing:.04em}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.card{background:#fff;border:1px solid var(--neutral-mid);border-radius:var(--r-lg);padding:16px 18px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -10px rgba(124,58,237,.14)}
+.card .ic{width:28px;height:28px;color:var(--brand-purple);margin-bottom:8px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}
+.kpi{background:var(--brand-tint);border:1px solid rgba(124,58,237,.16);border-radius:var(--r-lg);padding:16px;text-align:center}
+.kpi .v{font-family:var(--font-display);font-weight:600;font-size:24px;color:var(--brand-dark);line-height:1.1}
+.kpi .k{font-size:12px;color:var(--fg-muted);margin-top:6px}
+.feats{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.feat{background:#fff;border:1px solid var(--neutral-mid);border-radius:var(--r-md);padding:13px 14px}
+.feat .ic{width:22px;height:22px;color:var(--brand-purple);margin-bottom:7px;display:block}
+.feat p{font-size:12px;color:var(--fg-muted);margin:0;line-height:1.45}
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
+.flow .step{border:1px solid var(--neutral-mid);border-radius:var(--r-md);padding:12px;background:#fff}
+.flow .n{font-family:var(--font-mono);font-weight:500;width:26px;height:26px;border-radius:7px;background:var(--brand-purple);color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:13px}
+.flow .step strong{font-family:var(--font-display);font-size:13.5px}
+.flow .step div{font-size:12px;color:var(--fg-muted)}
+/* breakdown custo SDR */
+.bd{background:#fff;border:1px solid var(--neutral-mid);border-radius:var(--r-lg);padding:6px 20px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -12px rgba(124,58,237,.14)}
+.bd .row{display:flex;justify-content:space-between;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--neutral-mid)}
+.bd .row .lab{font-size:14.5px}
+.bd .row .lab small{display:block;color:var(--fg-muted);font-size:11.5px}
+.bd .row .val{font-family:var(--font-mono);font-weight:500;font-size:15px}
+.bd .row.plus .val{color:var(--brand-purple)}
+.bd .row.total{border-bottom:0;border-top:2px solid var(--brand-purple);margin-top:2px;padding-top:14px}
+.bd .row.total .lab{font-family:var(--font-display);font-weight:600;font-size:17px}
+.bd .row.total .val{font-family:var(--font-display);font-weight:700;font-size:26px;color:var(--brand-dark)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chips span{font-size:11px;background:var(--brand-tint);color:var(--brand-dark);border-radius:var(--r-pill);padding:4px 11px;font-weight:500}
+.human{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.human .h{border:1px solid var(--neutral-mid);border-radius:var(--r-md);padding:12px;background:#fff}
+.human .h .ic{width:22px;height:22px;color:var(--brand-purple);margin-bottom:6px;display:block}
+.human .h p{font-size:11.5px;color:var(--fg-muted);margin:0;line-height:1.4}
+/* comparativo */
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+.vs .col{border-radius:var(--r-xl);padding:22px;position:relative;overflow:hidden}
+.vs .col-h{background:#fff;border:1px solid var(--neutral-mid)}
+.vs .col-ai{background:var(--brand-dark);color:var(--fg-on-dark);border:1px solid rgba(167,139,250,.2)}
+.vs .col-ai::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(124,58,237,.16) 1px, transparent 1.4px);background-size:20px 20px;opacity:.5}
+.vs .col .in{position:relative;z-index:1}
+.vs .tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:500}
+.vs .col-h .tag{color:var(--fg-muted)}
+.vs .col-ai .tag{color:var(--brand-light)}
+.vs .big{font-family:var(--font-display);font-weight:700;font-size:34px;line-height:1;margin:8px 0 2px}
+.vs .col-h .big{color:var(--neutral-dark)}
+.vs .sub{font-size:12.5px;margin-bottom:12px}
+.vs .col-h .sub{color:var(--fg-muted)}
+.vs .col-ai .sub{color:var(--fg-on-dark-muted)}
+.vs ul{list-style:none;padding:0;margin:0}
+.vs ul li{font-size:13.5px;padding:7px 0 7px 24px;position:relative;border-top:1px solid rgba(124,58,237,.1)}
+.vs .col-ai ul li{border-top-color:rgba(167,139,250,.16)}
+.vs ul li:first-child{border-top:0}
+.vs .col-h li::before{content:"–";position:absolute;left:4px;top:6px;color:#94a3b8;font-weight:700}
+.vs .col-ai li::before{content:"+";position:absolute;left:3px;top:6px;color:var(--brand-light);font-weight:700}
+.hcost{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.hcost .b{border:1px solid var(--neutral-mid);border-radius:var(--r-md);padding:13px;text-align:center;background:#fff}
+.hcost .b .v{font-family:var(--font-display);font-weight:700;font-size:20px;color:var(--brand-dark)}
+.hcost .b .k{font-size:11.5px;color:var(--fg-muted);margin-top:4px}
+.turn{margin-top:16px;background:var(--brand-dark);color:var(--fg-on-dark);border-radius:var(--r-lg);padding:18px 20px;position:relative;overflow:hidden}
+.turn::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(124,58,237,.16) 1px, transparent 1.4px);background-size:20px 20px;opacity:.45}
+.turn .in{position:relative;z-index:1}
+.turn h3{color:#fff;margin-bottom:4px}
+.turn p{margin:0;font-size:14px;color:var(--fg-on-dark-muted)}
+/* preço */
+.plan{display:flex;gap:16px;margin-top:8px}
+.price-card{flex:1;background:var(--brand-dark);color:var(--fg-on-dark);border:1px solid rgba(167,139,250,.18);border-radius:var(--r-xl);padding:22px;position:relative;overflow:hidden}
+.price-card::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(124,58,237,.16) 1px, transparent 1.4px);background-size:20px 20px;opacity:.5}
+.price-card .in{position:relative;z-index:1}
+.price-card .lab{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-light);font-weight:500}
+.price-card .num{font-family:var(--font-display);font-weight:700;font-size:38px;line-height:1;margin:6px 0 4px}
+.price-card .num small{font-size:15px;font-weight:500;color:var(--fg-on-dark-muted)}
+.price-card .sub{font-size:13px;color:var(--fg-on-dark-muted);margin-bottom:10px}
+.price-card .terms span{display:flex;gap:8px;align-items:center;font-size:13px;padding:4px 0}
+.price-card .terms span::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--brand-light);flex:0 0 auto}
+.op-card{flex:1;background:#fff;border:1px solid var(--neutral-mid);border-radius:var(--r-xl);padding:22px}
+.op-card .lab{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-purple);font-weight:500;margin-bottom:8px;display:block}
+.op-card table{width:100%;border-collapse:collapse}
+.op-card td{padding:7px 0;font-size:13px;border-bottom:1px solid var(--neutral-mid)}
+.op-card td:last-child{text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--neutral-dark)}
+.op-card tr.tot td{border-bottom:0;font-weight:600;font-size:14.5px;padding-top:11px}
+.op-card tr.tot td:last-child{color:var(--brand-dark);font-family:var(--font-display)}
+.op-card .note{font-size:11.5px;color:var(--fg-muted);margin-top:10px;line-height:1.5}
+.callout{background:var(--brand-tint);border:1px solid rgba(124,58,237,.18);border-radius:var(--r-lg);padding:14px 16px;margin-top:16px;font-size:13.5px}
+.cta{border:1.5px solid var(--brand-purple);border-radius:var(--r-lg);padding:16px 18px;margin-top:16px;background:var(--surface-light)}
+.foot{position:absolute;left:18mm;right:18mm;bottom:10mm;z-index:1;border-top:1px solid var(--neutral-mid);padding-top:8px;display:flex;justify-content:space-between;color:var(--fg-muted);font-size:11px}
+.dark .foot{border-color:rgba(167,139,250,.2);color:var(--fg-on-dark-muted)}
+@media print{ .page{margin:0} @page{size:A4;margin:0} }
+</style>
+</head>
+<body>
+
+<!-- CAPA -->
+<section class="page dark cover">
+  <div class="inner">
+    <div class="wordmark"><img src="cranium-brain.png" alt="" /> CRANIUM <span class="suf">digital</span></div>
+    <div class="cover-hero">
+      <span class="pill">Proposta · Plano mensal</span>
+      <h1 style="margin-top:20px">Seu lead não pode esperar. A nossa IA não deixa.</h1>
+      <p class="sub">Um sistema completo de vendas para a sua corretora. Uma IA atende cada lead na hora, no seu WhatsApp, 24 horas por dia. Você acompanha tudo num painel. E paga mês a mês.</p>
+    </div>
+  </div>
+  <div class="cover-foot">
+    <span><strong>Cranium Digital</strong><br>Inteligência de quem vive o mercado.</span>
+    <span>Criado por corretor, para corretor.<br>craniumdigital.ia@gmail.com</span>
+  </div>
+</section>
+
+<!-- CENÁRIO + SOLUÇÃO -->
+<section class="page light">
+  <div class="inner">
+    <span class="label">O cenário</span>
+    <h2>O que faz o corretor perder venda.</h2>
+    <div class="grid2">
+      <div class="card">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+        <h3>Depende de indicação</h3><p class="muted">Um mês bomba, outro seca. Sem previsibilidade de clientes novos.</p>
+      </div>
+      <div class="card">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+        <h3>Lista fria não converte</h3><p class="muted">Tempo gasto ligando para quem nunca pediu nada.</p>
+      </div>
+      <div class="card">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>
+        <h3>O lead esfria esperando</h3><p class="muted">Quem responde primeiro fecha. O atendimento manual não dá conta.</p>
+      </div>
+      <div class="card">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 9V7a2 2 0 0 0-2-2h-2a2 2 0 1 0-4 0H6a2 2 0 0 0-2 2v2a2 2 0 1 1 0 4v2a2 2 0 0 0 2 2h2a2 2 0 1 1 4 0h2a2 2 0 0 0 2-2v-2a2 2 0 1 1 0-4z"/></svg>
+        <h3>Falta método</h3><p class="muted">Sem funil, sem follow-up, sem controle de quem está em cada etapa.</p>
+      </div>
+    </div>
+    <span class="label" style="margin-top:24px">A solução</span>
+    <h2>Um sistema completo, com IA, no seu nome.</h2>
+    <p class="muted">A gente monta a sua máquina de vendas e entrega a plataforma inteira pronta: CRM, atendimento por IA, follow-up, e-mail marketing, agenda e captação. Tudo no seu número e na sua marca. Os leads são exclusivamente seus.</p>
+    <div class="kpis">
+      <div class="kpi"><div class="v">24h</div><div class="k">Atende sem parar, todo dia</div></div>
+      <div class="kpi"><div class="v">Segundos</div><div class="k">Primeira resposta ao lead</div></div>
+      <div class="kpi"><div class="v">100% seu</div><div class="k">Leads e contas no seu nome</div></div>
+    </div>
+  </div>
+  <div class="foot"><span>Cranium Digital</span><span class="mono">02</span></div>
+</section>
+
+<!-- FUNCIONALIDADES -->
+<section class="page light">
+  <div class="inner">
+    <span class="label">Tudo que você tem</span>
+    <h2>A plataforma completa.</h2>
+    <div class="feats">
+      <div class="feat"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="6" height="18" rx="1.5"/><rect x="11" y="3" width="6" height="12" rx="1.5"/><rect x="19" y="3" width="2" height="8" rx="1"/></svg><h4>CRM em funil</h4><p>Cada lead na sua etapa, do novo ao fechado.</p></div>
+      <div class="feat"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/></svg><h4>Inbox de conversas</h4><p>Todas as conversas do WhatsApp num lugar só.</p></div>
+      <div class="feat"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 3v4M9 13h.01M15 13h.01"/></svg><h4>Atendente de IA 24h</h4><p>Atende e qualifica cada lead na hora.</p></div>
+      <div class="feat"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg><h4>Follow-up automático</h4><p>A IA retoma quem não respondeu, sozinha.</p></div>
+      <div class="feat"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3 7 9 6 9-6"/></svg><h4>E-mail marketing</h4><p>Campanhas, listas, modelos e contatos.</p></div>
+      <div class="feat"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><h4>Agenda + reunião</h4><p>Marca a call no Google e envia o convite com link.</p></div>
+      <div class="feat"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l18-7-7 18-2.5-7.5L3 11z"/></svg><h4>Captação por anúncios</h4><p>Lead do Instagram e Facebook entra sozinho.</p></div>
+      <div class="feat"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 2H7a2 2 0 0 0-2 2v16l7-3 7 3V4a2 2 0 0 0-2-2z"/></svg><h4>WhatsApp no seu número</h4><p>Conectado direto, na sua marca.</p></div>
+      <div class="feat"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><h4>Métricas e BI</h4><p>KPIs do funil e do atendimento.</p></div>
+      <div class="feat"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><h4>Ficha rica do lead</h4><p>Etiquetas, checklist, foto e resumo da IA.</p></div>
+      <div class="feat"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a4 4 0 0 1 4 4v3a4 4 0 0 1-8 0V7a4 4 0 0 1 4-4z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><h4>Você assume quando quer</h4><p>Responde de qualquer aparelho e a IA recua.</p></div>
+      <div class="feat"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="10" rx="5"/><circle cx="16" cy="12" r="3" fill="currentColor" stroke="none"/></svg><h4>Liga / desliga a IA</h4><p>Pause o atendimento automático quando quiser.</p></div>
+    </div>
+    <span class="label" style="margin-top:22px">Como funciona</span>
+    <div class="flow">
+      <div class="step"><div class="n">1</div><strong>O lead chega</strong><div>Anúncio ou WhatsApp</div></div>
+      <div class="step"><div class="n">2</div><strong>A IA atende</strong><div>Acolhe e qualifica</div></div>
+      <div class="step"><div class="n">3</div><strong>Agenda ou transfere</strong><div>Reunião ou humano</div></div>
+      <div class="step"><div class="n">4</div><strong>Você fecha</strong><div>Foco em vender</div></div>
+    </div>
+  </div>
+  <div class="foot"><span>Cranium Digital</span><span class="mono">03</span></div>
+</section>
+
+<!-- CUSTO REAL DE UM SDR -->
+<section class="page light">
+  <div class="inner">
+    <span class="label">A conta que importa</span>
+    <h2>O custo real de um SDR.</h2>
+    <p class="muted">Hoje um SDR profissional custa em torno de <strong>R$ 3.600</strong> de salário. Mas para a empresa, o salário é menos da metade da conta. Com encargos e benefícios, o custo real passa de R$ 6 mil por mês.</p>
+
+    <div class="bd">
+      <div class="row"><div class="lab">Salário base do SDR<small>valor de mercado, 2026</small></div><div class="val">R$ 3.600</div></div>
+      <div class="row plus"><div class="lab">Encargos e provisões<small>INSS, FGTS, 13º, férias + 1/3, RAT, Sistema S, rescisão</small></div><div class="val">+ R$ 1.900</div></div>
+      <div class="row plus"><div class="lab">Benefícios<small>vale-transporte, vale-refeição, plano de saúde</small></div><div class="val">+ R$ 800</div></div>
+      <div class="row total"><div class="lab">Custo real para a empresa</div><div class="val">~R$ 6.300 / mês</div></div>
+    </div>
+    <div class="chips">
+      <span>INSS patronal</span><span>FGTS 8%</span><span>13º salário</span><span>Férias + 1/3</span><span>RAT / SAT</span><span>Sistema S</span><span>Multa de rescisão</span><span>Vale-transporte</span><span>Vale-refeição</span><span>Plano de saúde</span>
+    </div>
+
+    <h3 style="margin-top:22px">E ainda tem o fator humano.</h3>
+    <div class="human">
+      <div class="h"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><h4>Férias e folgas</h4><p>30 dias por ano parado, mais feriados e folgas.</p></div>
+      <div class="h"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg><h4>Faltas e atestados</h4><p>Doença, atraso, imprevisto. O lead fica sem resposta.</p></div>
+      <div class="h"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 12a9 9 0 0 1-15 6.7L3 16"/></svg><h4>Rotatividade</h4><p>Pediu as contas? Recomeça: contratar e treinar de novo.</p></div>
+      <div class="h"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg><h4>Só no comercial</h4><p>Fora do expediente, ninguém atende. A IA não para.</p></div>
+    </div>
+  </div>
+  <div class="foot"><span>Cranium Digital</span><span class="mono">04</span></div>
+</section>
+
+<!-- A VIRADA: SDR x IA -->
+<section class="page light">
+  <div class="inner">
+    <span class="label">A virada</span>
+    <h2>Deixe a IA qualificar. Seu time fecha.</h2>
+    <p class="muted">A IA faz o trabalho do SDR: atende todo lead, separa o que é quente e organiza no funil. Aí o seu time não perde tempo qualificando frio. Ele faz o que sabe: vender.</p>
+
+    <div class="vs">
+      <div class="col col-h">
+        <div class="in">
+          <div class="tag">SDR humano · CLT</div>
+          <div class="big">~R$ 6.300<span style="font-size:15px">/mês</span></div>
+          <div class="sub">Salário R$ 3.600 + encargos + benefícios (1 pessoa).</div>
+          <ul>
+            <li>~8h por dia, 5 dias por semana</li>
+            <li>Tira férias, falta, adoece</li>
+            <li>Atende um lead por vez</li>
+            <li>Pode pedir aumento ou pedir as contas</li>
+          </ul>
+        </div>
+      </div>
+      <div class="col col-ai">
+        <div class="in">
+          <div class="tag">A IA Cranium</div>
+          <div class="big">R$ 2.500<span style="font-size:15px">/mês</span></div>
+          <div class="sub">+ cerca de R$ 300 de operação. Trabalha o mês inteiro.</div>
+          <ul>
+            <li>24h por dia, 7 dias por semana, 365 dias</li>
+            <li>Nunca falta, nunca tira férias</li>
+            <li>Atende vários leads ao mesmo tempo</li>
+            <li>Responde em segundos e já entra treinada</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="hcost">
+      <div class="b"><div class="v">~R$ 36/h</div><div class="k">SDR humano, só no comercial</div></div>
+      <div class="b"><div class="v">~R$ 4/h</div><div class="k">A IA, 24 horas por dia</div></div>
+      <div class="b"><div class="v">R$ 25.000+</div><div class="k">4 a 5 SDRs p/ cobrir 24/7</div></div>
+    </div>
+
+    <div class="turn">
+      <div class="in">
+        <h3>Transforme o gasto com SDR em vendedores.</h3>
+        <p>O que você pagaria a um SDR para qualificar leads, você usa para fazer o seu time vender mais. A IA atende e separa os quentes. As pessoas fecham. Você sai de um custo fixo de mais de R$ 6 mil para R$ 2.500, com a IA trabalhando o dobro do tempo.</p>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Cranium Digital</span><span class="mono">05</span></div>
+</section>
+
+<!-- PROPOSTA -->
+<section class="page light">
+  <div class="inner">
+    <span class="label">A proposta</span>
+    <h2>Plano mensal. Você paga conforme usa.</h2>
+    <p class="muted">Sem período de teste e sem fidelidade. A plataforma fica no seu nome: você é dono de tudo. A Cranium configura, gerencia e mantém a IA trabalhando. As contas de operação ficam com você, com total transparência.</p>
+
+    <div class="plan">
+      <div class="price-card">
+        <div class="in">
+          <div class="lab">Gestão Cranium</div>
+          <div class="num">R$&nbsp;2.500<small>/mês</small></div>
+          <div class="sub">Mantemos tudo funcionando por você.</div>
+          <div class="terms">
+            <span>IA configurada e ajustada ao seu negócio</span>
+            <span>Acompanhamento, suporte e atualizações</span>
+            <span>Pago mês a mês, sem fidelidade</span>
+            <span>Implantação inclusa no 1º mês</span>
+          </div>
+        </div>
+      </div>
+      <div class="op-card">
+        <span class="lab">Custos operacionais · suas contas (~130 leads/mês)</span>
+        <table>
+          <tr><td>Inteligência artificial (atendimento)</td><td>~R$ 110</td></tr>
+          <tr><td>Hospedagem e banco de dados</td><td>~R$ 135</td></tr>
+          <tr><td>WhatsApp (conexão do número)</td><td>~R$ 55</td></tr>
+          <tr class="tot"><td>Operação / mês</td><td>~R$ 300</td></tr>
+        </table>
+        <div class="note">Ficam no seu nome, com transparência total. Variam com o volume de leads. <strong>Verba de anúncios (tráfego) à parte</strong>, definida com você.</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Resumo para ~130 leads/mês:</strong> R$ 2.500 de gestão + cerca de R$ 300 de operação no seu nome. Menos da metade de um único SDR, com a IA trabalhando 24 horas por dia. Uma a duas vendas a mais por mês já cobrem tudo com folga.
+    </div>
+
+    <div class="cta">
+      <h3>Próximo passo.</h3>
+      <p style="margin:0" class="muted">Aprovando, fazemos a implantação e conectamos o seu WhatsApp. Em poucos dias a IA já está atendendo. Acima de 130 leads no mês, a gente ajusta o plano juntos.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Cranium Digital · craniumdigital.ia@gmail.com</span><span class="mono">06</span></div>
+</section>
+
+</body>
+</html>

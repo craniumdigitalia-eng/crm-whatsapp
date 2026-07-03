@@ -10,6 +10,8 @@ related: ["[[project/architecture]]", "[[project/conventions]]"]
 
 # QA Results — Histórico de Veredictos
 
+> Detalhe da Story 5.2 (AC5 runner + RLS): seção ["Story 5.2 — Auth + RBAC + AC5 e2e"](#story-52--auth--rbac--ac5-e2e) abaixo.
+
 | Story | Data | Veredicto | Issues | Agente |
 |---|---|---|---|---|
 | 1.1 | 2026-06-25 | ⚠️ CONCERNS | 1 concern (falta teste automatizado AC4); 1 nit (catch amplo na migração) | tessera (crm-qa) |
@@ -20,6 +22,124 @@ related: ["[[project/architecture]]", "[[project/conventions]]"]
 | 3.2 | 2026-06-25 | ✅ PASS | scaffold serverless: 7 rotas fiéis ao Express + method guards (405)/id (400), stateless-safe, fronteira 3.3/3.4 ok, tsc EXIT=0. Concern: `comment` em `crons[]` do vercel.json pode falhar validação no deploy (AC5) [RESOLVIDO pelo lead]; 2 nits | tessera (crm-qa) |
 | 3.3 | 2026-06-25 | ✅ PASS | webhook idempotente: síncrono (ADR-002), dedupe 1.1 preservado, WARN sem wamid, maxDuration 60, 22/22. **Concern de segurança: auth fail-open quando `MAKE_WEBHOOK_SECRET` ausente** (cron é fail-closed) → endurecer antes do go-live | tessera (crm-qa) |
 | 3.4 | 2026-06-25 | ✅ PASS | cron followup: auth fail-closed (401 mesmo sem secret), batch limit 50 via `.limit()` + maxDuration 60, GET+POST exigem secret, node-cron dev-only. Jest 6/6 cobrindo AC6. tsc EXIT=0 | tessera (crm-qa) |
+| 5.2 (config/dash) | 2026-06-28 | ✅ PASS | tela /config + dashboard: PATCH /api/profile escopa por auth.user.id (sem IDOR), role/email imutáveis (whitelist + trigger 006), upload avatar restrito à pasta própria por policy de Storage (009), dashboard só agrega (sem PII). 2 nits (avatar_url sem validar prefixo do bucket; limite de imagem só no client). Ver review-5.2-ac5-e-config.md | tessera (crm-qa) |
+| Leva features (Novo Lead · Topbar · Interruptor IA · Agenda) | 2026-06-30 | ⚠️ CONCERNS | 0 Alto · 3 Médio · 6 Baixo. M1 "Novo Lead" com telefone existente sobrescreve status/interesse do lead; M2 editar evento ignora troca de "Lead vinculado" (PATCH não envia leadId); M3 kill-switch IA global é requireUser sem auditoria. tsc source-clean. Ver seção abaixo | tessera (crm-qa) |
+| 5.2 (story toda) | 2026-06-28 | ⚠️ CONCERNS | AC1/AC2/AC4 ✅ + AC5 runner e2e RODADO (`scripts/test/ac5-negative.mjs`): N* 11/11 (401/redirect) · F* 14/14 (403 atendente em 12 rotas admin + 200 nos GET user) · R4 PASS (trigger 006 **confirmado aplicado**, `42501`). AC3 RLS **REPROVA**: R1/R2/R3 provam que anon key LÊ e INSERE em leads/messages (migration 005 não aplicada). Condição p/ PASS pleno: aplicar 005 e rodar com `STRICT_RLS=1` (R1–R3 → PASS); trocar senha temp admin | tessera (crm-qa) |
+
+---
+
+## Leva de features 2026-06-29/30 — Novo Lead · Topbar · Interruptor IA · Agenda
+
+**Veredicto geral: ⚠️ CONCERNS** — Tessera (crm-qa) — 2026-06-30
+Branch `feat/portal-epic-5`. Read-only no código de produção. `npx tsc --noEmit`: **source-clean**
+(os únicos erros são de artefatos duplicados em `.next/` — arquivos `* 2.ts` gerados por file-sync,
+não código). Achados: **0 Alto · 3 Médio · 6 Baixo**. Nada bloqueante; mediums são integridade de
+dados/UX e uma decisão de autorização. Push liberado com as observações registradas.
+
+### Veredictos por área
+| Área | Veredicto | Resumo |
+|---|---|---|
+| Novo Lead (`POST /api/leads` + modal) | ⚠️ CONCERNS | gate requireUser ✅, phone só-dígitos ≥8 ✅, status validado, existed:true tratado. **M1**: telefone existente sobrescreve status/interesse do lead. |
+| Topbar (4 botões) | ✅ PASS | logout reusa signOut ✅, ?lead/?stage validados antes de abrir drawer/filtrar ✅, sem exposição nova (mesmo dataset do kanban). Lows de perf. |
+| Interruptor IA (backend + API + AiToggle) | ⚠️ CONCERNS | trava correta em handleInbound (persiste msg, não responde) ✅, default ligado ✅, optimistic revert ✅. **M3**: kill-switch global é requireUser sem auditoria. |
+| Agenda (5.7 + cores + lado-a-lado + arrastar) | ⚠️ CONCERNS | colorId 1–11 validado ✅, drag PATCH+revert ✅, column-packing sem sobreposição incorreta ✅. **M2**: editar evento ignora troca de lead vinculado. |
+
+### Achados — Médio
+- **[M2] Editar evento ignora a troca de "Lead vinculado".** `app/api/agenda/events/[id]/route.ts:25-84`
+  só lê `summary/start/end/description/attendees/colorId`; **não lê `leadId`** do body, e
+  `AgendaEventPatch` (`src/crm/calendar.ts:297-305`) não tem `leadId`. Mas o modal de edição
+  (`components/AgendaModule.tsx:441`) **envia** `leadId` e mostra o select "Lead vinculado" em modo
+  edit. Resultado: vincular/trocar/remover o lead de um evento existente é **no-op silencioso** —
+  `extendedProperties.private.leadId` nunca é atualizado no Google. (O e-mail do lead até entra em
+  `attendees`, mas o vínculo não.) _Recomendação:_ tratar `leadId` no PATCH e atualizar
+  `extendedProperties`, ou desabilitar/ocultar o select de lead em modo edição.
+- **[M1] "Novo Lead" com telefone já existente sobrescreve o lead.** `app/api/leads/route.ts:65-85` —
+  o modal sempre manda `status: etapa`; quando o telefone já existe, `updateLeadFields` **reescreve
+  `status` e `service_interest`** do lead existente (ex.: um lead em `fechado` volta para `novo`). A UI
+  mostra "já estava no funil — recarregando", mas a mutação já ocorreu. _Recomendação:_ em `existed`,
+  não aplicar status/interesse (retornar o lead como está), ou exigir confirmação explícita.
+- **[M3] Kill-switch global da IA é `requireUser` (qualquer membro) e sem trilha de auditoria.**
+  `app/api/agente/status/route.ts:28` + `src/agent/config.ts:200`. Qualquer membro autenticado
+  pausa/religa TODA a automação (afeta custo e atendimento de todos os leads) e não há registro de
+  quem alterou. Defensável como controle operacional de equipe pequena, mas é um interruptor de alto
+  impacto. _Recomendação (decisão do produto):_ avaliar `requireAdmin` e/ou logar autor+timestamp do
+  toggle. Documentar a escolha.
+
+### Achados — Baixo
+- **[L1] `iniciarAtendimento` marca `em_atendimento` antes de checar o toggle.** `src/handler.ts:112`
+  roda `setStatus(em_atendimento)` e só depois (`:116`) a guarda de IA desligada. Com a IA OFF, um lead
+  outbound do Meta fica marcado "em atendimento" sem opener enviado e sem humano atuando — incoerente
+  com `handleInbound`, que retorna antes do setStatus. Mover a checagem do toggle para antes do setStatus.
+- **[L2] Telefone não é normalizado para E.164.** `app/api/leads/route.ts:42-49` guarda só-dígitos (sem
+  `+`/DDI garantido), divergindo do CLAUDE.md e de `isSendablePhone` (`^\+?\d{8,15}$`). Lead manual sem
+  DDI pode falhar num envio outbound futuro. `service_interest` também não tem cap de tamanho.
+- **[L3] `sendUpdates=all` em todo arraste.** `src/crm/calendar.ts:330` — cada remarcação por drag (snap
+  de 15 min) dispara e-mail de atualização aos convidados, inclusive o lead. Pode spammar em ajustes finos.
+- **[L4] `getAgentEnabled` falha ABERTO.** `src/agent/config.ts:180-197` retorna `true` (IA respondendo)
+  se a leitura de `integrations_config` der erro. Janela estreita (uma falha de banco quebraria
+  `getOrCreateLead` antes), mas um kill-switch que falha religando merece atenção.
+- **[L5] Topbar refaz `GET /api/leads` inteiro por busca e no mount.** `components/Topbar.tsx:167,209` —
+  busca refaz o fetch da lista completa a cada query (debounce) e as notificações disparam 2 fetches no
+  mount de toda página. Sem exposição nova (mesmo dataset do kanban, gate requireUser), só custo extra.
+- **[L6] Todo evento manual pede sala do Google Meet.** `src/crm/calendar.ts:146-151` — `createEvent`
+  sempre inclui `conferenceData.createRequest`, então até eventos internos/bloqueios ganham link do Meet.
+
+### O que está OK (confirmado)
+- Todas as rotas novas têm gate `requireUser` (leads POST, agente/status GET+POST, agenda GET/POST/PATCH/DELETE).
+- Validação de input sólida: colorId restrito a "1".."11" no POST e no PATCH; `enabled` exige boolean;
+  datas via `Date.parse`; `summary` não-vazio; status do lead validado contra `STATUS_LABELS`.
+- IDOR/escopo: o modelo é **single-tenant** (uma conta Cranium, equipe interna) — leads/eventos não têm
+  coluna de dono/tenant; qualquer membro opera o funil/agenda por design (coerente com `requireUser`).
+  **Documentado como esperado**, não é defeito.
+- Interruptor: `handleInbound` persiste a mensagem inbound e dedupa ANTES da checagem do toggle, e
+  **não responde** quando OFF; default = ligado; AiToggle reverte o otimismo e avisa em erro.
+- Agenda: `updateEvent` é PATCH parcial correto (drag manda só start/end → Google preserva colorId/Meet);
+  `conferenceDataVersion=1` preserva o Meet; column-packing por clusters transitivos não produz
+  sobreposição visual incorreta; drag reverte a posição e mostra toast em falha.
+- `extendedProperties.private.leadId` grava o vínculo na **criação** (a falha é só na edição — M2).
+
+**Próximo passo:** @devops push liberado (observações registradas). Endereçar M1/M2 (integridade/UX) e
+decidir M3 (autorização do kill-switch) num follow-up.
+
+---
+
+## Story 5.2 — Auth + RBAC + AC5 e2e
+
+**Veredicto: ⚠️ CONCERNS** (gate condicional: AC3/RLS depende de aplicar a migration 005) — Tessera (crm-qa) — 2026-06-28
+
+### Runner executado
+`scripts/test/ac5-negative.mjs` — runner HTTP que bate no dev server local (`npm run dev`), forja
+sessão de **atendente** de teste via `@supabase/ssr` (cookies reais) e cria/promove o usuário de
+teste com a service_role. **Rodado em 2026-06-28**, dev server `localhost:3000`, EXIT=0.
+
+```
+N*: 11 PASS · 0 FAIL · 0 PENDING   (não autenticado → 401 nas rotas /api · redirect /login na UI)
+F*: 14 PASS · 0 FAIL · 0 PENDING   (atendente → 403 nos 12 endpoints requireAdmin · 200 nos GET user)
+R*:  1 PASS · 0 FAIL · 3 PENDING   (R4 PASS=trigger 006 OK; R1/R2/R3 reprovam = RLS 005 não aplicada)
+```
+
+### Achado material — corrige premissa estaleira do contexto
+- **Migration 006 (role-lock) ESTÁ aplicada** — R4 (atendente `PATCH /rest/v1/profiles {role:admin}`)
+  retorna **403 / `42501`**. A story e a shared-context diziam "006 pendente": **desatualizado**.
+- **Migration 005 (RLS) NÃO está aplicada** — provado com **sentinela**: semeei 1 lead + 1 message via
+  service_role; a **anon key leu as duas linhas E conseguiu INSERIR** em `leads`. (O "0 linhas" de uma
+  rodada anterior era falso-positivo: as tabelas estavam vazias.) Defense-in-depth de RLS está **off**;
+  hoje a proteção dos dados de negócio é só o gate server-side (`lib/auth.ts`) + service_role.
+
+### Acceptance Criteria
+- **AC1 (login + middleware):** ✅ provado (N0 redirect `/login`; N1–N10 → 401 em `/api`).
+- **AC2 (papéis persistidos + role-lock):** ✅ `profiles.role`; **trigger 006 confirmado aplicado** (R4).
+- **AC3 (RLS em leads/messages):** ❌ **não atendido** — migration 005 não aplicada (R1–R3 provam vazamento via anon key).
+- **AC4 (RBAC writes admin):** ✅ provado (F1–F12 → 403; F13a/b GET user → 200).
+- **AC5 (teste negativo e2e):** ✅ **runner entregue e executado**; cobertura plena de N*/F*; RLS parcial (R4 ok, R1–R3 dependem de 005).
+
+### Condição para PASS pleno (gate condicional)
+1. **Aplicar `005-rls-business-tables.optional.sql`** no Supabase (RLS leads/messages/tags/…).
+2. Re-rodar: `node scripts/test/ac5-negative.mjs` com `STRICT_RLS=1` → esperar **R1/R2/R3 → PASS** (anon 0 linhas + insert negado).
+3. Pendência operacional: trocar a senha temporária do admin (`CraniumAdmin@2026`).
+
+> O bloqueio de AC3/AC5-RLS é **migration não aplicada**, não defeito de código. N*/F* (o núcleo
+> de auth+RBAC) passam 100% hoje. Sub-entrega config/dashboard de 2026-06-28 segue **✅ PASS** (linha própria).
 
 ---
 

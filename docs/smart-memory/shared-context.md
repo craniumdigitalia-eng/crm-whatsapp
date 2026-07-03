@@ -37,20 +37,27 @@
 ## 🔑 Setup / credenciais (estado)
 | Peça | Status |
 |---|---|
-| Supabase (URL + service_role + anon) | ✅ ligado · migrations 002/003/004 aplicadas |
+| Supabase (URL + service_role + anon) | ✅ ligado · migrations 002/003/004/006/009 aplicadas · **005 (RLS) NÃO aplicada** (blindagem extra pendente) |
 | Anthropic (IA) | ✅ ligada e validada (claude-opus-4-8) |
 | Login admin | ✅ `craniumdigital.ia@gmail.com` (senha temp `CraniumAdmin@2026` — trocar) |
-| WhatsApp/Evolution | ⬜ montar (Railway) |
-| Facebook via Make | ⬜ cenário no Make + adaptar `/api/leadgen` |
-| Deploy Vercel | ⬜ |
+| WhatsApp/Evolution | ✅ **conectado** (+55 21 97253-2773) |
+| Google Calendar | ✅ **conectado e testado** (auto-agendamento ativo) |
+| E-mail (Gmail SMTP) | ✅ confirmação de reunião + Google Meet |
+| Facebook / Meta Lead Ads | ✅ **conectado via Make** (webhook `/api/leadgen` + `x-make-secret`) |
+| Deploy Vercel | ✅ **NO AR** em `crm-cranium.vercel.app` (deploy via `vercel --prod` CLI, projeto `crm-cranium`) |
 
 ## 🔧 EM ANDAMENTO / FILA
-- **Hardening 5.2 (S1+S2):** trigger anti-escalonamento de role (migration 006) + `requireAdmin()` nos endpoints de credencial. (em execução)
-- **Motion neural** na tela de login (rede neural viva + cérebro com glow). (em execução)
+- **Topbar + Novo Lead + Interruptor IA (2026-06-29 — NO AR):**
+  - **Novo Lead:** `POST /api/leads` (`1e62428`) + modal NovoLeadModal no kanban, botões "Novo Lead" e "Adicionar" por coluna funcionais (`99d9265`).
+  - **Topbar 4 botões funcionais** (`38e22b9`): avatar→menu (Perfil/Sair), busca→leads (`/crm?lead=`), sino→próximas reuniões + leads novos, filtro→`/crm?stage=`. KanbanBoard lê `?lead`/`?stage` (Suspense no crm/page.tsx).
+  - **Interruptor liga/desliga da IA:** flag `agent_enabled` em integrations_config + trava no `src/handler.ts` (desligada = registra lead, não responde) + `GET/POST /api/agente/status` (`a7bf4d0`); `components/AiToggle.tsx` (switch na sidebar) (`b562788`). Tudo deploy+push OK.
+- **Agenda / Story 5.7 (2026-06-29 — NO AR):** módulo Agendamento completo. Backend `src/crm/calendar.ts` (listEvents/updateEvent/deleteEvent + AgendaEvent) + rotas `/api/agenda/events` (GET/POST/PATCH/DELETE). Frontend `components/AgendaModule.tsx` (calendário mês/semana roxo, CRUD, seletor de lead, Meet). Google Calendar = fonte da verdade (sync bidirecional ao abrir/escrever). Vínculo lead via `extendedProperties.private.leadId`. Commits `a1cd001`+`6f59938`, deploy prod OK.
+  - **Melhorias 2026-06-29 (NO AR):** (1) **11 cores** do Google por evento (`colorId`, sincroniza nos 2 lados) — `00df5aa`+`f0e279d`; (2) **eventos sobrepostos lado-a-lado** (column packing, visão semana) — `2da4333`; (3) **arrastar para remarcar** (drag-to-reschedule, pointer events, otimista+revert) — `01b739f`. Build+deploy OK.
+  - **Lição de orquestração:** evitar 2 agentes no MESMO arquivo em paralelo (crm-frontend-2 e -3 colidiram em AgendaModule.tsx; resolvido redirecionando o -3 só p/ a feature que faltava). Para mudanças no mesmo arquivo, serializar ou mandar tudo a UM agente. **Pendente: QA (crm-qa) — story em in-review.**
+- **Perfil & Config (2026-06-29 — NO AR):** tela `/config` (nome + foto via Storage), dashboard home, foto na sidebar. Migration 009 aplicada (coluna `avatar_url` + bucket `avatars` + policy `avatars_own_folder` pasta-própria). Commit `116db31` + deploy prod OK.
+- **Blindagem RLS (migration 005):** ⬜ pendente de aplicação no Supabase. QA provou que anon key lê/insere nas tabelas de negócio. Hoje só o gate server-side + service_role protege. Aplicar `005-rls-business-tables.optional.sql` → re-rodar `scripts/test/ac5-negative.mjs` com `STRICT_RLS=1`.
+- **Trocar senha temp do admin** (`CraniumAdmin@2026`).
 - **Bugs do QA (CRM):** escape duplo no Kanban; otimismo não-revertido em erro; MOCK oculta CRM vazio; IDOR tags/checklist sem escopo de dono. (a corrigir)
-- **Facebook via Make:** adaptar o card + endpoint pro fluxo Make (lead do form → POST → CRM → IA atende). (a fazer)
-- **Integrações restantes:** Evolution + QR; Google Calendar OAuth real.
-- **Deploy Vercel** (com envs) — só depois da auth/segurança fechada.
 
 ## 🗂️ Decisões (ADRs em `decisions/`)
 - ADR-001 serverless (funções /api) · ADR-002 webhook síncrono 60s · **ADR-003 Next.js** · **ADR-004 Evolution + Meta Lead Ads (Make)**.
