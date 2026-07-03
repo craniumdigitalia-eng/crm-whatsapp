@@ -46,6 +46,8 @@ interface Summary {
     mrr: number;
     arr: number;
     activeClients: number;
+    scheduledMrr: number;
+    scheduledClients: number;
     lateClients: number;
     lateValue: number;
     churnedClients: number;
@@ -189,7 +191,11 @@ export default function FinanceDashboard() {
 
           {/* KPIs */}
           <div className="bi-cards">
-            <Kpi label="MRR (receita recorrente)" value={brl(k!.mrr)} hint={`ARR ${brl(k!.arr)}`} />
+            <Kpi
+              label="MRR (receita recorrente)"
+              value={brl(k!.mrr)}
+              hint={k!.scheduledMrr > 0 ? `ARR ${brl(k!.arr)} · +${brl(k!.scheduledMrr)} a entrar (${k!.scheduledClients})` : `ARR ${brl(k!.arr)}`}
+            />
             <Kpi label="Clientes ativos" value={String(k!.activeClients)} hint={k!.avgTicket != null ? `Ticket médio ${brl(k!.avgTicket)}` : undefined} />
             <Kpi label="Inadimplência" value={String(k!.lateClients)} hint={`${brl(k!.lateValue)} em atraso`} tone={k!.lateClients > 0 ? 'warn' : undefined} />
             <Kpi label="Churn no período" value={String(k!.churnedClients)} hint={`${brl(k!.churnedMrr)} · ${pct(k!.churnRate)}`} tone={k!.churnedClients > 0 ? 'bad' : undefined} />

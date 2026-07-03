@@ -265,6 +265,8 @@ export interface FinanceSummary {
     mrr: number;
     arr: number;
     activeClients: number;
+    scheduledMrr: number;      // MRR contratado de clientes que ainda vão começar
+    scheduledClients: number;
     lateClients: number;
     lateValue: number;         // mensalidade contratada dos inadimplentes
     churnedClients: number;    // cancelados dentro do período
@@ -299,10 +301,19 @@ export async function getFinanceSummary(period: Period): Promise<FinanceSummary>
   const hasData = clients.length > 0 || revenue.length > 0 || expenses.length > 0;
   const months = monthsInWindow(win.start, win.end);
 
-  // ---- KPIs snapshot (hoje) ----
-  const active = clients.filter((c) => c.status === "ativo");
+  // ---- KPIs snapshot (mês atual) ----
+  // MRR conta só quem já está ATIVO no mês corrente (início <= fim do mês).
+  // Cliente ativo com início no futuro (ex.: "começa a pagar mês que vem") NÃO
+  // entra no MRR de hoje — vira "a entrar" (scheduled).
+  const nowY = now.getUTCFullYear();
+  const nowM = now.getUTCMonth();
+  const isActiveNow = (c: FinClient) =>
+    c.status === "ativo" && activeInMonth(c.started_at, c.canceled_at, nowY, nowM);
+  const active = clients.filter(isActiveNow);
+  const scheduled = clients.filter((c) => c.status === "ativo" && !isActiveNow(c));
   const late = clients.filter((c) => c.status === "atrasado");
   const mrr = active.reduce((s, c) => s + Number(c.monthly_value || 0), 0);
+  const scheduledMrr = scheduled.reduce((s, c) => s + Number(c.monthly_value || 0), 0);
   const lateValue = late.reduce((s, c) => s + Number(c.monthly_value || 0), 0);
 
   // Churn no período: clientes cancelados com canceled_at dentro da janela.
@@ -317,13 +328,11 @@ export async function getFinanceSummary(period: Period): Promise<FinanceSummary>
   // naquele mês (deriva de started_at/canceled_at; independe de lançamento manual).
   let recurringRevenue = 0;
   for (const { y, m } of months) {
+    const mEnd = toISODate(monthEnd(y, m));
     for (const c of clients) {
-      // Cliente conta no mês se ativo naquele mês (não cancelado antes do mês).
-      // status 'cancelado' já tem canceled_at, que limita a janela.
-      const endWindow = c.canceled_at;
-      if (activeInMonth(c.started_at, endWindow, y, m)) {
-        recurringRevenue += Number(c.monthly_value || 0);
-      }
+      if (c.started_at > mEnd) continue;                 // ainda não começou nesse mês
+      if (c.canceled_at && c.canceled_at <= mEnd) continue; // já saiu (churn) nesse mês ou antes
+      recurringRevenue += Number(c.monthly_value || 0);
     }
   }
 
@@ -364,6 +373,8 @@ export async function getFinanceSummary(period: Period): Promise<FinanceSummary>
       mrr,
       arr: mrr * 12,
       activeClients: active.length,
+      scheduledMrr,
+      scheduledClients: scheduled.length,
       lateClients: late.length,
       lateValue,
       churnedClients: churned.length,
