@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import AgentAssets from './AgentAssets';
 
 /* ============================================================
    Agente IA — personalizacao do atendimento (persona/abordagem)
@@ -356,6 +357,8 @@ export default function AgentConfigModule({ isAdmin }: { isAdmin: boolean }) {
           </div>
         </aside>
       </div>
+
+      <AgentAssets isAdmin={isAdmin} />
     </section>
   );
 }

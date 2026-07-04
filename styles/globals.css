@@ -6348,3 +6348,26 @@ legend.agent-card-title { margin-bottom: 4px; }
   color: var(--brand-purple);
   margin-bottom: 2px;
 }
+
+/* ============================================================
+   Materiais/provas do agente (AgentAssets)
+   ============================================================ */
+.asset-upload { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 16px; }
+.asset-input { padding: 8px 11px; font: inherit; font-size: 14px; color: var(--fg); background: #fff; border: 1px solid var(--neutral-mid); border-radius: var(--radius-sm); min-width: 120px; }
+.asset-input:focus { outline: none; border-color: var(--brand-light); box-shadow: 0 0 0 3px rgba(167,139,250,.18); }
+.asset-grow { flex: 1 1 180px; }
+.asset-file { font-size: 13px; }
+
+.asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; margin-top: 6px; }
+.asset-item { border: 1px solid var(--neutral-mid); border-radius: var(--radius-md); overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+.asset-item.is-off { opacity: 0.5; }
+.asset-thumb { width: 100%; height: 130px; object-fit: cover; background: var(--surface-light); display: block; }
+.asset-meta { padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
+.asset-cat { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--brand-dark); }
+.asset-label { font-weight: 600; font-size: 14px; color: var(--fg); }
+.asset-caption { font-size: 12.5px; color: var(--fg-muted); }
+.asset-actions { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-top: 1px solid var(--neutral-mid); }
+.asset-btn { font: inherit; font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--neutral-mid); background: #fff; color: var(--fg); cursor: pointer; }
+.asset-btn:hover { background: var(--surface-light); }
+.asset-del { width: 26px; height: 26px; font-size: 18px; line-height: 1; color: var(--fg-muted); background: transparent; border: none; border-radius: var(--radius-sm); cursor: pointer; }
+.asset-del:hover { background: #FEE2E2; color: #B91C1C; }

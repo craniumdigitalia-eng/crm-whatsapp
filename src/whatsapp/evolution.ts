@@ -164,6 +164,26 @@ export async function fetchGroupSubject(groupJid: string): Promise<string | unde
 
 // Normaliza o payload do webhook da Evolution (evento messages.upsert).
 // A Evolution pode mandar um objeto ou uma lista em body.data.
+// Envia uma imagem (por URL) ao número/grupo pela Evolution. Best-effort: loga e
+// segue em erro (não quebra o atendimento). Usada pelo agente para provas/prints.
+export async function sendMedia(phone: string, media: string, caption?: string): Promise<void> {
+  if (config.makeSendUrl) return; // canal Make não trata mídia aqui
+  try {
+    const evo = await getEvolutionConfig();
+    const res = await fetch(`${evo.url}/message/sendMedia/${evo.instance}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: evo.apiKey },
+      body: JSON.stringify({ number: phone, mediatype: "image", media, caption: caption || undefined }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.warn(`[evolution] sendMedia falhou (${res.status}): ${body.slice(0, 200)}`);
+    }
+  } catch (e) {
+    console.warn("[evolution] sendMedia:", e instanceof Error ? e.message : e);
+  }
+}
+
 export function parseWebhook(body: any): InboundMessage[] {
   const out: InboundMessage[] = [];
   const items = Array.isArray(body?.data) ? body.data : [body?.data];

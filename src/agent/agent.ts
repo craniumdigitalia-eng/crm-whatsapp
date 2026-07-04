@@ -3,9 +3,11 @@ import { config } from "../config";
 import { systemPrompt, buildSystemPrompt } from "./prompt";
 import type { AgentConfig } from "./config";
 import { Lead, Message, LeadStatus } from "../types";
-import { updateLeadFields, getLeadAttribution } from "../crm/leads";
+import { updateLeadFields, getLeadAttribution, addMessage } from "../crm/leads";
 import { createEvent, CalendarError } from "../crm/calendar";
 import { sendMeetingConfirmation } from "../crm/meeting-email";
+import { sendMedia } from "../whatsapp/evolution";
+import { listActiveByCategory, assetsSummaryForPrompt } from "./assets";
 
 // Provedor de IA = OpenAI (GPT). Ferramentas via function calling do Chat Completions.
 // Fallback no apiKey evita o SDK lancar no build (env ausente); em runtime a env real e usada.
@@ -96,6 +98,26 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           },
         },
         required: ["data_hora_iso"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "enviar_material",
+      description:
+        "Envia uma IMAGEM/prova ao lead pelo WhatsApp (print de campanha, resultado de cliente, exemplo de como o lead chega). Use no MOMENTO CERTO: quando o lead pedir prova/resultado, estiver em duvida ou cetico, ou ao mostrar valor antes de propor a call. Escolha a categoria certa. Nao use se nao houver material da categoria.",
+      parameters: {
+        type: "object",
+        properties: {
+          categoria: {
+            type: "string",
+            enum: ["campanha", "resultado", "como_chega", "depoimento"],
+            description:
+              "campanha = print de anuncio/campanha; resultado = resultado de cliente (leads/numeros); como_chega = como o lead cai pro corretor; depoimento = depoimento de cliente.",
+          },
+        },
+        required: ["categoria"],
       },
     },
   },
@@ -274,6 +296,26 @@ export async function applyTool(lead: Lead, name: string, input: any): Promise<T
       };
     }
   }
+  if (name === "enviar_material") {
+    const assets = await listActiveByCategory(String(input.categoria || ""));
+    if (assets.length === 0) {
+      return {
+        handoff: false,
+        content:
+          "Nao ha material dessa categoria cadastrado. NAO prometa a imagem; siga a conversa normalmente.",
+      };
+    }
+    let enviados = 0;
+    for (const a of assets.slice(0, 2)) {
+      await sendMedia(lead.phone, a.url, a.caption || undefined);
+      await addMessage(lead.id, "out", `📎 [material enviado: ${a.label}]`).catch(() => {});
+      enviados++;
+    }
+    return {
+      handoff: false,
+      content: `Enviei ${enviados} imagem(ns) da categoria ${input.categoria} ao lead. Comente a prova em 1 frase curta e siga conduzindo para a call.`,
+    };
+  }
   return { handoff: false, content: "ok" };
 }
 
@@ -302,7 +344,8 @@ export async function generateReply(
   // antes de agendar (confirmar se veio do formulario; perguntar se veio do WhatsApp).
   const system =
     (opts.config ? buildSystemPrompt(opts.config) : await systemPrompt()) +
-    (await leadContextBlock(lead, opts.dryRun));
+    (await leadContextBlock(lead, opts.dryRun)) +
+    (await assetsSummaryForPrompt());
 
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: "system", content: system },
@@ -343,6 +386,10 @@ export async function generateReply(
           if (tc.function.name === "agendar_reuniao") {
             content =
               "Reuniao simulada (previa) — em producao o evento seria criado no Google Calendar. Confirme ao lead.";
+          }
+          if (tc.function.name === "enviar_material") {
+            content =
+              "Previa: em producao a imagem seria enviada SE houver material dessa categoria cadastrado; se nao houver, NAO prometa a imagem.";
           }
         } else {
           const result = await applyTool(lead, tc.function.name, args);
