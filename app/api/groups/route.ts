@@ -1,21 +1,25 @@
 import { NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth';
-import { fetchAllGroups } from '@/src/whatsapp/evolution';
 import { getDemandCountsByGroup } from '@/src/crm/demands';
-import { getLastMessageByGroup } from '@/src/crm/groupchat';
+import { getLastMessageByGroup, getCachedGroups, refreshGroupsCache } from '@/src/crm/groupchat';
 
-// GET /api/groups — lista os grupos do WhatsApp (Evolution) com a última mensagem
-// (para o inbox) e a contagem de demandas de cada um. Ordena por atividade recente.
+// GET /api/groups — lista os grupos (do CACHE, rápido) com a última mensagem e a
+// contagem de demandas. O fetch na Evolution é lento (25s+), então só roda para
+// popular o cache quando ele está vazio; a atualização normal é via /api/groups/refresh.
+export const maxDuration = 60;
+
 export async function GET() {
   const auth = await requireUser();
   if (auth instanceof NextResponse) return auth;
   try {
-    const [groups, counts, lastByGroup] = await Promise.all([
-      fetchAllGroups(),
-      getDemandCountsByGroup(),
-      getLastMessageByGroup(),
-    ]);
-    const merged = groups.map((g) => {
+    let cached = await getCachedGroups();
+    if (cached.length === 0) {
+      // Primeira vez / cache vazio: popula (pode demorar por causa da Evolution).
+      await refreshGroupsCache().catch(() => {});
+      cached = await getCachedGroups();
+    }
+    const [counts, lastByGroup] = await Promise.all([getDemandCountsByGroup(), getLastMessageByGroup()]);
+    const merged = cached.map((g) => {
       const last = lastByGroup[g.jid];
       return {
         ...g,
@@ -26,7 +30,6 @@ export async function GET() {
         lastDirection: last?.direction ?? null,
       };
     });
-    // Grupos com mensagem recente primeiro; depois por nome.
     merged.sort((a, b) => {
       if (a.lastAt && b.lastAt) return a.lastAt < b.lastAt ? 1 : -1;
       if (a.lastAt) return -1;

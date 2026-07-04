@@ -1,4 +1,57 @@
 import { supabase } from "../db";
+import { fetchAllGroups, type EvoGroup } from "../whatsapp/evolution";
+
+// =====================================================================
+// Cache da lista de grupos. O endpoint fetchAllGroups da Evolution é MUITO
+// lento (chega a 25s+), o que estoura o timeout da função serverless. Então
+// guardamos a lista num JSON em integrations_config e lemos do cache (rápido);
+// a atualização (lenta) roda sob demanda (botão Atualizar) ou quando chega
+// mensagem de grupo novo.
+// =====================================================================
+const GROUPS_CACHE_KEY = "groups_cache";
+
+export interface CachedGroup { jid: string; name: string; size: number }
+
+export async function getCachedGroups(): Promise<CachedGroup[]> {
+  try {
+    const { data } = await supabase
+      .from("integrations_config")
+      .select("value")
+      .eq("key", GROUPS_CACHE_KEY)
+      .maybeSingle();
+    const raw = (data as { value: string | null } | null)?.value;
+    if (!raw) return [];
+    const arr = JSON.parse(raw) as CachedGroup[];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+async function setCachedGroups(groups: CachedGroup[]): Promise<void> {
+  await supabase
+    .from("integrations_config")
+    .upsert({ key: GROUPS_CACHE_KEY, value: JSON.stringify(groups) }, { onConflict: "key" });
+}
+
+// Atualiza o cache buscando na Evolution (LENTO). Use sob demanda.
+export async function refreshGroupsCache(): Promise<number> {
+  const groups: EvoGroup[] = await fetchAllGroups();
+  if (groups.length === 0) return 0; // não sobrescreve o cache com vazio (falha/timeout)
+  const clean = groups.map((g) => ({ jid: g.jid, name: g.name, size: g.size }));
+  await setCachedGroups(clean);
+  return clean.length;
+}
+
+// Garante que um grupo (visto numa mensagem) esteja no cache, sem chamar a Evolution.
+export async function ensureGroupCached(jid: string, name?: string): Promise<void> {
+  try {
+    const cur = await getCachedGroups();
+    if (cur.some((g) => g.jid === jid)) return;
+    cur.push({ jid, name: name?.trim() || "Grupo", size: 0 });
+    await setCachedGroups(cur);
+  } catch { /* best-effort */ }
+}
 
 // =====================================================================
 // Histórico de mensagens dos grupos (inbox da aba Grupos). Guardado a

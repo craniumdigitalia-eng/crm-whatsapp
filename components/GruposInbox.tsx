@@ -65,6 +65,7 @@ export default function GruposInbox() {
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const bodyRef = useRef<HTMLDivElement | null>(null);
 
   const loadGroups = useCallback(async () => {
@@ -135,14 +136,27 @@ export default function GruposInbox() {
     }
   };
 
+  const refresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      const res = await fetch('/api/groups/refresh', { method: 'POST' });
+      if (res.status === 401) { window.location.href = '/login'; return; }
+      await loadGroups();
+    } catch { /* silencioso */ } finally { setRefreshing(false); }
+  };
+
   const shellClass = `conv-shell${selJid ? ' conv-shell--chat-open' : ''}`;
 
   return (
     <div className={shellClass}>
       {/* Lista de grupos */}
       <aside className="conv-list" aria-label="Lista de grupos">
-        <div className="conv-list-head">
+        <div className="conv-list-head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h1 className="conv-list-title">Grupos</h1>
+          <button type="button" className="conv-btn conv-btn--ghost" onClick={refresh} disabled={refreshing} title="Buscar grupos novos na Evolution (pode demorar)">
+            {refreshing ? 'Atualizando…' : 'Atualizar'}
+          </button>
         </div>
 
         <div className="conv-search">
