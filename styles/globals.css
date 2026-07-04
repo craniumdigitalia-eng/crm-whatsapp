@@ -6371,3 +6371,13 @@ legend.agent-card-title { margin-bottom: 4px; }
 .asset-btn:hover { background: var(--surface-light); }
 .asset-del { width: 26px; height: 26px; font-size: 18px; line-height: 1; color: var(--fg-muted); background: transparent; border: none; border-radius: var(--radius-sm); cursor: pointer; }
 .asset-del:hover { background: #FEE2E2; color: #B91C1C; }
+
+/* Arrastar-e-soltar no kanban */
+.lead-card { cursor: grab; }
+.lead-card:active { cursor: grabbing; }
+.kanban-col.is-drop {
+  background: rgba(124, 58, 237, 0.06);
+  outline: 2px dashed var(--brand-light);
+  outline-offset: -4px;
+  border-radius: var(--radius-md);
+}

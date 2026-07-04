@@ -135,8 +135,13 @@ function LeadCard({
     <article
       className="lead-card"
       role="listitem"
-      aria-label={`Lead: ${lead.name ?? lead.phone} — clique para abrir conversa`}
+      aria-label={`Lead: ${lead.name ?? lead.phone} — clique para abrir, arraste para mover de etapa`}
       tabIndex={0}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/plain', lead.id);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
     >
@@ -448,14 +453,28 @@ function KanbanColumn({
   leads,
   onOpen,
   onAdd,
+  onMove,
 }: {
   stage: (typeof STAGES)[number];
   leads: Lead[];
   onOpen: (id: string, el: HTMLElement | null) => void;
   onAdd: (stageKey: string) => void;
+  onMove: (id: string, stageKey: string) => void;
 }) {
+  const [over, setOver] = useState(false);
   return (
-    <div className="kanban-col" data-stage={stage.key}>
+    <div
+      className={`kanban-col${over ? ' is-drop' : ''}`}
+      data-stage={stage.key}
+      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (!over) setOver(true); }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setOver(false);
+        const id = e.dataTransfer.getData('text/plain');
+        if (id) onMove(id, stage.key);
+      }}
+    >
       <div className="col-header">
         <span className={`col-dot ${stage.dotClass}`} aria-hidden="true" />
         <span className="col-title">{stage.label}</span>
@@ -682,6 +701,31 @@ export default function KanbanBoard() {
       prev.map(l => l.id === id ? { ...l, ...patch } : l)
     );
   }, []);
+
+  /* Arrastar-e-soltar: move o lead para a etapa da coluna onde foi solto.
+     Otimista (move na hora) + POST no /status; reverte se a API falhar. */
+  const handleMoveLead = useCallback((id: string, stageKey: string) => {
+    let prevStatus: string | undefined;
+    setLeads(prev => prev.map(l => {
+      if (l.id === id) { prevStatus = l.status; return { ...l, status: stageKey }; }
+      return l;
+    }));
+    if (prevStatus === undefined || prevStatus === stageKey) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/leads/${id}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: stageKey }),
+        });
+        if (res.status === 401) { window.location.href = '/login'; return; }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        void loadLeads();
+      } catch {
+        setLeads(prev => prev.map(l => l.id === id ? { ...l, status: prevStatus as string } : l));
+      }
+    })();
+  }, [loadLeads]);
 
   /* Filtragem combinada (AND): etapa URL E chip tipo E busca textual E etiquetas. */
   const query = search.trim().toLowerCase();
@@ -913,6 +957,7 @@ export default function KanbanBoard() {
                 leads={grouped[stage.key]}
                 onOpen={handleOpenLead}
                 onAdd={handleAbrirModal}
+                onMove={handleMoveLead}
               />
             ))
           )}
