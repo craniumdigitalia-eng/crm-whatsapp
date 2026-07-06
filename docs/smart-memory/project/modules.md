@@ -4,7 +4,7 @@ type: modules
 status: active
 agent: crm-architect
 created: 2026-06-25
-updated: 2026-06-25
+updated: 2026-07-06
 tags: [project, modules, architecture]
 related: ["[[overview]]", "[[architecture]]", "[[tech-stack]]"]
 ---
@@ -17,9 +17,53 @@ Trate o protótipo como **referência de lógica de negócio**; a migração de 
 
 > Convenção: nomes de função e comentários em português; o agente nunca inventa preço/prazo.
 
+> ⚠️ A seção **"Módulos do protótipo"** lá embaixo é referência HISTÓRICA (Express/SQLite/Make).
+> O estado real hoje é o **portal de produção** mapeado abaixo (Next.js + Supabase + OpenAI + Evolution).
+
 ---
 
-## Módulos
+## Módulos de PRODUÇÃO (portal — estado atual, jul/2026)
+
+Stack: Next.js 15 App Router, Supabase (service_role), OpenAI (gpt-4o-mini), Evolution (Railway), Vercel. Domínio em `src/`, borda HTTP em `app/api/`, UI em `app/(portal)/` + `components/`.
+
+### Domínio / dados (`src/`)
+- `src/config.ts` — env (OpenAI, Supabase, Evolution, Google, e-mail, `SITE_LEAD_SECRET`, `CRON_SECRET`). **God node**.
+- `src/db.ts` — client Supabase service_role. **God node** (toda persistência passa aqui).
+- `src/types.ts` — `Lead`, `Message`, `LeadStatus`, `AUTO_STATUSES`, `STATUS_LABELS`. **God node**.
+- `src/crm/leads.ts` — repositório de leads: `getOrCreateLead`, `updateLeadFields` (dispara a lista automática de e-mail), `setStatus` (automação por etapa + notificação), `addMessage`, `deleteLead`, atribuição. **God node**.
+- `src/handler.ts` — orquestrador: `handleInbound` (recebe→IA→responde em partes com timing humano) + `iniciarAtendimento` (opener outbound Meta/site). **God node**.
+
+### IA do agente (`src/agent/`)
+- `agent/agent.ts` — loop **OpenAI Chat Completions + function calling**. Ferramentas: `atualizar_lead`, `transferir_para_humano`, `agendar_reuniao`, **`enviar_material`** (envia imagem/prova). Guarda anti-vácuo.
+- `agent/prompt.ts` — system prompt dinâmico: SPIN selling, atendimento impecável (dúvidas/provas/agendamento), injeta materiais e contexto do lead.
+- `agent/config.ts` — persona/tom/abordagem (em `integrations_config`).
+- `agent/assets.ts` — materiais/provas (bucket `agent-assets`): categorias, upload, `assetsSummaryForPrompt`.
+
+### Canal WhatsApp (`src/whatsapp/`)
+- `whatsapp/evolution.ts` — `sendText` (delay/"digitando"), **`sendMedia`**, `parseWebhook` (1:1), `parseGroupWebhook` (grupos), `fetchAllGroups` (lento→cache), `getEvolutionState`, `fetchGroupSubject`.
+
+### Módulos de produto (`src/crm/`)
+- `finance.ts` — **Financeiro**: clientes/MRR, receitas avulsas, despesas, DRE por período, churn, inadimplência; **Metas** (`getGoals/setGoals`).
+- `demands.ts` — **Demandas**: `handleGroupMessage` (gatilho "demanda"), classifica+resume via IA, CRUD, contagem por grupo.
+- `groupchat.ts` — **Grupos**: histórico de mensagens de grupo (`group_messages`) + **cache** da lista de grupos (`groups_cache`).
+- `email.ts` / `email-content.ts` (pílulas via OpenAI) / `email-automation.ts` / `email-provider.ts` — **Email marketing** + **lista automática** (`email_auto_list_id`).
+- `notify.ts` — notificações ao operador (WhatsApp best-effort). `health.ts` — **alerta de queda da Evolution** por e-mail.
+- `meta.ts` — Meta Lead Ads (`upsertMetaLead`/`upsertMakeLead`, extrai e-mail do form). `calendar.ts` + `meeting-email.ts` — Google Calendar + confirmação.
+- `integrations.ts` — config das integrações (`getEvolutionConfig` etc.) via `integrations_config` (banco > env).
+- `followup/scheduler.ts` + `followup/cadence.ts` — follow-up (via Vercel Cron).
+
+### Borda HTTP (`app/api/`)
+`webhook` · `leadgen` · `site-lead` · `cron/{followup,evolution-health}` · `leads/*` (+ status/reply/tags/checklist/edit/takeover/release/DELETE) · `finance/*` · `demands/*` · `groups/*` (+ messages, refresh) · `agente/{config,preview,status,assets}` · `email/*` · `agenda/*` · `integrations/*` · `profile` · `notify` · `tags` · `bi/metrics` · `health`.
+
+### UI (`app/(portal)/` + `components/`)
+Dashboard · **CRM** (`KanbanBoard`, drag-and-drop) · **Conversas** (`ConversasInbox`) · **Grupos** (`GruposInbox`) · **Demandas** (`DemandasBoard`) · Follow-up · **Agente IA** (`AgentConfigModule` + `AgentAssets`) · **Financeiro** (`FinanceDashboard`) · **Metas** (`MetasDashboard`) · **BI** (`BiDashboard` + `BiLeadsTable`) · Agenda (`AgendaModule`) · Email (`EmailModule`) · WhatsApp · Integrações · Config. Sidebar/Topbar em `components/`.
+
+### Banco (migrations `supabase/migrations/`)
+001 schema · 002 tags/checklists · 003 atribuição · 004 auth/profiles · 005 RLS (opcional) · 006 role-lock · 007 email · 008 followup-schedule · 009 profile-settings · 010 lead-photo · **011 finance** · **012 demands** · **013 group-messages** · **014 agent-assets**. Buckets Storage: `avatars`, **`agent-assets`** (público).
+
+---
+
+## Módulos do protótipo (referência histórica)
 
 ### Bootstrap / Servidor
 - **Responsabilidade:** sobe o Express, registra rotas, serve o dashboard estático e inicia o motor de follow-up.
