@@ -1,7 +1,8 @@
 ---
-title: Changelog — Sessão de features (1-3 jul 2026)
+title: Changelog — Sessão de features (1-6 jul 2026)
 type: changelog
 created: 2026-07-03
+updated: 2026-07-06
 tags: [changelog, ia-openai, financeiro, metas, demandas, grupos, site-lead, email, evolution, incidente]
 related: ["[[../shared-context]]", "[[../decisions/ADR-005-ia-openai-vs-anthropic]]", "[[2026-06-29-sessao-features]]"]
 ---
@@ -60,3 +61,36 @@ Tudo abaixo foi construído, buildado, **publicado em produção** (`crm-cranium
 - **Causa**: a conta Vercel é **Hobby**, que só permite cron **1x por dia** (por isso o cron de follow-up é `0 12 * * *`). Um schedule mais frequente **quebra o build**.
 - **Correção**: removido o cron `evolution-health` do `vercel.json`. O endpoint continua e é acionado por **monitor externo** (`?token={CRON_SECRET}`).
 - **Aprendizado**: no Hobby, nada de cron sub-diário no `vercel.json`. Se precisar de frequência, usar monitor externo grátis ou subir pro plano Pro.
+
+---
+
+# Continuação — 4 a 6 jul 2026
+
+## 10. Agente envia PROVAS/IMAGENS ao lead (migration 014)
+- Novo: o agente manda **imagens** (prints de campanha, resultados, "como o lead chega") no momento certo, não só texto.
+- `evolution.sendMedia` (envia imagem por URL); ferramenta **`enviar_material`** (categorias: campanha/resultado/como_chega/depoimento); `src/agent/assets.ts` (CRUD + upload pro bucket público **`agent-assets`**). O prompt injeta os materiais disponíveis (`assetsSummaryForPrompt`).
+- **Tela de upload** na aba Agente IA (`AgentAssets`): sobe imagem + categoria + legenda; ativa/desativa; remove.
+- Prompt tunado: **tirar dúvidas** do projeto com clareza, **agendamento impecável** (confirma e-mail, 2 horários), e usar prova no momento certo. Testado ponta a ponta (imagem chegou no WhatsApp).
+
+## 11. Aba Grupos — redesign + cache (correção de instabilidade)
+- **Redesign**: o inbox de Grupos passou a usar as **mesmas classes visuais da aba Conversas** (`conv-*`) — roxo, busca com ícone, itens idênticos. (Antes era uma grade de cards que o usuário achou ruim.)
+- **Cache dos grupos**: o `fetchAllGroups` da Evolution é lento (**25s+**) e estourava o timeout da função, então os grupos apareciam de forma intermitente. Agora a lista fica em **cache** (JSON em `integrations_config`, chave `groups_cache`); `/api/groups` lê do cache (instantâneo). Botão **Atualizar** dispara o refresh lento; grupo novo entra no cache quando chega mensagem (`ensureGroupCached`). Ver incidente abaixo.
+
+## 12. Favicon + kanban arrastável
+- **Favicon**: ícone da Cranium (cérebro roxo) em `app/icon.png` + `app/apple-icon.png`.
+- **Kanban drag-and-drop**: arrastar o lead entre etapas com o mouse (HTML5 drag), update otimista + POST `/status`, reverte se falhar. Coluna destaca em roxo no hover.
+
+## 13. Formulário do site → CRM (testado)
+- `POST /api/site-lead` validado em produção (cria lead origem "site", entra na lista automática, dispara opener). Secret `SITE_LEAD_SECRET` na Vercel. **Integração no site ainda depende do usuário** ligar a chamada no projeto do site.
+
+## ⚠️ INCIDENTE — Evolution fetchAllGroups lento (grupos sumindo)
+- **Sintoma**: aba Grupos aparecia vazia de forma intermitente ("funciona e para"), mesmo com a Evolution `open`.
+- **Causa**: `/group/fetchAllGroups` da Evolution chega a **25-26s**; a função serverless corta antes → 0 grupos. E às vezes retorna 0 sem erro (instabilidade da Evolution).
+- **Correção**: cache da lista de grupos (item 11). O app não depende mais da latência da Evolution a cada abertura.
+- **Aprendizado**: qualquer chamada síncrona à Evolution na borda de request é risco de timeout — preferir cache + refresh sob demanda.
+
+## Pendências do usuário (loops abertos)
+- Subir os **prints reais** na aba Agente IA (a IA já sabe enviar, falta o material).
+- Preencher o **FAQ do agente** (cases, faixas de investimento, o que a Cranium entrega).
+- Ligar a chamada do **formulário do site** no projeto do site.
+- Configurar o **UptimeRobot** apontando pra `/api/cron/evolution-health?token=...` (alerta de queda) — feito nesta sessão.

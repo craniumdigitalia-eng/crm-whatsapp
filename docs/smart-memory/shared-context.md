@@ -1,6 +1,6 @@
 # Shared Context — CRM ATENDIMENTO → Portal Cranium
 
-> Fonte de verdade do projeto. Snapshot consolidado em 2026-06-26.
+> Fonte de verdade do projeto. Snapshot consolidado em 2026-07-06.
 
 ## 📍 Onde o projeto vive
 - **Repo local (real):** `/Users/brunocastro/Desktop/Projeto/CRM ATENDIMENTO` (git, branch `main`)
@@ -14,8 +14,20 @@
 - **Front:** Next.js 15 App Router (ADR-003), design system do KV em `styles/globals.css`.
 - **Backend:** funções `/api` (route handlers Next + Vercel Functions), domínio em `src/`.
 - **Banco:** Supabase/Postgres (service_role server-side). Projeto `iiahpfvhrfuznszytbod`.
-- **IA:** Claude API `claude-opus-4-8` (chave ligada e validada).
-- **Canal WhatsApp:** Evolution auto-hospedada (a montar). **Aquisição:** Meta Lead Ads (formulário) **via Make** → `/api/leadgen` → IA atende. **Agenda:** Google Calendar direto. (ADR-004)
+- **IA:** **OpenAI (GPT)** — modelo `gpt-4o-mini` (migrado de Claude em 02/jul, ver [[decisions/ADR-005-ia-openai-vs-anthropic|ADR-005]]). Chave dedicada do CRM na Vercel. Function calling (ferramentas: atualizar_lead, transferir_para_humano, agendar_reuniao, enviar_material).
+- **Canal WhatsApp:** Evolution auto-hospedada (Railway) — **conectada e no ar** (instância `cranium-crm`, número da Cranium pareado, em 49 grupos). **Aquisição:** Meta Lead Ads + **formulário do site** (`/api/site-lead`). **Agenda:** Google Calendar direto. (ADR-004)
+- ⚠️ **Config efetiva da Evolution vem do BANCO** (`integrations_config` > env). A chave certa é `cranium-crm-evolution-2026-secret`. `fetchAllGroups` é lento (25s+) → grupos ficam em cache (`groups_cache`).
+
+## 🟢 Estado atual (jul/2026) — módulos no ar
+Portal multi-módulo, tudo em produção (`crm-cranium.vercel.app`, branch `feat/portal-epic-5`):
+- **CRM/Kanban** (arrastar-e-soltar) · **Conversas** (inbox 1:1) · **Follow-up** · **Agenda** (Google Calendar).
+- **Agente IA**: SPIN selling, timing humano, coleta de e-mail, agendamento, **envia provas/imagens** (materiais no bucket `agent-assets`).
+- **Grupos**: inbox estilo WhatsApp (lê do cache) + **Demandas** (quadro kanban, gatilho "demanda" nos grupos).
+- **Financeiro** (MRR, churn, inadimplência, DRE) + **Metas** (projeção de MRR).
+- **Email marketing** (listas, pílulas, automação por etapa, **lista automática** de leads Meta/site/IA).
+- **BI** (métricas do funil) · **Config** · **Integrações** · **WhatsApp** (QR).
+- **Alerta de queda da Evolution** por e-mail (endpoint + UptimeRobot, pois o Hobby não deixa cron sub-diário).
+- Detalhes por sessão: [[changelog/2026-07-03-sessao-features]] (jul) e [[changelog/2026-06-29-sessao-features]] (jun).
 
 ## ✅ FEITO
 
@@ -24,7 +36,7 @@
 - **Wave 1 Supabase:** persistência migrada de SQLite → `@supabase/supabase-js`. (QA PASS)
 - **Wave 2 Serverless:** rotas → `/api`, webhook idempotente, cron Vercel, webhook fail-closed. (QA PASS)
 
-### Portal (Epic 5) — construído, AINDA NÃO commitado no git
+### Portal (Epic 5) — construído e no GitHub (branch `feat/portal-epic-5`)
 - **5.1 Shell Next.js + 5.3 Design system** — portal navegável na marca Cranium (sidebar/topbar/rotas).
 - **5.4 CRM/kanban funcional** — botões reais (assumir/devolver/mover/responder/editar) + drawer de conversa, persistindo no Supabase. (QA CONCERNS)
 - **5.12 Etiquetas + 5.13 Checklists** no lead — schema (migration 002, aplicada) + API + UI no drawer. (QA PASS c/ ressalvas)
