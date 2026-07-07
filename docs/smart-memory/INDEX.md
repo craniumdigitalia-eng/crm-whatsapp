@@ -1,7 +1,7 @@
 ---
 title: Smart Memory Index
 type: index
-updated: 2026-07-06
+updated: 2026-07-07
 tags: [index]
 ---
 
@@ -24,6 +24,7 @@ MOC raiz (Map of Content). Todo arquivo novo em `docs/smart-memory/` deve ser re
 - [[project/modules]] — mapa de módulos
 - [[project/conventions]] — convenções de código
 - `docs/design/kv/` — KV / design system da Cranium (tokens roxo/violeta, Geist, componentes)
+- `docs/design/app-handoff/` — KV do **app mobile** (Claude Design): telas login/chat/leads/funil/perfil claro+escuro, tokens, `App Design System.dc.html`
 
 ## Stories
 - [[stories/BACKLOG]] — backlog (stories pendentes)

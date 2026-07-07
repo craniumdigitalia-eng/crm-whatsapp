@@ -1,8 +1,8 @@
 ---
-title: Changelog — Sessão de features (1-6 jul 2026)
+title: Changelog — Sessão de features (1-7 jul 2026)
 type: changelog
 created: 2026-07-03
-updated: 2026-07-06
+updated: 2026-07-07
 tags: [changelog, ia-openai, financeiro, metas, demandas, grupos, site-lead, email, evolution, incidente]
 related: ["[[../shared-context]]", "[[../decisions/ADR-005-ia-openai-vs-anthropic]]", "[[2026-06-29-sessao-features]]"]
 ---
@@ -94,3 +94,19 @@ Tudo abaixo foi construído, buildado, **publicado em produção** (`crm-cranium
 - Preencher o **FAQ do agente** (cases, faixas de investimento, o que a Cranium entrega).
 - Ligar a chamada do **formulário do site** no projeto do site.
 - Configurar o **UptimeRobot** apontando pra `/api/cron/evolution-health?token=...` (alerta de queda) — feito nesta sessão.
+
+---
+
+# Continuação — 7 jul 2026 (mobile / PWA + tema escuro)
+
+## 14. Mobile / PWA (portal instalável)
+- Decisão: **mobile da equipe** (não app de corretor) via **PWA** sobre o portal atual (reaproveita backend/dados). Gamificação do KV ficou de fora (é engajamento de corretor).
+- **PWA**: `app/manifest.ts` (instalável, standalone, tema roxo, ícones 192/512 em `public/`); `viewport`/`themeColor` no layout raiz; `apple-icon`.
+- **Barra de abas inferior** (`MobileTabBar`) substitui a sidebar no celular (Início/Funil/Conversas/Grupos/Mais). Página **`/mais`** (`MoreMenu`) com todos os módulos. CSS: `.sidebar { display:none }` no mobile.
+- Handoff de design salvo em **`docs/design/app-handoff/`** (KV do app: tokens `colors_and_type.css` iguais aos atuais, telas login/chat/leads/funil/perfil em claro+escuro, `App Design System.dc.html`).
+
+## 15. Tema escuro (data-theme="dark")
+- Alternância clara/escura via botão na **Topbar** (`ThemeToggle`), persistida em localStorage; script inline no layout raiz aplica antes do paint (sem flash).
+- Implementado por **inversão de tokens** em `:root[data-theme="dark"]`. Os **82 fundos `#fff`** viraram token `--card` (invertem juntos).
+- Correções de retrofit: o **inbox** (`conv-*`, usado por Conversas e Grupos) era **roxo-escuro fixo** e não seguia o tema → convertido pra tokens (claro E escuro). **Sidebar** mantém cores claras no escuro (é sempre roxo profundo; logo/texto usam `--off-white`). **Selinhos de etapa** com contraste por tema.
+- **Pendente/menor**: ~22 selinhos de status com cor fixa (drawer/integ/email/followup/finance) — badges pequenos, contraste aceitável; polir se incomodar.

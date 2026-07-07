@@ -27,6 +27,7 @@ Portal multi-módulo, tudo em produção (`crm-cranium.vercel.app`, branch `feat
 - **Email marketing** (listas, pílulas, automação por etapa, **lista automática** de leads Meta/site/IA).
 - **BI** (métricas do funil) · **Config** · **Integrações** · **WhatsApp** (QR).
 - **Alerta de queda da Evolution** por e-mail (endpoint + UptimeRobot, pois o Hobby não deixa cron sub-diário).
+- **Mobile/PWA**: portal instalável no celular (barra de abas inferior + menu `/mais`) + **tema escuro** (botão na topbar, persistido). KV do app em `docs/design/app-handoff/`.
 - Detalhes por sessão: [[changelog/2026-07-03-sessao-features]] (jul) e [[changelog/2026-06-29-sessao-features]] (jun).
 
 ## ✅ FEITO
