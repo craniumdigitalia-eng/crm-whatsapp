@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import type { SidebarUser } from './Sidebar';
+import ThemeToggle from './ThemeToggle';
 
 /* ============================================================
    Types
@@ -332,6 +333,9 @@ export default function Topbar({ user }: { user: SidebarUser }) {
 
       {/* Ações */}
       <div className="topbar-actions">
+
+        {/* Alternar tema claro/escuro */}
+        <ThemeToggle />
 
         {/* Sino — notificações */}
         <div className="tb-action-wrap" ref={notifRef}>

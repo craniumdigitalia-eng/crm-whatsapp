@@ -15,6 +15,7 @@
   --brand-tint:         #EDE9FE;
   --off-white:          #F8F7FF;
   --surface-light:      #F5F3FF;
+  --card:               #ffffff;
   --neutral-dark:       #0F172A;
   --neutral-mid:        #E2E8F0;
   --neutral-soft:       #C4B0F0;
@@ -360,7 +361,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-pill);
   padding: 7px 14px;
@@ -404,7 +405,7 @@ body {
   align-items: center;
   justify-content: center;
   border: 1px solid var(--neutral-mid);
-  background: #fff;
+  background: var(--card);
   cursor: pointer;
   color: var(--fg-muted);
   transition: all var(--dur-fast) var(--ease);
@@ -489,7 +490,7 @@ body {
   font-size: 11.5px;
   font-weight: 500;
   border: 1px solid var(--neutral-mid);
-  background: #fff;
+  background: var(--card);
   color: var(--fg-muted);
   cursor: pointer;
   transition: all var(--dur-fast) var(--ease);
@@ -529,7 +530,7 @@ body {
   padding: 5px 28px 5px 30px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--neutral-mid);
-  background: #fff;
+  background: var(--card);
   font-family: var(--font-body);
   font-size: 12px;
   color: var(--fg);
@@ -592,7 +593,7 @@ body {
   max-height: 280px;
   overflow-y: auto;
   padding: 6px;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-md, 12px);
   box-shadow: var(--shadow-lg, 0 12px 32px rgba(15, 23, 42, 0.16));
@@ -682,7 +683,7 @@ body {
 }
 
 .btn-ghost {
-  background: #fff;
+  background: var(--card);
   color: var(--fg);
   border: 1px solid var(--neutral-mid);
   box-shadow: var(--shadow-sm);
@@ -751,7 +752,7 @@ body {
   gap: 7px;
   padding: 10px 12px;
   border-radius: var(--radius-md) var(--radius-md) 0 0;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-bottom: 2px solid var(--neutral-mid);
 }
@@ -800,7 +801,7 @@ body {
 
 /* Lead card */
 .lead-card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-md);
   padding: 13px 13px 11px;
@@ -1079,7 +1080,7 @@ body {
   bottom: 0;
   width: 480px;
   max-width: 100vw;
-  background: #fff;
+  background: var(--card);
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
@@ -1140,7 +1141,7 @@ body {
   height: 32px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--neutral-mid);
-  background: #fff;
+  background: var(--card);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1324,7 +1325,7 @@ body {
   font-family: var(--font-body);
   font-size: 12.5px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   cursor: pointer;
   transition: border-color var(--dur-fast) var(--ease);
   appearance: auto;
@@ -1372,7 +1373,7 @@ body {
   font-family: var(--font-body);
   font-size: 13px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
   resize: vertical;
 }
@@ -1435,7 +1436,7 @@ body {
 }
 
 .msg-bubble--in  .msg-body {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   color: var(--fg);
   border-radius: 2px var(--radius-md) var(--radius-md) var(--radius-md);
@@ -1473,7 +1474,7 @@ body {
   gap: 8px;
   padding: 14px 20px;
   border-top: 1px solid var(--neutral-mid);
-  background: #fff;
+  background: var(--card);
   flex-shrink: 0;
 }
 
@@ -1573,7 +1574,7 @@ body {
   height: 24px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--neutral-mid);
-  background: #fff;
+  background: var(--card);
   color: var(--brand-purple);
   cursor: pointer;
   transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
@@ -1701,7 +1702,7 @@ body {
   font-family: var(--font-body);
   font-size: 12.5px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
 
@@ -1842,7 +1843,7 @@ body {
   font-family: var(--font-body);
   font-size: 13px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
 
@@ -1957,7 +1958,7 @@ body {
 }
 
 .integ-card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-lg);
   padding: 20px;
@@ -2159,7 +2160,7 @@ body {
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--card);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.22);
   transition: left var(--dur-fast) var(--ease);
 }
@@ -2244,7 +2245,7 @@ body {
   width: 264px;
   height: 264px;
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border-dark);
   image-rendering: pixelated;
 }
@@ -2432,7 +2433,7 @@ body {
   font-family: inherit;
   font-size: 14px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
@@ -2556,7 +2557,7 @@ body {
   gap: 12px;
   width: 100%;
   text-align: left;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-md);
   padding: 14px 16px;
@@ -2596,7 +2597,7 @@ body {
   font-family: var(--font-body);
   font-size: 14px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
   padding: 9px 12px;
@@ -2624,7 +2625,7 @@ body {
   padding: 6px 12px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--neutral-mid);
-  background: #fff;
+  background: var(--card);
   font-size: 12.5px;
   color: var(--fg);
   cursor: pointer;
@@ -2653,7 +2654,7 @@ body {
   padding: 24px;
 }
 .em-modal {
-  background: #fff;
+  background: var(--card);
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 560px;
@@ -2677,7 +2678,7 @@ body {
 
 /* Cards de seção (contatos/templates/provedor) */
 .em-card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-md);
   padding: 16px 18px;
@@ -2689,7 +2690,7 @@ body {
 .em-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0 20px; }
 @media (max-width: 720px) { .em-stats { grid-template-columns: repeat(2, 1fr); } }
 .em-stat {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-md);
   padding: 16px;
@@ -2716,7 +2717,7 @@ body {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 14px;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
 }
@@ -2729,7 +2730,7 @@ body {
   height: 600px; /* fallback; o onLoad ajusta pra altura real do e-mail (sem scroll interno) */
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: var(--card);
   display: block;
   overflow: hidden;
 }
@@ -3313,7 +3314,7 @@ body {
 .agent-form { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
 .agent-card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-md);
   padding: 16px 18px;
@@ -3342,7 +3343,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   font-family: var(--font-body);
   font-size: 14px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
   padding: 9px 12px;
@@ -3485,7 +3486,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--card);
   box-shadow: var(--shadow-sm);
   transition: transform var(--dur-fast) var(--ease);
 }
@@ -3543,7 +3544,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   align-items: center;
   justify-content: center;
   border: 1px solid var(--neutral-mid);
-  background: #fff;
+  background: var(--card);
   border-radius: var(--radius-sm);
   color: var(--fg-muted);
   font-size: 13px;
@@ -3563,7 +3564,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   font-family: var(--font-body);
   font-size: 14px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
   padding: 7px 10px;
@@ -3574,7 +3575,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   font-family: var(--font-body);
   font-size: 14px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
   padding: 7px 10px;
@@ -3584,7 +3585,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   font-family: var(--font-body);
   font-size: 14px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
   padding: 9px 12px;
@@ -3602,7 +3603,7 @@ legend.agent-card-title { margin-bottom: 4px; }
 
 .cad-add {
   border: 1px dashed var(--neutral-mid);
-  background: #fff;
+  background: var(--card);
   color: var(--brand-purple);
   border-radius: var(--radius-sm);
   padding: 9px 14px;
@@ -3633,7 +3634,7 @@ legend.agent-card-title { margin-bottom: 4px; }
 }
 
 .fup-card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-lg);
   padding: 20px;
@@ -3659,7 +3660,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   font-family: var(--font-body);
   font-size: 14px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
   padding: 9px 12px;
@@ -3680,7 +3681,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   padding: 4px;
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: var(--card);
   max-height: 220px;
   overflow-y: auto;
 }
@@ -3725,7 +3726,7 @@ legend.agent-card-title { margin-bottom: 4px; }
 .fup-quick { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
 .fup-chip {
   border: 1px solid var(--neutral-mid);
-  background: #fff;
+  background: var(--card);
   color: var(--fg-muted);
   border-radius: var(--radius-pill);
   padding: 5px 12px;
@@ -3750,7 +3751,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-md);
   padding: 12px 14px;
-  background: #fff;
+  background: var(--card);
 }
 .fup-item-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
 .fup-item-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -3847,7 +3848,7 @@ legend.agent-card-title { margin-bottom: 4px; }
 }
 .bi-period-btn:hover { color: var(--brand-purple); }
 .bi-period-btn.is-active {
-  background: #fff;
+  background: var(--card);
   color: var(--brand-purple);
   box-shadow: var(--shadow-sm);
 }
@@ -3867,7 +3868,7 @@ legend.agent-card-title { margin-bottom: 4px; }
 }
 .bi-retry {
   border: 1px solid #fca5a5;
-  background: #fff;
+  background: var(--card);
   color: #991b1b;
   border-radius: var(--radius-pill);
   padding: 5px 14px;
@@ -3907,7 +3908,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-md);
   padding: 16px 18px;
@@ -3935,7 +3936,7 @@ legend.agent-card-title { margin-bottom: 4px; }
 
 /* --- Painéis --- */
 .bi-panel {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-md);
   padding: 20px 22px;
@@ -4143,7 +4144,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   margin-top: 18px;
 }
 .cfg-card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border-dark);
   border-radius: var(--radius-md);
   padding: 20px;
@@ -4288,7 +4289,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   width: 16px;
   height: 16px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--card);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.22);
   transition: left var(--dur-fast) var(--ease);
   pointer-events: none;
@@ -4319,7 +4320,7 @@ legend.agent-card-title { margin-bottom: 4px; }
 @media (max-width: 880px) { .dash-grid { grid-template-columns: 1fr; } }
 
 .dash-panel {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border-dark);
   border-radius: var(--radius-md);
   padding: 18px 20px;
@@ -4423,7 +4424,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-pill);
   overflow: hidden;
-  background: #fff;
+  background: var(--card);
 }
 
 .agd-view-btn {
@@ -4477,7 +4478,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   gap: 6px;
   padding: 10px 24px;
   flex-shrink: 0;
-  background: #fff;
+  background: var(--card);
   border-bottom: 1px solid var(--neutral-mid);
 }
 
@@ -4489,7 +4490,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   justify-content: center;
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: var(--card);
   color: var(--fg-muted);
   cursor: pointer;
   transition: all var(--dur-fast) var(--ease);
@@ -4511,7 +4512,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   padding: 4px 12px;
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-pill);
-  background: #fff;
+  background: var(--card);
   font-family: var(--font-body);
   font-size: 12.5px;
   font-weight: 500;
@@ -4602,7 +4603,7 @@ legend.agent-card-title { margin-bottom: 4px; }
 
 /* Célula de dia */
 .agd-month-cell {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
   padding: 7px 8px;
@@ -4741,7 +4742,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   grid-template-columns: 52px repeat(7, 1fr);
   flex-shrink: 0;
   border-bottom: 1px solid var(--neutral-mid);
-  background: #fff;
+  background: var(--card);
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   border: 1px solid var(--neutral-mid);
 }
@@ -4800,7 +4801,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   border: 1px solid var(--neutral-mid);
   border-top: none;
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-  background: #fff;
+  background: var(--card);
 }
 
 .agd-week-body::-webkit-scrollbar { width: 4px; }
@@ -4923,7 +4924,7 @@ legend.agent-card-title { margin-bottom: 4px; }
 }
 
 .agd-modal {
-  background: #fff;
+  background: var(--card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   width: 100%;
@@ -4969,7 +4970,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   justify-content: center;
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-pill);
-  background: #fff;
+  background: var(--card);
   color: var(--fg-muted);
   cursor: pointer;
   transition: all var(--dur-fast) var(--ease);
@@ -5028,7 +5029,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   outline: none;
   border-color: var(--brand-purple);
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
-  background: #fff;
+  background: var(--card);
 }
 
 .agd-field input:disabled,
@@ -5185,7 +5186,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   left: 50%;
   transform: translateX(-50%);
   z-index: 200;
-  background: #fff;
+  background: var(--card);
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: var(--radius-pill);
   padding: 8px 20px;
@@ -5240,7 +5241,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   transform: translate(-50%, -50%);
   width: 420px;
   max-width: calc(100vw - 32px);
-  background: #fff;
+  background: var(--card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   z-index: 61;
@@ -5307,7 +5308,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   font-family: var(--font-body);
   font-size: 13.5px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   transition:
     border-color var(--dur-fast) var(--ease),
     box-shadow var(--dur-fast) var(--ease);
@@ -5380,7 +5381,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   top: calc(100% + 8px);
   right: 0;
   z-index: 100;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
@@ -5413,7 +5414,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   flex-shrink: 0;
   position: sticky;
   top: 0;
-  background: #fff;
+  background: var(--card);
 }
 
 /* Mensagem de estado (carregando, sem resultados, tudo em dia) */
@@ -5658,7 +5659,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   padding: 5px 12px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--neutral-mid);
-  background: #fff;
+  background: var(--card);
   color: var(--fg);
   cursor: pointer;
   margin-right: 10px;
@@ -5724,7 +5725,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   justify-content: space-between;
   gap: 12px;
   padding: 14px 18px;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-md);
   margin-bottom: 16px;
@@ -5776,7 +5777,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   width: 16px;
   height: 16px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--card);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.22);
   transition: left var(--dur-fast) var(--ease);
   pointer-events: none;
@@ -5799,7 +5800,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   align-items: center;
   gap: 16px;
   padding: 10px 14px;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
   transition: border-color var(--dur-fast) var(--ease);
@@ -5871,7 +5872,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   font: inherit;
   font-size: 14px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
@@ -5886,7 +5887,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   font: inherit;
   font-size: 14px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -6009,7 +6010,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   font: inherit;
   font-size: 14px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
   min-width: 120px;
@@ -6127,7 +6128,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   font: inherit;
   font-size: 14px;
   color: var(--fg);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -6168,7 +6169,7 @@ legend.agent-card-title { margin-bottom: 4px; }
 @media (max-width: 900px) { .dem-board { grid-template-columns: 1fr; } }
 
 .dem-col {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -6223,7 +6224,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   font-size: 12.5px;
   font-weight: 600;
   color: var(--brand-dark);
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-sm);
   padding: 5px 10px;
@@ -6255,7 +6256,7 @@ legend.agent-card-title { margin-bottom: 4px; }
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--neutral-mid);
   border-radius: var(--radius-md);
   padding: 12px 14px;
@@ -6304,7 +6305,7 @@ legend.agent-card-title { margin-bottom: 4px; }
 /* ============================================================
    Grupos — inbox (GruposInbox): lista + conversa estilo WhatsApp
    ============================================================ */
-.grp-inbox { flex: 1; display: flex; min-height: 0; background: #fff; }
+.grp-inbox { flex: 1; display: flex; min-height: 0; background: var(--card); }
 .grp-list { width: 340px; flex-shrink: 0; border-right: 1px solid var(--neutral-mid); display: flex; flex-direction: column; min-height: 0; }
 .grp-list-head { padding: 16px; border-bottom: 1px solid var(--neutral-mid); display: flex; flex-direction: column; gap: 10px; }
 .grp-list-title { font-size: 20px; font-weight: 700; color: var(--fg); margin: 0; }
@@ -6325,13 +6326,13 @@ legend.agent-card-title { margin-bottom: 4px; }
 .grp-chat-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--fg-muted); padding: 24px; text-align: center; }
 .grp-chat-body { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 8px; }
 .grp-bubble { max-width: 72%; padding: 8px 12px; border-radius: 12px; font-size: 14px; line-height: 1.4; display: flex; flex-direction: column; }
-.grp-bubble--in { align-self: flex-start; background: #fff; border: 1px solid var(--neutral-mid); }
+.grp-bubble--in { align-self: flex-start; background: var(--card); border: 1px solid var(--neutral-mid); }
 .grp-bubble--out { align-self: flex-end; background: #DCF8C6; }
 .grp-bubble-sender { font-size: 12px; font-weight: 700; color: var(--brand-purple); margin-bottom: 2px; }
 .grp-bubble-text { white-space: pre-wrap; word-break: break-word; color: var(--fg); }
 .grp-bubble-time { align-self: flex-end; font-size: 10.5px; color: var(--fg-muted); margin-top: 2px; }
 
-.grp-composer { display: flex; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--neutral-mid); background: #fff; }
+.grp-composer { display: flex; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--neutral-mid); background: var(--card); }
 .grp-composer-input { flex: 1; padding: 10px 14px; font: inherit; font-size: 14px; border: 1px solid var(--neutral-mid); border-radius: var(--radius-pill); }
 .grp-composer-input:focus { outline: none; border-color: var(--brand-light); box-shadow: 0 0 0 3px rgba(167,139,250,.18); }
 
@@ -6353,13 +6354,13 @@ legend.agent-card-title { margin-bottom: 4px; }
    Materiais/provas do agente (AgentAssets)
    ============================================================ */
 .asset-upload { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 16px; }
-.asset-input { padding: 8px 11px; font: inherit; font-size: 14px; color: var(--fg); background: #fff; border: 1px solid var(--neutral-mid); border-radius: var(--radius-sm); min-width: 120px; }
+.asset-input { padding: 8px 11px; font: inherit; font-size: 14px; color: var(--fg); background: var(--card); border: 1px solid var(--neutral-mid); border-radius: var(--radius-sm); min-width: 120px; }
 .asset-input:focus { outline: none; border-color: var(--brand-light); box-shadow: 0 0 0 3px rgba(167,139,250,.18); }
 .asset-grow { flex: 1 1 180px; }
 .asset-file { font-size: 13px; }
 
 .asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; margin-top: 6px; }
-.asset-item { border: 1px solid var(--neutral-mid); border-radius: var(--radius-md); overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+.asset-item { border: 1px solid var(--neutral-mid); border-radius: var(--radius-md); overflow: hidden; background: var(--card); display: flex; flex-direction: column; }
 .asset-item.is-off { opacity: 0.5; }
 .asset-thumb { width: 100%; height: 130px; object-fit: cover; background: var(--surface-light); display: block; }
 .asset-meta { padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
@@ -6367,7 +6368,7 @@ legend.agent-card-title { margin-bottom: 4px; }
 .asset-label { font-weight: 600; font-size: 14px; color: var(--fg); }
 .asset-caption { font-size: 12.5px; color: var(--fg-muted); }
 .asset-actions { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-top: 1px solid var(--neutral-mid); }
-.asset-btn { font: inherit; font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--neutral-mid); background: #fff; color: var(--fg); cursor: pointer; }
+.asset-btn { font: inherit; font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--neutral-mid); background: var(--card); color: var(--fg); cursor: pointer; }
 .asset-btn:hover { background: var(--surface-light); }
 .asset-del { width: 26px; height: 26px; font-size: 18px; line-height: 1; color: var(--fg-muted); background: transparent; border: none; border-radius: var(--radius-sm); cursor: pointer; }
 .asset-del:hover { background: #FEE2E2; color: #B91C1C; }
@@ -6423,8 +6424,41 @@ legend.agent-card-title { margin-bottom: 4px; }
 .more-sub { color: var(--fg-muted); font-size: 14px; margin: 4px 0 0; }
 .more-group { margin-bottom: 20px; }
 .more-group-title { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--fg-muted); padding: 0 4px; }
-.more-list { margin-top: 8px; background: #fff; border: 1px solid var(--neutral-mid); border-radius: var(--radius-md); overflow: hidden; }
+.more-list { margin-top: 8px; background: var(--card); border: 1px solid var(--neutral-mid); border-radius: var(--radius-md); overflow: hidden; }
 .more-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; text-decoration: none; color: var(--fg); font-size: 15px; font-weight: 500; border-bottom: 1px solid var(--neutral-mid); }
 .more-item:last-child { border-bottom: none; }
 .more-item:active { background: var(--surface-light); }
 .more-item svg { color: var(--fg-muted); }
+
+/* ============================================================
+   TEMA ESCURO — inverte os tokens semânticos. A maioria dos
+   componentes usa var(--card)/--fg/--border, então vira sozinho.
+   Ativado por data-theme="dark" no <html>.
+   ============================================================ */
+:root[data-theme="dark"] {
+  --off-white:     #150826;   /* fundo principal */
+  --surface-light: #1d0f33;   /* fundo alternativo */
+  --card:          #241442;   /* superfície de card/input */
+  --neutral-dark:  #F1ECFA;   /* texto principal (claro) */
+  --fg:            #F1ECFA;
+  --fg-muted:      #A99BC9;   /* texto secundário */
+  --neutral-mid:   rgba(167, 139, 250, 0.18); /* bordas/divisores */
+  --border:        rgba(167, 139, 250, 0.18);
+  --brand-tint:    #2d1b52;   /* chip/ativo com identidade */
+  --brand-dark:    #C4B5FD;   /* era texto escuro → claro no dark */
+  --shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md:     0 8px 24px -8px rgba(0, 0, 0, 0.55);
+  --shadow-lg:     0 24px 48px -16px rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+/* Ajustes pontuais no escuro */
+:root[data-theme="dark"] .conv-bubble--out,
+:root[data-theme="dark"] .grp-bubble--out { background: #3b2170; }
+:root[data-theme="dark"] .conv-bubble--out .conv-bubble-body,
+:root[data-theme="dark"] .grp-bubble--out .grp-bubble-text,
+:root[data-theme="dark"] .conv-bubble--out .conv-bubble-time { color: #F1ECFA; }
+:root[data-theme="dark"] .topbar { background: rgba(21, 8, 38, 0.9); }
+:root[data-theme="dark"] img.asset-thumb,
+:root[data-theme="dark"] .grp-chat-body,
+:root[data-theme="dark"] .conv-chat-body { background: var(--surface-light); }
