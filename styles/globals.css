@@ -6467,6 +6467,17 @@ legend.agent-card-title { margin-bottom: 4px; }
 :root[data-theme="dark"] .grp-bubble--out .grp-bubble-text,
 :root[data-theme="dark"] .conv-bubble--out .conv-bubble-time { color: #F1ECFA; }
 :root[data-theme="dark"] .topbar { background: rgba(21, 8, 38, 0.9); }
+
+/* A sidebar é SEMPRE escura (roxo profundo) — mantém os tokens claros dentro dela,
+   senão o texto/logo (que usam --off-white/--brand-tint) somem no tema escuro. */
+:root[data-theme="dark"] .sidebar {
+  --off-white:     #F8F7FF;
+  --surface-light: #F5F3FF;
+  --card:          #ffffff;
+  --brand-tint:    #EDE9FE;
+  --fg:            #F8F7FF;
+  --fg-muted:      #C4B0F0;
+}
 :root[data-theme="dark"] img.asset-thumb,
 :root[data-theme="dark"] .grp-chat-body,
 :root[data-theme="dark"] .conv-chat-body { background: var(--surface-light); }
