@@ -2968,13 +2968,21 @@ body {
   border: 1px solid transparent;
   white-space: nowrap;
 }
-.conv-stage--novo            { background: rgba(96, 165, 250, 0.16); color: #93c5fd; }
-.conv-stage--em_atendimento  { background: rgba(167, 139, 250, 0.18); color: #c4b5fd; }
-.conv-stage--qualificado     { background: rgba(45, 212, 191, 0.16); color: #5eead4; }
-.conv-stage--proposta        { background: rgba(251, 191, 36, 0.16); color: #fcd34d; }
-.conv-stage--fechado         { background: rgba(52, 211, 153, 0.18); color: #6ee7b7; }
-.conv-stage--perdido         { background: rgba(248, 113, 113, 0.16); color: #fca5a5; }
-.conv-stage--humano          { background: rgba(244, 114, 182, 0.18); color: #f9a8d4; }
+/* Selinhos de etapa — texto ESCURO (legível no claro); no escuro vira claro (override abaixo). */
+.conv-stage--novo            { background: rgba(59, 130, 246, 0.14); color: #1d4ed8; }
+.conv-stage--em_atendimento  { background: rgba(124, 58, 237, 0.14); color: #6d28d9; }
+.conv-stage--qualificado     { background: rgba(20, 184, 166, 0.15); color: #0f766e; }
+.conv-stage--proposta        { background: rgba(245, 158, 11, 0.16); color: #b45309; }
+.conv-stage--fechado         { background: rgba(16, 185, 129, 0.15); color: #047857; }
+.conv-stage--perdido         { background: rgba(239, 68, 68, 0.13);  color: #b91c1c; }
+.conv-stage--humano          { background: rgba(236, 72, 153, 0.14); color: #be185d; }
+:root[data-theme="dark"] .conv-stage--novo           { color: #93c5fd; }
+:root[data-theme="dark"] .conv-stage--em_atendimento { color: #c4b5fd; }
+:root[data-theme="dark"] .conv-stage--qualificado    { color: #5eead4; }
+:root[data-theme="dark"] .conv-stage--proposta       { color: #fcd34d; }
+:root[data-theme="dark"] .conv-stage--fechado        { color: #6ee7b7; }
+:root[data-theme="dark"] .conv-stage--perdido        { color: #fca5a5; }
+:root[data-theme="dark"] .conv-stage--humano         { color: #f9a8d4; }
 
 .conv-ia-pill {
   display: inline-flex;
