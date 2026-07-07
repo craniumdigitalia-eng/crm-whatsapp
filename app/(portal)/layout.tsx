@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
+import MobileTabBar from '@/components/MobileTabBar';
 import { createClient } from '@/lib/supabase/server';
 
 // Layout do portal autenticado: injeta Sidebar + Topbar e exige sessao.
@@ -40,6 +41,7 @@ export default async function PortalLayout({
       <div className="main">
         <Topbar user={sidebarUser} />
         {children}
+        <MobileTabBar />
       </div>
     </>
   );

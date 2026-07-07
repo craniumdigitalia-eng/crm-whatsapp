@@ -1,0 +1,256 @@
+/* ============================================================
+   Cranium Digital — Design Tokens
+   Inteligência de quem vive o mercado.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* ---------- Brand colors ---------- */
+  --deep-violet:   #1A0A2E;   /* fundo principal escuro */
+  --brand-dark:    #2D0F52;   /* cards escuros, destaque */
+  --brand-purple:  #7C3AED;   /* CTA, ícones ativos */
+  --brand-light:   #A78BFA;   /* destaques, hover, "digital" */
+  --brand-tint:    #EDE9FE;   /* fundo claro com identidade */
+
+  /* Hover do CTA principal */
+  --brand-purple-hover: #6D28D9;
+
+  /* ---------- Neutrals ---------- */
+  --off-white:     #F8F7FF;   /* fundo claro principal (NUNCA #FFF puro) */
+  --surface-light: #F5F3FF;   /* fundo claro alternativo */
+  --neutral-dark:  #0F172A;   /* texto principal em fundo claro */
+  --neutral-mid:   #E2E8F0;   /* bordas, divisores */
+  --neutral-soft:  #C4B0F0;   /* texto secundário em fundo escuro */
+
+  /* ---------- Semantic ---------- */
+  --bg:            var(--off-white);
+  --bg-alt:        var(--surface-light);
+  --bg-dark:       var(--deep-violet);
+  --bg-dark-alt:   var(--brand-dark);
+
+  --fg:            var(--neutral-dark);
+  --fg-muted:      #475569;
+  --fg-on-dark:    var(--brand-tint);
+  --fg-on-dark-muted: var(--neutral-soft);
+
+  --accent:        var(--brand-purple);
+  --accent-soft:   var(--brand-light);
+
+  --border:        var(--neutral-mid);
+  --border-dark:   rgba(167, 139, 250, 0.18);
+
+  /* ---------- Type families ---------- */
+  --font-display:  'Geist', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-body:     'Geist', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono:     'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
+
+  /* ---------- Type scale ---------- */
+  --text-display: clamp(48px, 6vw, 84px);
+  --text-h1:      clamp(32px, 4.2vw, 56px);
+  --text-h2:      clamp(24px, 2.8vw, 36px);
+  --text-h3:      22px;
+  --text-h4:      18px;
+  --text-body:    16px;
+  --text-body-sm: 15px;
+  --text-caption: 12px;
+  --text-label:   11px;
+
+  /* ---------- Line heights ---------- */
+  --lh-tight: 1.08;
+  --lh-snug:  1.22;
+  --lh-base:  1.5;
+  --lh-body:  1.7;
+
+  /* ---------- Letter-spacing ---------- */
+  --track-wordmark: 0.15em;
+  --track-display:  0.02em;
+  --track-label:    0.08em;
+
+  /* ---------- Spacing (base 4px) ---------- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-7:  48px;
+  --space-8:  64px;
+  --space-9:  96px;
+  --space-10: 128px;
+
+  /* ---------- Radii ---------- */
+  --radius-sm:   8px;
+  --radius-md:   14px;
+  --radius-lg:   20px;
+  --radius-xl:   28px;
+  --radius-pill: 999px;
+
+  /* ---------- Shadows ---------- */
+  --shadow-sm:  0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md:  0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -8px rgba(124, 58, 237, 0.18);
+  --shadow-lg:  0 4px 12px rgba(15, 23, 42, 0.05), 0 24px 48px -16px rgba(124, 58, 237, 0.24);
+  --shadow-glow: 0 0 0 1px rgba(167, 139, 250, 0.2), 0 12px 32px -8px rgba(124, 58, 237, 0.35);
+  --shadow-inset-dark: inset 0 1px 0 rgba(167, 139, 250, 0.08);
+
+  /* ---------- Motion ---------- */
+  --ease:     cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 180ms;
+  --dur-mid:  320ms;
+  --dur-slow: 600ms;
+}
+
+/* ============================================================
+   Base type roles (semantic)
+   ============================================================ */
+
+.cd-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-display);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--track-display);
+}
+.cd-h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-h1);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.01em;
+}
+.cd-h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--text-h2);
+  line-height: var(--lh-snug);
+}
+.cd-h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-h3);
+  line-height: var(--lh-snug);
+}
+.cd-body {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--text-body);
+  line-height: var(--lh-body);
+  color: var(--fg);
+}
+.cd-body-sm {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--text-body-sm);
+  line-height: var(--lh-body);
+}
+.cd-label {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--text-label);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--brand-purple);
+}
+.cd-caption {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--text-caption);
+  color: var(--fg-muted);
+}
+
+/* ============================================================
+   Wordmark
+   ============================================================ */
+
+.cd-wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: var(--track-wordmark);
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.55em;
+}
+.cd-wordmark__mark {
+  color: currentColor;
+}
+.cd-wordmark__suffix {
+  font-weight: 400;
+  font-size: 0.5em;
+  text-transform: lowercase;
+  letter-spacing: 0.10em;
+  color: var(--brand-light);
+  transform: translateY(-0.05em);
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+
+.cd-btn {
+  --btn-bg: var(--brand-purple);
+  --btn-fg: #FFFFFF;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1;
+  padding: 14px 22px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background var(--dur-fast) var(--ease),
+              transform var(--dur-fast) var(--ease),
+              box-shadow var(--dur-fast) var(--ease);
+  box-shadow: var(--shadow-md);
+}
+.cd-btn:hover {
+  background: var(--brand-purple-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+.cd-btn:active { transform: scale(0.98); }
+.cd-btn--ghost {
+  --btn-bg: transparent;
+  --btn-fg: var(--neutral-dark);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+.cd-btn--ghost-dark {
+  --btn-bg: transparent;
+  --btn-fg: var(--fg-on-dark);
+  border: 1px solid var(--border-dark);
+  box-shadow: none;
+}
+.cd-btn--ghost:hover,
+.cd-btn--ghost-dark:hover {
+  background: rgba(124, 58, 237, 0.08);
+  transform: translateY(-1px);
+  box-shadow: none;
+}
+
+/* ============================================================
+   Cards
+   ============================================================ */
+
+.cd-card {
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+}
+.cd-card--dark {
+  background: var(--brand-dark);
+  border: 1px solid var(--border-dark);
+  color: var(--fg-on-dark);
+  box-shadow: var(--shadow-inset-dark);
+}
+.cd-card--accent {
+  background: var(--brand-tint);
+  border: 1px solid rgba(124, 58, 237, 0.18);
+}

@@ -6381,3 +6381,50 @@ legend.agent-card-title { margin-bottom: 4px; }
   outline-offset: -4px;
   border-radius: var(--radius-md);
 }
+
+/* ============================================================
+   Barra de abas mobile (MobileTabBar) + esconde sidebar no celular
+   ============================================================ */
+.mobile-tabbar { display: none; }
+
+@media (max-width: 768px) {
+  .sidebar { display: none !important; }
+  .mobile-tabbar {
+    display: flex;
+    flex: none;
+    background: var(--deep-violet);
+    border-top: 1px solid var(--border-dark);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 50;
+  }
+  .mtab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    text-decoration: none;
+    color: var(--neutral-soft);
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 9px 0 8px;
+    transition: color var(--dur-fast) var(--ease);
+  }
+  .mtab-icon svg { width: 22px; height: 22px; display: block; }
+  .mtab.is-active { color: #fff; }
+  .mtab.is-active .mtab-icon svg { color: var(--brand-light); }
+}
+
+/* Menu "Mais" (mobile) */
+.more-menu { flex: 1; overflow-y: auto; padding: 24px 20px 40px; background: var(--off-white); }
+.more-head { margin-bottom: 18px; }
+.more-title { font-size: 24px; font-weight: 700; color: var(--fg); margin: 0; }
+.more-sub { color: var(--fg-muted); font-size: 14px; margin: 4px 0 0; }
+.more-group { margin-bottom: 20px; }
+.more-group-title { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--fg-muted); padding: 0 4px; }
+.more-list { margin-top: 8px; background: #fff; border: 1px solid var(--neutral-mid); border-radius: var(--radius-md); overflow: hidden; }
+.more-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; text-decoration: none; color: var(--fg); font-size: 15px; font-weight: 500; border-bottom: 1px solid var(--neutral-mid); }
+.more-item:last-child { border-bottom: none; }
+.more-item:active { background: var(--surface-light); }
+.more-item svg { color: var(--fg-muted); }

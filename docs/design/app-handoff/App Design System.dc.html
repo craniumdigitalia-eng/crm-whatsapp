@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/cranium-digital-design-system-7dae03a7-7856-48af-a426-a5c556045cb3/colors_and_type.css">
+<script src="_ds/cranium-digital-design-system-7dae03a7-7856-48af-a426-a5c556045cb3/_ds_bundle.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  * { box-sizing: border-box; }
+  a { color: #7C3AED; text-decoration: none; }
+  a:hover { color: #6D28D9; text-decoration: underline; }
+  .phone-scroll::-webkit-scrollbar { display: none; }
+  @keyframes cdpulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+  @keyframes cdshimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+  @keyframes cdspin { to { transform: rotate(360deg); } }
+</style>
+</helmet>
+<div style="font-family:'Geist','Inter',system-ui,sans-serif;background:#E9E4F7;background-image:radial-gradient(circle at 1px 1px, rgba(124,58,237,0.10) 1px, transparent 0);background-size:26px 26px;min-height:100vh;padding:56px 48px 96px;color:#0F172A;">
+
+  <!-- ============ MASTHEAD ============ -->
+  <header style="max-width:1240px;margin:0 auto 56px;display:flex;align-items:flex-end;justify-content:space-between;gap:32px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:18px;">
+      <div style="width:64px;height:64px;border-radius:18px;background:#1A0A2E;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 32px -8px rgba(124,58,237,0.45);">
+        <img src="assets/brain-symbol.png" alt="Cranium" style="width:44px;height:44px;object-fit:contain;"/>
+      </div>
+      <div>
+        <div class="cd-wordmark" style="font-size:26px;color:#1A0A2E;"><span class="cd-wordmark__mark">Cranium</span><span class="cd-wordmark__suffix">broker</span></div>
+        <div style="font-size:13px;color:#5B4B7A;font-weight:500;letter-spacing:0.02em;margin-top:2px;">App Design System · mobile-first · v1.0</div>
+      </div>
+    </div>
+    <div style="max-width:480px;font-size:15px;line-height:1.6;color:#3D2E5C;">Sistema de UI mobile herdado do Design System Cranium. Dark mode paritário, alvos de toque 44px, gamificação pra prender o corretor. <strong style="color:#1A0A2E;">Inteligência de quem vive o mercado.</strong></div>
+  </header>
+
+  <!-- ============ TURN 1a ============ -->
+  <section id="1a" style="max-width:1240px;margin:0 auto;">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:#1A0A2E;color:#EDE9FE;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:7px 14px;border-radius:999px;margin-bottom:28px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:#A78BFA;animation:cdpulse 1.4s var(--ease) infinite;"></span>Cranium Broker · 1a
+    </div>
+
+    <!-- ===== FOUNDATIONS ===== -->
+    <div style="margin-bottom:20px;">
+      <div class="cd-label" style="margin-bottom:6px;">Foundations</div>
+      <h2 class="cd-h2" style="margin:0;color:#1A0A2E;">Cor, superfície e elevação</h2>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px;margin-bottom:64px;align-items:start;">
+
+      <!-- Semantic colors -->
+      <div style="background:#F8F7FF;border:1px solid #E2E8F0;border-radius:20px;padding:24px;">
+        <div style="font-size:13px;font-weight:600;color:#1A0A2E;margin-bottom:4px;">Cores semânticas</div>
+        <p style="font-size:12.5px;line-height:1.55;color:#64748B;margin:0 0 18px;">Novas, funcionais. O roxo permanece acento — vermelho só sinaliza erro/destrutivo, nunca decora.</p>
+        <div style="display:grid;gap:10px;">
+          <div style="display:flex;align-items:center;gap:12px;"><span style="width:40px;height:40px;border-radius:12px;background:#7C3AED;flex:none;"></span><div><div style="font-size:13px;font-weight:600;">Primária / Info</div><div style="font-family:var(--font-mono);font-size:11px;color:#94A3B8;">#7C3AED</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px;"><span style="width:40px;height:40px;border-radius:12px;background:#16A34A;flex:none;"></span><div><div style="font-size:13px;font-weight:600;">Sucesso</div><div style="font-family:var(--font-mono);font-size:11px;color:#94A3B8;">#16A34A · dark #22C55E</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px;"><span style="width:40px;height:40px;border-radius:12px;background:#D97706;flex:none;"></span><div><div style="font-size:13px;font-weight:600;">Alerta</div><div style="font-family:var(--font-mono);font-size:11px;color:#94A3B8;">#D97706 · dark #FBBF24</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px;"><span style="width:40px;height:40px;border-radius:12px;background:#DC2626;flex:none;"></span><div><div style="font-size:13px;font-weight:600;">Erro / Destrutivo</div><div style="font-family:var(--font-mono);font-size:11px;color:#94A3B8;">#DC2626 · dark #F87171</div></div></div>
+        </div>
+      </div>
+
+      <!-- Elevation light -->
+      <div style="background:#F8F7FF;border:1px solid #E2E8F0;border-radius:20px;padding:24px;">
+        <div style="font-size:13px;font-weight:600;color:#1A0A2E;margin-bottom:4px;">Elevação — modo claro</div>
+        <p style="font-size:12.5px;line-height:1.55;color:#64748B;margin:0 0 18px;">Sombra roxa muito leve cresce com o nível.</p>
+        <div style="display:grid;gap:12px;">
+          <div style="background:#F5F3FF;border:1px solid #E2E8F0;border-radius:12px;padding:12px 14px;font-size:12px;font-weight:500;">0 · superfície</div>
+          <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:12px 14px;font-size:12px;font-weight:500;box-shadow:0 1px 2px rgba(15,23,42,0.06);">1 · card</div>
+          <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:12px 14px;font-size:12px;font-weight:500;box-shadow:0 1px 2px rgba(15,23,42,0.04),0 8px 24px -8px rgba(124,58,237,0.18);">2 · header sticky</div>
+          <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:12px 14px;font-size:12px;font-weight:500;box-shadow:0 4px 12px rgba(15,23,42,0.05),0 24px 48px -16px rgba(124,58,237,0.24);">3 · modal</div>
+          <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:12px 14px;font-size:12px;font-weight:500;box-shadow:0 0 0 1px rgba(167,139,250,0.2),0 12px 32px -8px rgba(124,58,237,0.35);">4 · bottom sheet</div>
+        </div>
+      </div>
+
+      <!-- Elevation dark -->
+      <div style="background:#1A0A2E;border:1px solid rgba(167,139,250,0.18);border-radius:20px;padding:24px;color:#EDE9FE;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Elevação — modo escuro</div>
+        <p style="font-size:12.5px;line-height:1.55;color:#C4B0F0;margin:0 0 18px;">Sem sombra: elevação vira degrau de superfície.</p>
+        <div style="display:grid;gap:12px;">
+          <div style="background:#1A0A2E;border:1px solid rgba(167,139,250,0.14);border-radius:12px;padding:12px 14px;font-size:12px;font-weight:500;">0 · #1A0A2E</div>
+          <div style="background:#241041;border:1px solid rgba(167,139,250,0.16);border-radius:12px;padding:12px 14px;font-size:12px;font-weight:500;">1 · #241041</div>
+          <div style="background:#2D0F52;border:1px solid rgba(167,139,250,0.18);border-radius:12px;padding:12px 14px;font-size:12px;font-weight:500;">2 · #2D0F52</div>
+          <div style="background:#371563;border:1px solid rgba(167,139,250,0.22);border-radius:12px;padding:12px 14px;font-size:12px;font-weight:500;">3 · #371563</div>
+          <div style="background:#421B74;border:1px solid rgba(167,139,250,0.28);border-radius:12px;padding:12px 14px;font-size:12px;font-weight:500;">4 · #421B74</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== COMPONENTS ===== -->
+    <div style="margin-bottom:20px;">
+      <div class="cd-label" style="margin-bottom:6px;">Componentes</div>
+      <h2 class="cd-h2" style="margin:0;color:#1A0A2E;">Blocos de UI mobile</h2>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px;margin-bottom:64px;align-items:start;">
+
+      <!-- Buttons -->
+      <div style="background:#F8F7FF;border:1px solid #E2E8F0;border-radius:20px;padding:24px;">
+        <div style="font-size:13px;font-weight:600;color:#1A0A2E;margin-bottom:16px;">Botões · alvo mín. 44px</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <button style="height:56px;border:none;border-radius:999px;background:#7C3AED;color:#fff;font-family:inherit;font-weight:600;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 24px -8px rgba(124,58,237,0.5);"><i data-lucide="message-square" style="width:18px;height:18px;"></i>Primário · large 56</button>
+          <button style="height:44px;border:none;border-radius:999px;background:#7C3AED;color:#fff;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;">Primário · medium 44</button>
+          <button style="height:44px;border:1px solid #CBB8F5;border-radius:999px;background:transparent;color:#5B21B6;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;">Secundário</button>
+          <button style="height:44px;border:none;border-radius:999px;background:transparent;color:#7C3AED;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;">Terciário (ghost)</button>
+          <button style="height:44px;border:none;border-radius:999px;background:#DC2626;color:#fff;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;"><i data-lucide="trash-2" style="width:16px;height:16px;"></i>Destrutivo</button>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button style="height:44px;flex:1;border:none;border-radius:999px;background:#7C3AED;color:#fff;font-family:inherit;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:default;"><span style="width:16px;height:16px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:cdspin 0.7s linear infinite;"></span>Carregando</button>
+            <button disabled style="height:44px;flex:1;border:none;border-radius:999px;background:#7C3AED;color:#fff;font-family:inherit;font-weight:600;font-size:14px;opacity:0.4;">Disabled</button>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:4px;">
+            <button style="width:32px;height:32px;border:1px solid #CBB8F5;border-radius:999px;background:transparent;color:#7C3AED;display:flex;align-items:center;justify-content:center;cursor:pointer;"><i data-lucide="plus" style="width:15px;height:15px;"></i></button>
+            <span style="font-size:11px;color:#94A3B8;">small 32 (icon)</span>
+            <div style="margin-left:auto;width:56px;height:56px;border-radius:999px;background:#7C3AED;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 28px -6px rgba(124,58,237,0.6);"><i data-lucide="plus" style="width:26px;height:26px;color:#fff;"></i></div>
+            <span style="font-size:11px;color:#94A3B8;">FAB</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inputs -->
+      <div style="background:#F8F7FF;border:1px solid #E2E8F0;border-radius:20px;padding:24px;">
+        <div style="font-size:13px;font-weight:600;color:#1A0A2E;margin-bottom:16px;">Inputs · estados</div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <label style="display:block;"><span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#64748B;">Default</span><div style="margin-top:6px;height:48px;border:1px solid #E2E8F0;border-radius:12px;background:#fff;display:flex;align-items:center;padding:0 14px;gap:10px;"><i data-lucide="user" style="width:18px;height:18px;color:#94A3B8;"></i><span style="font-size:14px;color:#94A3B8;">Nome do lead</span></div></label>
+          <label style="display:block;"><span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#7C3AED;">Focus</span><div style="margin-top:6px;height:48px;border:2px solid #7C3AED;border-radius:12px;background:#fff;display:flex;align-items:center;padding:0 13px;gap:10px;box-shadow:0 0 0 4px rgba(124,58,237,0.12);"><i data-lucide="search" style="width:18px;height:18px;color:#7C3AED;"></i><span style="font-size:14px;color:#1A0A2E;">Unimed<span style="border-left:1.5px solid #7C3AED;margin-left:1px;animation:cdpulse 1s step-end infinite;">&nbsp;</span></span></div></label>
+          <label style="display:block;"><span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#16A34A;">Success · filled</span><div style="margin-top:6px;height:48px;border:1.5px solid #16A34A;border-radius:12px;background:#fff;display:flex;align-items:center;padding:0 14px;gap:10px;"><span style="font-family:var(--font-mono);font-size:14px;color:#1A0A2E;flex:1;">SUSEP 123456789</span><i data-lucide="check-circle-2" style="width:18px;height:18px;color:#16A34A;"></i></div></label>
+          <label style="display:block;"><span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#DC2626;">Error</span><div style="margin-top:6px;height:48px;border:1.5px solid #DC2626;border-radius:12px;background:#fff;display:flex;align-items:center;padding:0 14px;gap:10px;"><span style="font-size:14px;color:#1A0A2E;flex:1;">joao@</span><i data-lucide="alert-circle" style="width:18px;height:18px;color:#DC2626;"></i></div><span style="font-size:11.5px;color:#DC2626;margin-top:5px;display:block;">E-mail incompleto.</span></label>
+          <label style="display:block;"><span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#94A3B8;">Filled (variação)</span><div style="margin-top:6px;height:48px;border:1px solid transparent;border-radius:12px;background:#EDE9FE;display:flex;align-items:center;padding:0 14px;gap:10px;"><i data-lucide="phone" style="width:18px;height:18px;color:#7C3AED;"></i><span style="font-family:var(--font-mono);font-size:14px;color:#1A0A2E;">(11) 98••••-••••</span></div></label>
+        </div>
+      </div>
+
+      <!-- Overlays -->
+      <div style="background:#F8F7FF;border:1px solid #E2E8F0;border-radius:20px;padding:24px;">
+        <div style="font-size:13px;font-weight:600;color:#1A0A2E;margin-bottom:16px;">Overlays &amp; feedback</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="background:#1A0A2E;color:#EDE9FE;border-radius:14px;padding:13px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 12px 32px -8px rgba(124,58,237,0.35);"><i data-lucide="check-circle-2" style="width:20px;height:20px;color:#22C55E;flex:none;"></i><span style="font-size:13.5px;flex:1;">Lead salvo no funil.</span><span style="font-size:12px;color:#A78BFA;font-weight:600;">Desfazer</span></div>
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:14px;padding:13px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 12px rgba(15,23,42,0.05);"><i data-lucide="bell" style="width:20px;height:20px;color:#7C3AED;flex:none;"></i><span style="font-size:13.5px;flex:1;color:#1A0A2E;">Toast · IA respondeu 3 leads.</span></div>
+          <div style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:14px;padding:13px 16px;display:flex;align-items:center;gap:12px;"><i data-lucide="wifi-off" style="width:20px;height:20px;color:#DC2626;flex:none;"></i><span style="font-size:13.5px;flex:1;color:#7F1D1D;">Snackbar · sem conexão.</span></div>
+          <div style="margin-top:4px;border:1px dashed #CBB8F5;border-radius:14px;padding:16px;text-align:center;background:#fff;">
+            <div style="width:34px;height:5px;border-radius:999px;background:#E2E8F0;margin:0 auto 12px;"></div>
+            <div style="font-size:13px;font-weight:600;color:#1A0A2E;">Action sheet / Bottom sheet</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+              <div style="height:44px;border-radius:10px;background:#EDE9FE;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:500;color:#5B21B6;"><i data-lucide="phone" style="width:16px;height:16px;"></i>Ligar</div>
+              <div style="height:44px;border-radius:10px;background:#EDE9FE;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:500;color:#5B21B6;"><i data-lucide="share-2" style="width:16px;height:16px;"></i>Compartilhar</div>
+              <div style="height:44px;border-radius:10px;color:#DC2626;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:600;"><i data-lucide="trash-2" style="width:16px;height:16px;"></i>Descartar lead</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading states -->
+      <div style="background:#F8F7FF;border:1px solid #E2E8F0;border-radius:20px;padding:24px;">
+        <div style="font-size:13px;font-weight:600;color:#1A0A2E;margin-bottom:16px;">Loading &amp; estados vazios</div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center;">
+            <div style="width:44px;height:44px;border-radius:50%;flex:none;background:linear-gradient(90deg,#EDE9FE 25%,#F5F3FF 50%,#EDE9FE 75%);background-size:400px 100%;animation:cdshimmer 1.3s infinite;"></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+              <div style="height:12px;width:70%;border-radius:6px;background:linear-gradient(90deg,#EDE9FE 25%,#F5F3FF 50%,#EDE9FE 75%);background-size:400px 100%;animation:cdshimmer 1.3s infinite;"></div>
+              <div style="height:10px;width:45%;border-radius:6px;background:linear-gradient(90deg,#EDE9FE 25%,#F5F3FF 50%,#EDE9FE 75%);background-size:400px 100%;animation:cdshimmer 1.3s infinite;"></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;justify-content:center;color:#64748B;font-size:12.5px;padding:6px;"><span style="width:22px;height:22px;border:3px solid #EDE9FE;border-top-color:#7C3AED;border-radius:50%;animation:cdspin 0.7s linear infinite;"></span>Spinner · pull to refresh</div>
+          <div style="text-align:center;padding:20px 16px;border:1px dashed #E2E8F0;border-radius:14px;background:#fff;">
+            <div style="width:52px;height:52px;border-radius:16px;background:#EDE9FE;display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px;"><i data-lucide="inbox" style="width:26px;height:26px;color:#7C3AED;"></i></div>
+            <div style="font-size:14px;font-weight:600;color:#1A0A2E;">Nenhum lead ainda</div>
+            <div style="font-size:12.5px;color:#64748B;margin-top:3px;line-height:1.5;">A IA começa a atender assim que você publicar seu link.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ICON SET ===== -->
+    <div style="margin-bottom:20px;">
+      <div class="cd-label" style="margin-bottom:6px;">Iconografia</div>
+      <h2 class="cd-h2" style="margin:0;color:#1A0A2E;">24 ícones essenciais · Lucide 1.75px</h2>
+    </div>
+    <div style="background:#1A0A2E;border-radius:20px;padding:28px;margin-bottom:64px;display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px;">
+      <div data-icons style="display:contents;"></div>
+    </div>
+
+    <!-- ===== SCREENS ===== -->
+    <div style="margin-bottom:8px;">
+      <div class="cd-label" style="margin-bottom:6px;">Telas</div>
+      <h2 class="cd-h2" style="margin:0 0 6px;color:#1A0A2E;">Fluxo do app · claro &amp; escuro</h2>
+      <p style="font-size:14px;color:#3D2E5C;max-width:640px;line-height:1.6;margin:0;">Cada tela pareada nos dois modos. Tab bar de 5 ícones, gamificação (nível, streak, missões, ranking) e a IA presente em cada canto.</p>
+    </div>
+
+    <div data-screens style="display:flex;flex-wrap:wrap;gap:40px;margin-top:36px;"></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() { this.draw(); }
+  componentDidUpdate() { this.draw(); }
+
+  draw() {
+    // ---- icon set ----
+    const iconWrap = document.querySelector('[data-icons]');
+    if (iconWrap && !iconWrap.dataset.done) {
+      const names = ['home','search','user','settings','bell','message-square','heart','share-2','download','upload','x','menu','arrow-left','more-horizontal','edit-3','trash-2','calendar','clock','map-pin','camera','image','mic','badge-check','alert-triangle'];
+      iconWrap.style.display = 'contents';
+      iconWrap.innerHTML = names.map(n => `<div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 6px;border-radius:14px;background:rgba(167,139,250,0.06);border:1px solid rgba(167,139,250,0.14);"><i data-lucide="${n}" style="width:24px;height:24px;color:#A78BFA;stroke-width:1.75;"></i><span style="font-size:10px;color:#C4B0F0;font-family:var(--font-mono);">${n}</span></div>`).join('');
+      iconWrap.dataset.done = '1';
+    }
+
+    // ---- screens ----
+    const screensWrap = document.querySelector('[data-screens]');
+    if (screensWrap && !screensWrap.dataset.done) {
+      screensWrap.innerHTML = this.screensData().map(s => this.pair(s)).join('');
+      screensWrap.dataset.done = '1';
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  // theme tokens per mode
+  T(dark) {
+    return dark ? {
+      bg:'#1A0A2E', surf:'#241041', surf2:'#2D0F52', card:'#241041',
+      border:'rgba(167,139,250,0.18)', fg:'#EDE9FE', mut:'#A78BFA', mut2:'#8B79C4',
+      tabbg:'rgba(26,10,46,0.88)', accent:'#A78BFA', chip:'#371563', bar:'#fff'
+    } : {
+      bg:'#F8F7FF', surf:'#FFFFFF', surf2:'#F5F3FF', card:'#FFFFFF',
+      border:'#E2E8F0', fg:'#1A0A2E', mut:'#64748B', mut2:'#94A3B8',
+      tabbg:'rgba(248,247,255,0.92)', accent:'#7C3AED', chip:'#EDE9FE', bar:'#0F172A'
+    };
+  }
+
+  frame(dark, label, inner) {
+    const t = this.T(dark);
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:${dark?'#5B4B7A':'#7C6B95'};">${label} · ${dark?'dark':'light'}</div>
+      <div style="width:300px;background:${dark?'#0A0413':'#1A0A2E'};border-radius:42px;padding:9px;box-shadow:0 30px 70px -24px rgba(26,10,46,0.6);">
+        <div class="phone-scroll" style="position:relative;width:100%;height:620px;background:${t.bg};border-radius:34px;overflow:hidden;display:flex;flex-direction:column;">
+          <div style="position:absolute;top:9px;left:50%;transform:translateX(-50%);width:100px;height:26px;background:#0A0413;border-radius:999px;z-index:40;"></div>
+          <div style="height:46px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px 0 26px;color:${t.fg};font-family:var(--font-mono);font-size:13px;font-weight:500;z-index:30;">
+            <span>9:41</span><span style="display:flex;gap:6px;align-items:center;"><i data-lucide="signal" style="width:15px;height:15px;"></i><i data-lucide="wifi" style="width:15px;height:15px;"></i><i data-lucide="battery-full" style="width:20px;height:15px;"></i></span>
+          </div>
+          <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;">${inner}</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  pair(s) {
+    return `<div style="display:flex;gap:28px;flex-wrap:wrap;">${this.frame(false,s.label,s.render(this.T(false),false))}${this.frame(true,s.label,s.render(this.T(true),true))}</div>`;
+  }
+
+  tabbar(t, active) {
+    const items = [['home','Início'],['inbox','Leads'],['zap','Missões'],['trophy','Ranking'],['user','Perfil']];
+    return `<div style="flex:none;height:78px;background:${t.tabbg};backdrop-filter:blur(12px);border-top:1px solid ${t.border};display:flex;align-items:flex-start;padding:10px 6px 0;">
+      ${items.map((it,i)=>{const on=i===active;return `<div style="flex:1;min-height:56px;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:6px;color:${on?t.accent:t.mut2};">
+        <div style="position:relative;width:44px;height:30px;display:flex;align-items:center;justify-content:center;">${on?`<span style="position:absolute;inset:0;background:${t.accent};opacity:0.14;border-radius:999px;"></span>`:''}<i data-lucide="${it[0]}" style="width:22px;height:22px;stroke-width:${on?2.2:1.75};position:relative;"></i></div>
+        <span style="font-size:10px;font-weight:${on?600:500};">${it[1]}</span></div>`;}).join('')}
+    </div>`;
+  }
+
+  header(t, title, opts={}) {
+    return `<div style="flex:none;padding:6px 20px 14px;display:flex;align-items:center;gap:12px;">
+      ${opts.back?`<div style="width:38px;height:38px;border-radius:50%;background:${t.chip};display:flex;align-items:center;justify-content:center;color:${t.accent};"><i data-lucide="arrow-left" style="width:20px;height:20px;"></i></div>`:''}
+      <div style="font-family:var(--font-display);font-weight:600;font-size:${opts.big?'26px':'20px'};color:${t.fg};letter-spacing:-0.02em;flex:1;">${title}</div>
+      ${opts.right||''}
+    </div>`;
+  }
+
+  ring(t,pct,dark){const c=dark?'#22C55E':'#16A34A';return `<div style="width:56px;height:56px;border-radius:50%;background:conic-gradient(${t.accent} ${pct*3.6}deg, ${dark?'rgba(167,139,250,0.18)':'#EDE9FE'} 0);display:flex;align-items:center;justify-content:center;flex:none;"><div style="width:42px;height:42px;border-radius:50%;background:${t.card};display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;font-weight:600;color:${t.fg};">${pct}%</div></div>`;}
+
+  screensData() {
+    const self = this;
+    return [
+      // ---------- ONBOARDING ----------
+      { label:'Onboarding', render(t,dark){
+        return `<div style="flex:1;display:flex;flex-direction:column;padding:8px 26px 26px;position:relative;">
+          ${dark?`<div style="position:absolute;inset:0;background-image:radial-gradient(circle at 1px 1px, rgba(167,139,250,0.18) 1px, transparent 0);background-size:22px 22px;opacity:0.5;"></div>`:''}
+          <div style="position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:24px;">
+            <div style="width:120px;height:120px;border-radius:32px;background:${dark?'#2D0F52':'#1A0A2E'};display:flex;align-items:center;justify-content:center;box-shadow:0 20px 48px -12px rgba(124,58,237,0.55);"><img src="assets/brain-symbol.png" style="width:82px;height:82px;object-fit:contain;"/></div>
+            <div>
+              <div style="font-family:var(--font-display);font-weight:600;font-size:27px;line-height:1.15;letter-spacing:-0.02em;color:${t.fg};">Seu lead não pode esperar.</div>
+              <div style="font-size:15px;color:${t.mut};line-height:1.6;margin-top:12px;">A IA atende, qualifica e agenda 24h por dia. Você fecha o plano. Simples.</div>
+            </div>
+          </div>
+          <div style="position:relative;display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;gap:7px;justify-content:center;">
+              <span style="width:24px;height:7px;border-radius:999px;background:${t.accent};"></span>
+              <span style="width:7px;height:7px;border-radius:999px;background:${dark?'rgba(167,139,250,0.3)':'#D8CCF5'};"></span>
+              <span style="width:7px;height:7px;border-radius:999px;background:${dark?'rgba(167,139,250,0.3)':'#D8CCF5'};"></span>
+            </div>
+            <button style="height:56px;border:none;border-radius:999px;background:#7C3AED;color:#fff;font-family:inherit;font-weight:600;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 12px 30px -8px rgba(124,58,237,0.6);">Começar →</button>
+            <div style="text-align:center;font-size:13px;color:${t.mut};font-weight:500;">Já tenho conta</div>
+          </div>
+        </div>`;
+      }},
+
+      // ---------- LOGIN ----------
+      { label:'Login', render(t,dark){
+        return `<div style="flex:1;display:flex;flex-direction:column;padding:12px 26px 26px;">
+          <div style="width:56px;height:56px;border-radius:16px;background:${dark?'#2D0F52':'#1A0A2E'};display:flex;align-items:center;justify-content:center;margin-bottom:28px;"><img src="assets/brain-symbol.png" style="width:38px;height:38px;object-fit:contain;"/></div>
+          <div style="font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.02em;color:${t.fg};">Entrar</div>
+          <div style="font-size:14px;color:${t.mut};margin-top:6px;margin-bottom:28px;">Você tem SUSEP. Agora tem IA também.</div>
+          <div style="display:flex;flex-direction:column;gap:16px;flex:1;">
+            <label><span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:${t.mut};">E-mail</span><div style="margin-top:7px;height:52px;border:1px solid ${t.border};border-radius:14px;background:${t.surf};display:flex;align-items:center;padding:0 15px;gap:10px;"><i data-lucide="mail" style="width:19px;height:19px;color:${t.mut2};"></i><span style="font-size:15px;color:${t.fg};">bruno@corretor.com</span></div></label>
+            <label><span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:${t.accent};">Senha</span><div style="margin-top:7px;height:52px;border:2px solid ${t.accent};border-radius:14px;background:${t.surf};display:flex;align-items:center;padding:0 14px;gap:10px;box-shadow:0 0 0 4px rgba(124,58,237,0.12);"><i data-lucide="lock" style="width:19px;height:19px;color:${t.accent};"></i><span style="font-size:15px;color:${t.fg};letter-spacing:2px;flex:1;">••••••••</span><i data-lucide="eye" style="width:19px;height:19px;color:${t.mut2};"></i></div></label>
+            <div style="text-align:right;font-size:13px;color:${t.accent};font-weight:600;">Esqueci a senha</div>
+          </div>
+          <button style="height:56px;border:none;border-radius:999px;background:#7C3AED;color:#fff;font-family:inherit;font-weight:600;font-size:16px;box-shadow:0 12px 30px -8px rgba(124,58,237,0.6);margin-bottom:14px;">Entrar</button>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;"><span style="flex:1;height:1px;background:${t.border};"></span><span style="font-size:12px;color:${t.mut2};">ou</span><span style="flex:1;height:1px;background:${t.border};"></span></div>
+          <button style="height:52px;border:1px solid ${t.border};border-radius:999px;background:transparent;color:${t.fg};font-family:inherit;font-weight:600;font-size:15px;display:flex;align-items:center;justify-content:center;gap:10px;"><i data-lucide="fingerprint" style="width:20px;height:20px;color:${t.accent};"></i>Entrar com biometria</button>
+        </div>`;
+      }},
+
+      // ---------- HOME / DASHBOARD (gamified) ----------
+      { label:'Home', render(t,dark){
+        return `<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="flex:none;padding:4px 20px 12px;display:flex;align-items:center;gap:12px;">
+            <img src="assets/bruno.jpg" style="width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid ${t.accent};"/>
+            <div style="flex:1;"><div style="font-size:12px;color:${t.mut};">Bom dia,</div><div style="font-family:var(--font-display);font-weight:600;font-size:17px;color:${t.fg};">Bruno de Castro</div></div>
+            <div style="width:40px;height:40px;border-radius:50%;background:${t.chip};display:flex;align-items:center;justify-content:center;color:${t.accent};position:relative;"><i data-lucide="bell" style="width:20px;height:20px;"></i><span style="position:absolute;top:8px;right:9px;width:8px;height:8px;border-radius:50%;background:#DC2626;border:2px solid ${t.bg};"></span></div>
+          </div>
+          <div style="flex:1;overflow:hidden;padding:0 20px;display:flex;flex-direction:column;gap:14px;">
+            <!-- level + streak -->
+            <div style="background:${dark?'#2D0F52':'#1A0A2E'};border-radius:20px;padding:18px;position:relative;overflow:hidden;">
+              <div style="position:absolute;inset:0;background-image:radial-gradient(circle at 1px 1px, rgba(167,139,250,0.22) 1px, transparent 0);background-size:20px 20px;opacity:0.5;"></div>
+              <div style="position:relative;display:flex;align-items:center;gap:14px;">
+                <div style="width:52px;height:52px;border-radius:16px;background:rgba(167,139,250,0.16);display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none;"><span style="font-size:9px;color:#A78BFA;font-weight:600;letter-spacing:0.05em;">NÍVEL</span><span style="font-family:var(--font-mono);font-size:20px;font-weight:600;color:#fff;line-height:1;">7</span></div>
+                <div style="flex:1;">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-size:13px;font-weight:600;color:#EDE9FE;">Corretor Ouro</span><span style="font-family:var(--font-mono);font-size:11px;color:#A78BFA;">1.840 / 2.500 XP</span></div>
+                  <div style="height:8px;border-radius:999px;background:rgba(167,139,250,0.2);overflow:hidden;"><div style="width:73%;height:100%;background:linear-gradient(90deg,#A78BFA,#7C3AED);border-radius:999px;"></div></div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;flex:none;color:#FBBF24;"><i data-lucide="flame" style="width:24px;height:24px;"></i><span style="font-family:var(--font-mono);font-size:13px;font-weight:600;">12</span></div>
+              </div>
+            </div>
+            <!-- metrics -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div style="background:${t.card};border:1px solid ${t.border};border-radius:16px;padding:14px;">
+                <div style="display:flex;align-items:center;gap:8px;color:${t.accent};margin-bottom:8px;"><i data-lucide="inbox" style="width:18px;height:18px;"></i><span style="font-size:11px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:${t.mut};">Leads hoje</span></div>
+                <div style="font-family:var(--font-mono);font-size:26px;font-weight:600;color:${t.fg};">14</div>
+                <div style="font-size:11px;color:${dark?'#22C55E':'#16A34A'};font-weight:600;display:flex;align-items:center;gap:3px;margin-top:2px;"><i data-lucide="trending-up" style="width:13px;height:13px;"></i>+38% vs ontem</div>
+              </div>
+              <div style="background:${t.card};border:1px solid ${t.border};border-radius:16px;padding:14px;">
+                <div style="display:flex;align-items:center;gap:8px;color:${t.accent};margin-bottom:8px;"><i data-lucide="target" style="width:18px;height:18px;"></i><span style="font-size:11px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:${t.mut};">Conversão</span></div>
+                <div style="font-family:var(--font-mono);font-size:26px;font-weight:600;color:${t.fg};">31%</div>
+                <div style="font-size:11px;color:${t.mut};font-weight:500;margin-top:2px;">meta 28%</div>
+              </div>
+            </div>
+            <!-- daily mission -->
+            <div style="background:${t.card};border:1px solid ${t.border};border-radius:16px;padding:15px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span style="font-size:13px;font-weight:600;color:${t.fg};">Missão do dia</span><span style="font-size:11px;font-family:var(--font-mono);color:${t.accent};font-weight:600;">+120 XP</span></div>
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <div style="display:flex;align-items:center;gap:10px;"><span style="width:22px;height:22px;border-radius:7px;background:${dark?'#22C55E':'#16A34A'};display:flex;align-items:center;justify-content:center;"><i data-lucide="check" style="width:14px;height:14px;color:#fff;"></i></span><span style="font-size:13px;color:${t.mut};text-decoration:line-through;flex:1;">Responder 5 leads quentes</span></div>
+                <div style="display:flex;align-items:center;gap:10px;"><span style="width:22px;height:22px;border-radius:7px;border:2px solid ${t.accent};flex:none;"></span><span style="font-size:13px;color:${t.fg};flex:1;">Ligar para 3 agendamentos</span><span style="font-family:var(--font-mono);font-size:11px;color:${t.mut2};">1/3</span></div>
+              </div>
+            </div>
+          </div>
+          ${self.tabbar(t,0)}
+        </div>`;
+      }},
+
+      // ---------- LEADS LIST ----------
+      { label:'Leads', render(t,dark){
+        const leads=[['Ana Ribeiro','Unimed · PME','quente','Agora','#DC2626','Quente',true],['João Menezes','Amil · pessoa física','morno','8 min','#D97706','Morno',false],['Clara Souza','SulAmérica · adesão','quente','23 min','#DC2626','Quente',true],['Pedro Lima','Bradesco · PME','frio','1 h','#64748B','Frio',false],['Marina Alves','Unimed · pessoa física','morno','2 h','#D97706','Morno',false]];
+        return `<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+          ${self.header(t,'Leads',{right:`<div style="width:40px;height:40px;border-radius:50%;background:${t.chip};display:flex;align-items:center;justify-content:center;color:${t.accent};"><i data-lucide="sliders-horizontal" style="width:19px;height:19px;"></i></div>`})}
+          <div style="flex:none;padding:0 20px 12px;"><div style="height:44px;border:1px solid ${t.border};border-radius:14px;background:${t.surf};display:flex;align-items:center;padding:0 14px;gap:10px;"><i data-lucide="search" style="width:18px;height:18px;color:${t.mut2};"></i><span style="font-size:14px;color:${t.mut2};">Buscar lead ou operadora</span></div></div>
+          <div style="flex:none;padding:0 20px 10px;display:flex;gap:8px;overflow:hidden;">
+            ${['Todos','Quentes','Mornos','Agendados'].map((c,i)=>`<span style="flex:none;padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:600;background:${i===0?t.accent:t.chip};color:${i===0?'#fff':t.mut};">${c}</span>`).join('')}
+          </div>
+          <div class="phone-scroll" style="flex:1;overflow-y:auto;padding:2px 20px 12px;display:flex;flex-direction:column;gap:10px;">
+            ${leads.map(l=>`<div style="background:${t.card};border:1px solid ${t.border};border-radius:16px;padding:13px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="width:44px;height:44px;border-radius:50%;background:${t.chip};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:600;font-size:16px;color:${t.accent};flex:none;position:relative;">${l[0][0]}${l[6]?`<span style="position:absolute;bottom:-1px;right:-1px;width:16px;height:16px;border-radius:50%;background:${dark?'#22C55E':'#16A34A'};border:2px solid ${t.card};display:flex;align-items:center;justify-content:center;"><i data-lucide="bot" style="width:9px;height:9px;color:#fff;"></i></span>`:''}</div>
+              <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:600;color:${t.fg};">${l[0]}</div><div style="font-size:12px;color:${t.mut};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l[1]}</div></div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none;"><span style="font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:${l[4]};background:${l[4]}1F;padding:3px 8px;border-radius:999px;">${l[5]}</span><span style="font-family:var(--font-mono);font-size:10.5px;color:${t.mut2};">${l[3]}</span></div>
+            </div>`).join('')}
+            <div style="display:flex;align-items:center;gap:8px;justify-content:center;padding:10px;color:${t.mut2};font-size:12px;"><span style="width:16px;height:16px;border:2px solid ${t.chip};border-top-color:${t.accent};border-radius:50%;animation:cdspin 0.7s linear infinite;"></span>Carregando mais</div>
+          </div>
+          ${self.tabbar(t,1)}
+          <div style="position:absolute;right:18px;bottom:92px;width:56px;height:56px;border-radius:999px;background:#7C3AED;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px -6px rgba(124,58,237,0.65);z-index:20;"><i data-lucide="plus" style="width:26px;height:26px;color:#fff;"></i></div>
+        </div>`;
+      }},
+
+      // ---------- LEAD DETAIL ----------
+      { label:'Detalhe', render(t,dark){
+        return `<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+          ${self.header(t,'',{back:true,right:`<div style="margin-left:auto;display:flex;gap:8px;"><div style="width:38px;height:38px;border-radius:50%;background:${t.chip};display:flex;align-items:center;justify-content:center;color:${t.accent};"><i data-lucide="star" style="width:19px;height:19px;"></i></div><div style="width:38px;height:38px;border-radius:50%;background:${t.chip};display:flex;align-items:center;justify-content:center;color:${t.accent};"><i data-lucide="more-horizontal" style="width:19px;height:19px;"></i></div></div>`})}
+          <div class="phone-scroll" style="flex:1;overflow-y:auto;padding:0 20px 16px;">
+            <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;margin-bottom:20px;">
+              <div style="width:76px;height:76px;border-radius:50%;background:${t.chip};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:600;font-size:30px;color:${t.accent};position:relative;">A<span style="position:absolute;bottom:2px;right:2px;width:22px;height:22px;border-radius:50%;background:${dark?'#22C55E':'#16A34A'};border:3px solid ${t.bg};display:flex;align-items:center;justify-content:center;"><i data-lucide="bot" style="width:12px;height:12px;color:#fff;"></i></span></div>
+              <div><div style="font-family:var(--font-display);font-weight:600;font-size:21px;color:${t.fg};">Ana Ribeiro</div><div style="font-size:13px;color:${t.mut};margin-top:2px;">Unimed · PME · 12 vidas</div></div>
+              <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#DC2626;background:#DC26261F;padding:5px 12px;border-radius:999px;">Lead quente</span>
+            </div>
+            <div style="display:flex;gap:10px;margin-bottom:18px;">
+              <button style="flex:1;height:48px;border:none;border-radius:14px;background:#7C3AED;color:#fff;font-family:inherit;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:7px;"><i data-lucide="phone" style="width:17px;height:17px;"></i>Ligar</button>
+              <button style="flex:1;height:48px;border:1px solid ${t.border};border-radius:14px;background:${t.surf};color:${t.fg};font-family:inherit;font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:7px;"><i data-lucide="message-square" style="width:17px;height:17px;"></i>WhatsApp</button>
+            </div>
+            <div style="background:${t.card};border:1px solid ${t.border};border-radius:16px;padding:15px;margin-bottom:12px;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><i data-lucide="sparkles" style="width:17px;height:17px;color:${t.accent};"></i><span style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:${t.accent};">Resumo da IA</span></div>
+              <p style="font-size:13.5px;line-height:1.65;color:${t.fg};margin:0;">Quer migrar 12 vidas da PME. Insatisfeita com reajuste de 24% na operadora atual. Prazo: fechar até sexta. Sensível a coparticipação.</p>
+            </div>
+            <div style="background:${t.card};border:1px solid ${t.border};border-radius:16px;padding:15px;">
+              <div style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:${t.mut};margin-bottom:14px;">Dados</div>
+              ${[['phone','Telefone','(11) 98812-3390'],['mail','E-mail','ana.ribeiro@empresa.com'],['map-pin','Cidade','São Paulo · SP'],['clock','Último contato','Hoje, 08:14 (IA)']].map(r=>`<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid ${t.border};"><i data-lucide="${r[0]}" style="width:18px;height:18px;color:${t.accent};flex:none;"></i><span style="font-size:12.5px;color:${t.mut};flex:1;">${r[1]}</span><span style="font-family:var(--font-mono);font-size:12.5px;color:${t.fg};font-weight:500;">${r[2]}</span></div>`).join('')}
+            </div>
+          </div>
+        </div>`;
+      }},
+
+      // ---------- PROFILE / RANKING ----------
+      { label:'Perfil', render(t,dark){
+        const ach=[['award','1ª venda','#7C3AED',true],['flame','Streak 7d','#D97706',true],['zap','Resposta relâmpago','#7C3AED',true],['crown','Top 3 nacional','#94A3B8',false]];
+        return `<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+          ${self.header(t,'Perfil',{right:`<div style="width:40px;height:40px;border-radius:50%;background:${t.chip};display:flex;align-items:center;justify-content:center;color:${t.accent};"><i data-lucide="settings" style="width:19px;height:19px;"></i></div>`})}
+          <div class="phone-scroll" style="flex:1;overflow-y:auto;padding:0 20px 12px;">
+            <div style="display:flex;align-items:center;gap:14px;background:${dark?'#2D0F52':'#1A0A2E'};border-radius:20px;padding:16px;margin-bottom:14px;position:relative;overflow:hidden;">
+              <div style="position:absolute;inset:0;background-image:radial-gradient(circle at 1px 1px, rgba(167,139,250,0.2) 1px, transparent 0);background-size:20px 20px;opacity:0.5;"></div>
+              <img src="assets/bruno.jpg" style="position:relative;width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid #A78BFA;"/>
+              <div style="position:relative;flex:1;"><div style="font-family:var(--font-display);font-weight:600;font-size:18px;color:#fff;">Bruno de Castro</div><div style="font-family:var(--font-mono);font-size:11px;color:#A78BFA;margin-top:2px;">SUSEP 10.2394871</div><div style="display:inline-flex;align-items:center;gap:5px;margin-top:7px;background:rgba(167,139,250,0.16);padding:4px 10px;border-radius:999px;"><i data-lucide="badge-check" style="width:13px;height:13px;color:#A78BFA;"></i><span style="font-size:11px;color:#EDE9FE;font-weight:600;">Nível 7 · Ouro</span></div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+              ${[['142','Leads','#7C3AED'],['44','Fechados','#16A34A'],['#2','Ranking','#D97706']].map(m=>`<div style="background:${t.card};border:1px solid ${t.border};border-radius:14px;padding:12px 8px;text-align:center;"><div style="font-family:var(--font-mono);font-size:19px;font-weight:600;color:${t.fg};">${m[0]}</div><div style="font-size:10.5px;color:${t.mut};font-weight:500;margin-top:2px;">${m[1]}</div></div>`).join('')}
+            </div>
+            <div style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:${t.mut};margin-bottom:12px;">Conquistas</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">
+              ${ach.map(a=>`<div style="display:flex;flex-direction:column;align-items:center;gap:6px;opacity:${a[3]?1:0.4};"><div style="width:52px;height:52px;border-radius:16px;background:${a[3]?a[2]+'1F':t.chip};display:flex;align-items:center;justify-content:center;color:${a[2]};border:1px solid ${a[3]?a[2]+'40':t.border};"><i data-lucide="${a[0]}" style="width:24px;height:24px;"></i></div><span style="font-size:9.5px;text-align:center;color:${t.mut};line-height:1.2;">${a[1]}</span></div>`).join('')}
+            </div>
+            <div style="background:${t.card};border:1px solid ${t.border};border-radius:16px;overflow:hidden;">
+              ${[['user','Editar perfil'],['bell','Notificações'],['shield-check','SUSEP e documentos'],['log-out','Sair']].map((r,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:15px;${i>0?`border-top:1px solid ${t.border};`:''}color:${r[0]==='log-out'?'#DC2626':t.fg};"><i data-lucide="${r[0]}" style="width:19px;height:19px;color:${r[0]==='log-out'?'#DC2626':t.accent};"></i><span style="font-size:14px;font-weight:500;flex:1;">${r[1]}</span>${r[0]!=='log-out'?`<i data-lucide="chevron-right" style="width:18px;height:18px;color:${t.mut2};"></i>`:''}</div>`).join('')}
+            </div>
+          </div>
+          ${self.tabbar(t,4)}
+        </div>`;
+      }},
+
+      // ---------- IA CHAT ----------
+      { label:'IA · Chat', render(t,dark){
+        const bubbleAI = dark?'#2D0F52':'#EDE9FE', fgAI = dark?'#EDE9FE':'#1A0A2E';
+        return `<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="flex:none;padding:2px 16px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid ${t.border};">
+            <div style="width:36px;height:36px;border-radius:50%;background:${t.chip};display:flex;align-items:center;justify-content:center;color:${t.accent};"><i data-lucide="arrow-left" style="width:19px;height:19px;"></i></div>
+            <div style="width:40px;height:40px;border-radius:50%;background:${dark?'#2D0F52':'#1A0A2E'};display:flex;align-items:center;justify-content:center;position:relative;"><i data-lucide="bot" style="width:22px;height:22px;color:#A78BFA;"></i><span style="position:absolute;bottom:0;right:0;width:11px;height:11px;border-radius:50%;background:#22C55E;border:2px solid ${t.bg};animation:cdpulse 1.4s var(--ease) infinite;"></span></div>
+            <div style="flex:1;"><div style="font-size:14px;font-weight:600;color:${t.fg};">Assistente Cranium</div><div style="font-size:11px;color:#22C55E;font-weight:600;">online · atendendo Ana</div></div>
+            <i data-lucide="phone" style="width:20px;height:20px;color:${t.accent};"></i>
+          </div>
+          <div class="phone-scroll" style="flex:1;overflow-y:auto;padding:16px 16px 12px;display:flex;flex-direction:column;gap:10px;">
+            <div style="text-align:center;font-family:var(--font-mono);font-size:10px;color:${t.mut2};margin-bottom:4px;">HOJE · 08:14</div>
+            <div style="align-self:flex-start;max-width:80%;background:${bubbleAI};color:${fgAI};padding:10px 13px;border-radius:16px 16px 16px 4px;font-size:13.5px;line-height:1.5;">Oi Ana! Vi que você quer migrar o plano da sua PME. Posso te ajudar agora mesmo. Quantas vidas?</div>
+            <div style="align-self:flex-end;max-width:80%;background:#7C3AED;color:#fff;padding:10px 13px;border-radius:16px 16px 4px 16px;font-size:13.5px;line-height:1.5;">São 12 vidas. O reajuste veio 24% esse ano 😤</div>
+            <div style="align-self:flex-start;max-width:82%;background:${bubbleAI};color:${fgAI};padding:10px 13px;border-radius:16px 16px 16px 4px;font-size:13.5px;line-height:1.5;">24% é pesado mesmo. Consigo 3 opções com coparticipação menor. Qual o melhor horário pro Bruno te ligar?</div>
+            <div style="align-self:flex-end;max-width:80%;background:#7C3AED;color:#fff;padding:10px 13px;border-radius:16px 16px 4px 16px;font-size:13.5px;line-height:1.5;">Amanhã de manhã pode ser</div>
+            <div style="align-self:flex-start;display:flex;align-items:center;gap:6px;background:${bubbleAI};padding:12px 14px;border-radius:16px;">
+              <span style="width:7px;height:7px;border-radius:50%;background:${t.accent};animation:cdpulse 1s var(--ease) infinite;"></span>
+              <span style="width:7px;height:7px;border-radius:50%;background:${t.accent};animation:cdpulse 1s var(--ease) infinite 0.2s;"></span>
+              <span style="width:7px;height:7px;border-radius:50%;background:${t.accent};animation:cdpulse 1s var(--ease) infinite 0.4s;"></span>
+            </div>
+          </div>
+          <div style="flex:none;padding:10px 14px 16px;display:flex;align-items:center;gap:10px;border-top:1px solid ${t.border};">
+            <div style="flex:1;height:44px;border:1px solid ${t.border};border-radius:999px;background:${t.surf};display:flex;align-items:center;padding:0 16px;font-size:14px;color:${t.mut2};">Mensagem…</div>
+            <div style="width:44px;height:44px;border-radius:50%;background:#7C3AED;display:flex;align-items:center;justify-content:center;flex:none;"><i data-lucide="mic" style="width:20px;height:20px;color:#fff;"></i></div>
+          </div>
+        </div>`;
+      }},
+
+      // ---------- FUNIL / PIPELINE ----------
+      { label:'Funil', render(t,dark){
+        const cols=[['Novos','3','#7C3AED',[['Marina Alves','Unimed'],['Pedro Lima','Bradesco'],['Rafael Dias','Amil']]],['Qualificados','2','#D97706',[['João Menezes','Amil · PF'],['Clara Souza','SulAmérica']]],['Proposta','2','#0EA5E9',[['Ana Ribeiro','Unimed · 12 vidas'],['Lúcia Reis','Omint']]],['Fechados','1','#16A34A',[['Ítalo Nunes','Porto · fechado']]]];
+        return `<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+          ${self.header(t,'Funil',{right:`<div style="width:40px;height:40px;border-radius:50%;background:${t.chip};display:flex;align-items:center;justify-content:center;color:${t.accent};"><i data-lucide="plus" style="width:20px;height:20px;"></i></div>`})}
+          <div class="phone-scroll" style="flex:1;overflow-x:auto;overflow-y:hidden;padding:0 16px 16px;display:flex;gap:12px;align-items:stretch;">
+            ${cols.map(c=>`<div style="flex:none;width:180px;display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;align-items:center;gap:8px;padding:0 2px;"><span style="width:9px;height:9px;border-radius:50%;background:${c[2]};"></span><span style="font-size:13px;font-weight:600;color:${t.fg};">${c[0]}</span><span style="font-family:var(--font-mono);font-size:11px;color:${t.mut2};background:${t.chip};padding:2px 7px;border-radius:999px;">${c[1]}</span></div>
+              ${c[3].map(card=>`<div style="background:${t.card};border:1px solid ${t.border};border-radius:14px;padding:12px;border-left:3px solid ${c[2]};"><div style="font-size:13px;font-weight:600;color:${t.fg};margin-bottom:4px;">${card[0]}</div><div style="font-size:11.5px;color:${t.mut};">${card[1]}</div></div>`).join('')}
+            </div>`).join('')}
+          </div>
+          ${self.tabbar(t,1)}
+        </div>`;
+      }},
+
+      // ---------- RANKING ----------
+      { label:'Ranking', render(t,dark){
+        const podium=[['2','Camila R.','38','#94A3B8',72],['1','Bruno C.','44','#FBBF24',92],['3','Diego M.','31','#B45309',58]];
+        const rest=[['4','Fernanda L.','29'],['5','Você não · Tiago','27'],['6','Marcos A.','24']];
+        return `<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+          ${self.header(t,'Ranking',{right:`<span style="font-family:var(--font-mono);font-size:11px;color:${t.accent};font-weight:600;background:${t.chip};padding:6px 10px;border-radius:999px;">Julho</span>`})}
+          <div class="phone-scroll" style="flex:1;overflow-y:auto;padding:0 20px 12px;">
+            <div style="display:flex;align-items:flex-end;justify-content:center;gap:10px;margin:8px 0 20px;">
+              ${podium.map(p=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;">
+                <div style="width:${p[0]==='1'?'62px':'50px'};height:${p[0]==='1'?'62px':'50px'};border-radius:50%;background:${t.chip};border:2px solid ${p[3]};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:600;font-size:${p[0]==='1'?'22px':'18px'};color:${t.fg};position:relative;">${p[1][0]}${p[0]==='1'?`<i data-lucide="crown" style="width:20px;height:20px;color:#FBBF24;position:absolute;top:-16px;"></i>`:''}</div>
+                <div style="text-align:center;white-space:nowrap;"><div style="font-size:12px;font-weight:600;color:${t.fg};">${p[1]}</div><div style="font-family:var(--font-mono);font-size:10.5px;color:${t.accent};">${p[2]} vendas</div></div>
+                <div style="width:100%;height:${p[4]}px;background:${p[0]==='1'?'linear-gradient(180deg,#A78BFA,#7C3AED)':t.chip};border-radius:12px 12px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:8px;font-family:var(--font-mono);font-weight:700;font-size:16px;color:${p[0]==='1'?'#fff':t.mut};">${p[0]}</div>
+              </div>`).join('')}
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              ${rest.map((r,i)=>{const you=i===1;return `<div style="display:flex;align-items:center;gap:12px;background:${you?(dark?'#2D0F52':'#EDE9FE'):t.card};border:1px solid ${you?t.accent:t.border};border-radius:14px;padding:12px 14px;">
+                <span style="font-family:var(--font-mono);font-size:14px;font-weight:600;color:${you?t.accent:t.mut2};width:20px;">${r[0]}</span>
+                <div style="width:36px;height:36px;border-radius:50%;background:${t.chip};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:600;font-size:14px;color:${t.accent};">${r[1].slice(-1)==='o'?r[1][0]:r[1][0]}</div>
+                <span style="flex:1;font-size:13.5px;font-weight:${you?600:500};color:${t.fg};">${you?'Você':r[1]}</span>
+                <span style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:${t.fg};">${r[2]}</span>
+              </div>`;}).join('')}
+            </div>
+          </div>
+          ${self.tabbar(t,3)}
+        </div>`;
+      }},
+
+      // ---------- NOVA VENDA (multi-step) ----------
+      { label:'Nova venda · passo 2/4', render(t,dark){
+        return `<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+          ${self.header(t,'Nova venda',{back:true})}
+          <div style="flex:none;padding:0 20px 16px;display:flex;gap:6px;">
+            ${[1,2,3,4].map(n=>`<div style="flex:1;height:5px;border-radius:999px;background:${n<=2?t.accent:t.chip};"></div>`).join('')}
+          </div>
+          <div class="phone-scroll" style="flex:1;overflow-y:auto;padding:0 20px 12px;">
+            <div style="font-family:var(--font-mono);font-size:11px;color:${t.accent};font-weight:600;margin-bottom:4px;">PASSO 2 DE 4</div>
+            <div style="font-family:var(--font-display);font-weight:600;font-size:20px;color:${t.fg};margin-bottom:4px;">Qual operadora?</div>
+            <div style="font-size:13px;color:${t.mut};margin-bottom:20px;">Escolha a operadora e o tipo de contratação.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+              ${[['Unimed',true],['Amil',false],['SulAmérica',false],['Bradesco',false]].map(o=>`<div style="height:56px;border:2px solid ${o[1]?t.accent:t.border};border-radius:14px;background:${o[1]?(dark?'#2D0F52':'#EDE9FE'):t.surf};display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:600;color:${o[1]?t.accent:t.fg};">${o[1]?`<i data-lucide="check-circle-2" style="width:17px;height:17px;"></i>`:''}${o[0]}</div>`).join('')}
+            </div>
+            <div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:${t.mut};margin-bottom:10px;">Tipo</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+              ${[['PME',true],['Pessoa física',false],['Adesão',false]].map(c=>`<span style="padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;background:${c[1]?t.accent:t.chip};color:${c[1]?'#fff':t.mut};">${c[0]}</span>`).join('')}
+            </div>
+            <label style="display:block;"><span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:${t.mut};">Número de vidas</span><div style="margin-top:7px;height:52px;border:1px solid ${t.border};border-radius:14px;background:${t.surf};display:flex;align-items:center;padding:0 16px;"><span style="font-family:var(--font-mono);font-size:16px;color:${t.fg};">12</span></div></label>
+          </div>
+          <div style="flex:none;padding:12px 20px 20px;display:flex;gap:12px;border-top:1px solid ${t.border};">
+            <button style="width:52px;height:52px;border:1px solid ${t.border};border-radius:14px;background:transparent;color:${t.fg};display:flex;align-items:center;justify-content:center;"><i data-lucide="arrow-left" style="width:20px;height:20px;"></i></button>
+            <button style="flex:1;height:52px;border:none;border-radius:14px;background:#7C3AED;color:#fff;font-family:inherit;font-weight:600;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;">Continuar →</button>
+          </div>
+        </div>`;
+      }},
+
+      // ---------- LEVEL UP (celebration overlay) ----------
+      { label:'Level up', render(t,dark){
+        return `<div style="flex:1;position:relative;display:flex;flex-direction:column;overflow:hidden;background:${dark?'#0A0413':'#1A0A2E'};">
+          <div style="position:absolute;inset:0;background-image:radial-gradient(circle at 1px 1px, rgba(167,139,250,0.22) 1px, transparent 0);background-size:22px 22px;opacity:0.6;"></div>
+          <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 38%, rgba(124,58,237,0.5), transparent 60%);"></div>
+          <div style="position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px;gap:22px;">
+            <div style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.12em;color:#A78BFA;font-weight:600;">VOCÊ SUBIU DE NÍVEL</div>
+            <div style="width:130px;height:130px;border-radius:50%;background:conic-gradient(#A78BFA, #7C3AED, #A78BFA);padding:5px;box-shadow:0 0 60px -8px rgba(124,58,237,0.8);">
+              <div style="width:100%;height:100%;border-radius:50%;background:#1A0A2E;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                <span style="font-family:var(--font-display);font-weight:700;font-size:48px;color:#fff;line-height:1;">8</span>
+                <span style="font-size:10px;letter-spacing:0.1em;color:#A78BFA;font-weight:600;">NÍVEL</span>
+              </div>
+            </div>
+            <div><div style="font-family:var(--font-display);font-weight:600;font-size:26px;color:#fff;">Corretor Platina</div><div style="font-size:14px;color:#C4B0F0;margin-top:8px;line-height:1.5;">Você fechou 44 planos e desbloqueou<br/>relatórios avançados da IA.</div></div>
+            <div style="display:flex;gap:10px;">
+              <div style="display:flex;align-items:center;gap:7px;background:rgba(167,139,250,0.16);border:1px solid rgba(167,139,250,0.3);padding:8px 14px;border-radius:999px;"><i data-lucide="sparkles" style="width:15px;height:15px;color:#FBBF24;"></i><span style="font-size:12px;color:#EDE9FE;font-weight:600;font-family:var(--font-mono);">+500 XP</span></div>
+              <div style="display:flex;align-items:center;gap:7px;background:rgba(167,139,250,0.16);border:1px solid rgba(167,139,250,0.3);padding:8px 14px;border-radius:999px;"><i data-lucide="bar-chart-3" style="width:15px;height:15px;color:#A78BFA;"></i><span style="font-size:12px;color:#EDE9FE;font-weight:600;">Relatórios</span></div>
+            </div>
+          </div>
+          <div style="position:relative;padding:0 28px 32px;"><button style="width:100%;height:56px;border:none;border-radius:999px;background:#7C3AED;color:#fff;font-family:inherit;font-weight:600;font-size:16px;box-shadow:0 12px 30px -8px rgba(124,58,237,0.7);">Continuar</button></div>
+        </div>`;
+      }},
+
+      // ---------- NOTIFICAÇÕES ----------
+      { label:'Notificações', render(t,dark){
+        const groups=[['HOJE',[['bot','A IA agendou','Ana Ribeiro para amanhã 9h','2 min','#7C3AED',true],['flame','Streak salvo!','Você manteve 12 dias seguidos','1 h','#D97706',false],['trending-up','Lead quente','Clara Souza pediu proposta','3 h','#DC2626',false]]],['ONTEM',[['award','Conquista desbloqueada','Resposta relâmpago · +80 XP','1 d','#7C3AED',false],['badge-check','SUSEP verificada','Seu registro foi confirmado','1 d','#16A34A',false]]]];
+        return `<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+          ${self.header(t,'Notificações',{right:`<span style="font-size:12px;color:${t.accent};font-weight:600;">Marcar lidas</span>`})}
+          <div class="phone-scroll" style="flex:1;overflow-y:auto;padding:0 20px 12px;">
+            ${groups.map(g=>`<div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;color:${t.mut2};font-weight:600;margin:10px 0 10px;">${g[0]}</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;">
+              ${g[1].map(n=>`<div style="display:flex;gap:12px;background:${n[5]?(dark?'#2D0F52':'#EDE9FE'):t.card};border:1px solid ${n[5]?t.accent+'40':t.border};border-radius:14px;padding:13px;">
+                <div style="width:40px;height:40px;border-radius:12px;background:${n[4]}1F;display:flex;align-items:center;justify-content:center;color:${n[4]};flex:none;"><i data-lucide="${n[0]}" style="width:20px;height:20px;"></i></div>
+                <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:600;color:${t.fg};">${n[1]}</div><div style="font-size:12.5px;color:${t.mut};line-height:1.4;margin-top:1px;">${n[2]}</div></div>
+                <span style="font-family:var(--font-mono);font-size:10.5px;color:${t.mut2};flex:none;">${n[3]}</span>
+              </div>`).join('')}
+            </div>`).join('')}
+          </div>
+          ${self.tabbar(t,0)}
+        </div>`;
+      }},
+    ];
+  }
+
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

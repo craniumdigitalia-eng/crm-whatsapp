@@ -1,0 +1,18 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <rect width="200" height="200" rx="40" fill="#1A0A2E"></rect>
+  <g transform="translate(40, 40)" stroke="#A78BFA" fill="none">
+    <circle cx="60" cy="60" r="50" stroke-width="1.5" opacity="0.35"></circle>
+    <circle cx="60" cy="60" r="36" stroke-width="1.5" opacity="0.6"></circle>
+    <circle cx="60" cy="60" r="22" stroke-width="1.75"></circle>
+    <line x1="60" y1="60" x2="60" y2="10" stroke-width="1" opacity="0.5"></line>
+    <line x1="60" y1="60" x2="60" y2="110" stroke-width="1" opacity="0.5"></line>
+    <line x1="60" y1="60" x2="10" y2="60" stroke-width="1" opacity="0.5"></line>
+    <line x1="60" y1="60" x2="110" y2="60" stroke-width="1" opacity="0.5"></line>
+    <circle cx="60" cy="10" r="4" fill="#A78BFA" stroke="none" opacity="0.85"></circle>
+    <circle cx="60" cy="110" r="4" fill="#A78BFA" stroke="none" opacity="0.85"></circle>
+    <circle cx="10" cy="60" r="4" fill="#A78BFA" stroke="none" opacity="0.85"></circle>
+    <circle cx="110" cy="60" r="4" fill="#A78BFA" stroke="none" opacity="0.85"></circle>
+    <circle cx="60" cy="60" r="7" fill="#7C3AED" stroke="none"></circle>
+  </g>
+</svg>
