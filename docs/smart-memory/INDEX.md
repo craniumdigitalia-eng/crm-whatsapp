@@ -18,6 +18,7 @@ MOC raiz (Map of Content). Todo arquivo novo em `docs/smart-memory/` deve ser re
 - [[changelog/2026-06-29-sessao-features]] — o que foi construído na sessão de 29-30/jun
 
 ## Projeto
+- [[project/roadmap-saas]] — **roadmap de virar SaaS** (fases, decisões pendentes, riscos)
 - [[project/overview]] — contexto e objetivo
 - [[project/tech-stack]] — stack
 - [[project/architecture]] — padrão arquitetural
