@@ -1,0 +1,22 @@
+name: Cadencia e Follow-up (cron horario)
+
+# Dispara o motor de follow-up/cadencia da Cranium de hora em hora.
+# O proprio engine decide o que enviar com base no horario (BRT) de cada toque,
+# garantindo no maximo 1 mensagem por lead por dia.
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # toda hora cheia (UTC)
+  workflow_dispatch:        # permite disparo manual pelo painel do GitHub
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Disparar follow-up/cadencia
+        run: |
+          code=$(curl -sS -o /dev/null -w "%{http_code}" -X POST \
+            "https://crm-cranium.vercel.app/api/cron/followup" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "HTTP $code"
+          test "$code" = "200"

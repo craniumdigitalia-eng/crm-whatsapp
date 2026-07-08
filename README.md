@@ -111,6 +111,10 @@ src/
 public/               dashboard (kanban + conversas)
 ```
 
+## Deploy em produção (Supabase + Vercel + Make)
+
+Passo a passo completo em **[DEPLOY.md](DEPLOY.md)**. A camada de produção já tem esqueleto em `api/` e `lib/`; o briefing para o time está em [CLAUDE.md](CLAUDE.md).
+
 ## Próximos passos sugeridos
 
 - Migrar o banco de SQLite para PostgreSQL quando o volume crescer.
