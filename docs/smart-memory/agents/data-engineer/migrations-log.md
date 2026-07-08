@@ -53,8 +53,74 @@ Ordem recomendada de aplicação: 006 → 007 → 008 → 005 → 009 (005 e 009
 
 Validação estática de 005 e 009: ver `rls-ac3-validation.md` (2026-06-28).
 
-## Próximas migrations planejadas
+## Migration 015 — control-plane (pendente de aplicacao)
 
-| Prioridade | Descrição | Motivo | Story |
+| # | Arquivo | Status | Descricao | Dependencia |
+|---|---------|--------|-----------|-------------|
+| 015 | `015-control-plane.sql` | **PENDENTE** | Cria schema `control_plane` + 8 tabelas do plano de controle central do SaaS (ADR-008): `tenants`, `plans` (seed: Plano unico R$997), `subscriptions`, `subscription_events`, `invoices`, `webhook_events`, `admins`, `admin_actions`. | Schema `public` base ja aplicado. Nenhuma dependencia de migrations anteriores do `public`. |
+| 015 | `015-control-plane.rollback.sql` | — | Dropa todas as tabelas e o schema `control_plane` (ordem inversa, idempotente). | — |
+
+**Nota de arquitetura:** o schema `control_plane` compartilha o mesmo projeto Supabase com o schema `public` (CRM interno da Cranium), conforme ADR-008. Sao isolados por permissoes de schema. O Data API publico NAO deve expor `control_plane` (verificar Settings > API > Exposed schemas no Supabase).
+
+**Smoke-checks sugeridos apos aplicar 015:**
+
+```sql
+-- 1. Schema existe
+select schema_name from information_schema.schemata
+  where schema_name = 'control_plane';
+
+-- 2. Todas as 8 tabelas existem
+select table_name from information_schema.tables
+  where table_schema = 'control_plane'
+  order by table_name;
+-- Esperado: admin_actions, admins, invoices, plans, subscription_events,
+--           subscriptions, tenants, webhook_events
+
+-- 3. Seed do plano unico inserido
+select id, name, price_cents, trial_days, active
+  from control_plane.plans;
+-- Esperado: 1 linha, name='Plano unico', price_cents=99700, active=true
+
+-- 4. RLS habilitada em todas as tabelas
+select tablename, rowsecurity
+  from pg_tables
+  where schemaname = 'control_plane'
+  order by tablename;
+-- Esperado: rowsecurity = true em todas as 8 tabelas
+
+-- 5. Indice unico de idempotencia de webhook
+select indexname from pg_indexes
+  where schemaname = 'control_plane'
+    and tablename = 'webhook_events'
+    and indexname like '%provider%external_id%';
+
+-- 6. Indice unico de fatura Asaas
+select indexname from pg_indexes
+  where schemaname = 'control_plane'
+    and tablename = 'invoices'
+    and indexname = 'cp_invoices_asaas_id_idx';
+```
+
+**Como aplicar com seguranca:**
+
+```bash
+# 1. Snapshot do schema atual
+pg_dump $DATABASE_URL --schema-only > backups/schema-$(date +%Y%m%d-%H%M%S).sql
+
+# 2. Dry-run (verifica sintaxe sem commitar)
+psql $DATABASE_URL -c "BEGIN; \i supabase/migrations/015-control-plane.sql; ROLLBACK;"
+
+# 3. Aplicar (somente se dry-run OK)
+psql $DATABASE_URL -f supabase/migrations/015-control-plane.sql
+
+# 4. Smoke-test: rodar as queries acima
+
+# 5. Rollback se smoke-test falhar
+psql $DATABASE_URL -f supabase/migrations/015-control-plane.rollback.sql
+```
+
+## Proximas migrations planejadas
+
+| Prioridade | Descricao | Motivo | Story |
 |------------|-----------|--------|-------|
 | Baixa | Adicionar `model`, `input_tokens`, `output_tokens` em `messages` | Observabilidade de custo por conversa | 4.5 |
