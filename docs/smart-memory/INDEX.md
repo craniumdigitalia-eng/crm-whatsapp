@@ -28,10 +28,11 @@ MOC raiz (Map of Content). Todo arquivo novo em `docs/smart-memory/` deve ser re
 - `docs/design/app-handoff/` — KV do **app mobile** (Claude Design): telas login/chat/leads/funil/perfil claro+escuro, tokens, `App Design System.dc.html`
 
 ## Stories
-- [[stories/BACKLOG]] — backlog (stories pendentes)
+- [[stories/BACKLOG]] — backlog (stories pendentes) · **Epics 6–10 = virar SaaS** (16 stories novas, ver [[project/roadmap-saas]])
 - `stories/active/` — em desenvolvimento
 - `stories/in-review/` — aguardando QA · [[stories/in-review/5.7-modulo-agendamento]]
 - `stories/done/` — concluídas
+- Epics SaaS: **6** Fundação comercial · **7** Confiabilidade & escala · **8** Jurídico & compliance · **9** Produto self-serve · **10** Multi-tenant DB (futuro). 🔴 stories `blocked-canal` travadas pela DECISÃO 1 (ADR do canal WhatsApp).
 
 ## Decisões Arquiteturais (ADRs)
 - [[decisions/ADR-001-serverless-vercel]] — serverless na Vercel (funções `/api`)
@@ -39,6 +40,9 @@ MOC raiz (Map of Content). Todo arquivo novo em `docs/smart-memory/` deve ser re
 - [[decisions/ADR-003-portal-nextjs]] — front em Next.js App Router (epic 5)
 - [[decisions/ADR-004-canal-whatsapp-qr-vs-make]] — canal WhatsApp Evolution + aquisição Meta Lead Ads
 - [[decisions/ADR-005-ia-openai-vs-anthropic]] — IA do agente migrada de Claude para OpenAI (GPT)
+- [[decisions/ADR-006-canal-whatsapp-em-escala]] — manter Evolution com gatilho de migração (30 clientes ou 1º ban) para Cloud API; supersede parcial o ADR-004
+- [[decisions/ADR-007-gateway-pagamento-br]] — gateway de pagamento BR = Asaas (PIX/boleto fixo, NFS-e nativa, suspensão automática)
+- [[decisions/ADR-008-plano-de-controle-central]] — control-plane central (Supabase dedicado) para tenants/billing/super-admin; ponte para a Fase 5
 
 ## Operações
 - [[ops/setup-e-infra]] — setup, credenciais e infraestrutura
@@ -57,6 +61,7 @@ MOC raiz (Map of Content). Todo arquivo novo em `docs/smart-memory/` deve ser re
 - [[agents/qa/review-5.2-ac5-e-config]] — matriz de gates por endpoint + AC5 + review config/dashboard
 - [[agents/ux/components]] — specs de componentes
 - `agents/research/` — research reports
+  - [[agents/research/saas-decisoes-canal-e-pagamento]] — Canal WhatsApp (Evolution vs Cloud API) e Gateway de Pagamento (Asaas vs Pagar.me vs Iugu) para escala SaaS
 
 ## Status
 - [[shared-context]] — status board em tempo real

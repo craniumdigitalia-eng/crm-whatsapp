@@ -97,3 +97,20 @@ Registro de todos os Agent Teams formados neste projeto. Lead (team-os) atualiza
 **Status:** ativo
 **Início:** 2026-06-28
 **Wave atual:** Wave 1 (crm-data + crm-qa em paralelo)
+
+## 2026-07-08 — Team crm-atendimento-saas-roadmap (planejamento SaaS)
+
+**Objetivo:** Estruturar o planejamento pra virar SaaS de venda em escala: (1) pesquisar as decisões pendentes com evidência (WhatsApp Cloud API oficial vs Evolution; gateway de pagamento BR Asaas/Pagar.me/Iugu); (2) quebrar o [[../project/roadmap-saas]] em backlog de stories por fase.
+**Lead:** team-os (skill). **Mecanismo:** time implícito (Agent run_in_background + SendMessage).
+**Composição (paralela):**
+- crm-analyst — research das 2 decisões pendentes (canal WhatsApp; gateway de pagamento) com evidência e recomendação
+- crm-architect — quebra do roadmap-saas em stories numeradas por fase, no backlog
+
+**Fonte de verdade:** [[../project/roadmap-saas]]
+**Status:** entregue (teammates encerrados; aguardando decisão do usuário sobre ADRs)
+**Início:** 2026-07-08
+**Encerrado (teammates):** 2026-07-08
+**Resultado:**
+- crm-analyst: research das 2 decisões em [[../agents/research/saas-decisoes-canal-e-pagamento]]. Recomendações: canal WhatsApp = Evolution híbrido agora (migrar pra Cloud API oficial ao passar de ~30 clientes ativos OU no 1º ban); gateway = Asaas.
+- crm-architect: 16 stories novas (Epics 6 a 10, 1 épico por fase do roadmap) em `stories/backlog/`; BACKLOG.md e INDEX.md atualizados. Bloqueios `blocked-canal`: 7.2 e 8.3 (total), 6.2 e 9.3 (parcial).
+**Próximo passo (pendente do usuário):** escrever 3 ADRs (canal WhatsApp em escala, gateway BR, plano de controle central) pra destravar o Epic 6. Religar um architect quando decidido.
