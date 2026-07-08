@@ -33,6 +33,10 @@ Decisões de produto que guiam o Epic 6 em diante:
 4. **Pré-configurado com protocolo de atendimento para leads de plano de saúde** por padrão, em todo tenant novo.
 5. **Onboarding/wizard (6.2 + 9.3) é o coração:** o corretor entra e conecta as 4 integrações + põe a chave OpenAI, sozinho.
 6. **Control-plane = schema separado no Supabase atual** (não projeto novo). Ajusta o ADR-008.
+7. **Estratégia de domínio (confirmado 2026-07-08):**
+   - `crm.craniumdigital.com.br` = **porta de entrada do SaaS** (landing/login/cadastro dos corretores). Hoje ainda serve o CRM interno da Cranium por transição; será reapontado pra porta do SaaS quando a landing/login (6.4/6.2) existir.
+   - `{corretor}.craniumdigital.com.br` = **1 subdomínio por corretor** (o deploy do tenant). O provisionamento (6.2) cria o subdomínio automático via Vercel a cada corretor novo (domínio já está nos nameservers da Vercel, então subdomínio é imediato + SSL automático).
+   - `interno.craniumdigital.com.br` = **CRM interno da Cranium** (a instância atual, que NÃO é tenant). Movido pra cá pra liberar o `crm.` pro SaaS.
 
 ## ⚖️ Decisões pendentes (travam o resto — decidir PRIMEIRO)
 1. **Canal WhatsApp em escala** (o mais importante):
