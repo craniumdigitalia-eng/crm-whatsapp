@@ -19,6 +19,21 @@ vende (idealmente sozinho) pra corretoras/agências em escala". Esforço: **P** 
 - **Multi-tenant por deploy**: 1 código, 1 Supabase + 1 Vercel por cliente. Kit em `provisioning/` (schema consolidado + `setup.ts` + `update-all.ts`). Ver [[modules]].
 - Infra: Vercel **Hobby**, Supabase, Evolution (Railway), OpenAI (gpt-4o-mini).
 
+## 🧩 Forma do produto SaaS (confirmado pelo usuário em 2026-07-08)
+Decisões de produto que guiam o Epic 6 em diante:
+1. **Duas coisas separadas, nunca misturar:**
+   - **CRM da Cranium** (login/senha do dono, instância atual) = ferramenta interna que a Cranium usa pra atender e vender pros corretores. **NÃO é um tenant do SaaS. Fica intocado.**
+   - **SaaS** = produto que o corretor compra e usa pra atender os leads dele. Instância à parte por cliente.
+2. **Bring your own (cada corretor pluga o que é dele):**
+   - **Chave OpenAI** do próprio corretor (SOMENTE OpenAI, sem opção de Claude). O agente segue OpenAI (ADR-005); a chave passa a ser por tenant.
+   - **Meta Lead Ads** dele.
+   - **Google Calendar** dele.
+   - **Evolution API** dele.
+3. **Plano único: R$997/mês** (sem tiers Starter/Pro). Ajusta a 6.1 e a 9.1.
+4. **Pré-configurado com protocolo de atendimento para leads de plano de saúde** por padrão, em todo tenant novo.
+5. **Onboarding/wizard (6.2 + 9.3) é o coração:** o corretor entra e conecta as 4 integrações + põe a chave OpenAI, sozinho.
+6. **Control-plane = schema separado no Supabase atual** (não projeto novo). Ajusta o ADR-008.
+
 ## ⚖️ Decisões pendentes (travam o resto — decidir PRIMEIRO)
 1. **Canal WhatsApp em escala** (o mais importante):
    - **Evolution (não-oficial)**: barato, opener livre, mas viola os termos do WhatsApp → risco de **ban** dos números com automação/follow-up em massa. Aceitável em poucos clientes; arriscado em centenas.

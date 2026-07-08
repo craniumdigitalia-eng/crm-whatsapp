@@ -4,9 +4,9 @@ type: decision
 status: accepted
 agent: crm-architect
 created: 2026-07-02
-updated: 2026-07-03
-tags: [architecture, decision, ia, custo]
-related: ["[[ADR-003-portal-nextjs]]", "[[../project/architecture]]", "[[../changelog/2026-07-03-sessao-features]]"]
+updated: 2026-07-08
+tags: [architecture, decision, ia, custo, byok]
+related: ["[[ADR-003-portal-nextjs]]", "[[ADR-009-byok-openai-por-tenant]]", "[[../project/architecture]]", "[[../changelog/2026-07-03-sessao-features]]"]
 ---
 
 # ADR-005: Provedor de IA do agente — Anthropic (Claude) → OpenAI (GPT)
@@ -32,3 +32,6 @@ related: ["[[ADR-003-portal-nextjs]]", "[[../project/architecture]]", "[[../chan
 - **Trade-off**: GPT-4o-mini é um pouco mais verboso/emoji que o Claude; ajustável via prompt se incomodar.
 - **Reversão**: trocar `AGENT_MODEL` de volta para um modelo Claude exigiria reverter `agent.ts`/`email-content.ts` para o SDK Anthropic (código versionado no git antes do commit da migração).
 - **Env de produção (Vercel)**: `OPENAI_API_KEY` + `AGENT_MODEL=gpt-4o-mini`.
+
+## Adendo (2026-07-08) — no modelo SaaS, a chave OpenAI é POR TENANT (BYOK)
+Esta decisão fixa **o provedor** (OpenAI, sem Claude) e continua valendo. O que muda no SaaS multi-tenant: **de quem é a chave**. Cada **corretor** (tenant do SaaS) traz a **própria** `OPENAI_API_KEY` (bring-your-own-key), plugada no onboarding; **continua só OpenAI, sem opção de Claude**. A instância da Cranium **não é tenant** e segue com a chave dedicada descrita acima. Detalhes, segurança e trade-offs em [[ADR-009-byok-openai-por-tenant]].

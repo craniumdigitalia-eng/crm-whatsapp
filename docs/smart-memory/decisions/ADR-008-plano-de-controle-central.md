@@ -5,7 +5,7 @@ status: accepted
 agent: crm-architect
 created: 2026-07-08
 updated: 2026-07-08
-tags: [architecture, decision, control-plane, multi-tenant, super-admin, billing, tenancy, saas, fase-1]
+tags: [architecture, decision, control-plane, multi-tenant, super-admin, billing, tenancy, saas, fase-1, schema-separado]
 related: ["[[ADR-007-gateway-pagamento-br]]", "[[../project/roadmap-saas]]", "[[../stories/backlog/6.1-cobranca-assinatura]]", "[[../stories/backlog/6.3-painel-super-admin]]", "[[../stories/backlog/6.2-onboarding-self-service]]", "[[../stories/backlog/10.1-multi-tenant-db-compartilhado]]"]
 ---
 
@@ -13,6 +13,10 @@ related: ["[[ADR-007-gateway-pagamento-br]]", "[[../project/roadmap-saas]]", "[[
 
 ## Status
 **Accepted** (usuário, 2026-07-08). Introduz um conceito novo na arquitetura: um **plano de controle central (control-plane)** que conhece todos os clientes. Casado com [[ADR-007-gateway-pagamento-br]] (onde vive o billing) e pré-requisito das stories [[../stories/backlog/6.1-cobranca-assinatura]] e [[../stories/backlog/6.3-painel-super-admin]]. Define a ponte arquitetural para a Fase 5 ([[../stories/backlog/10.1-multi-tenant-db-compartilhado]]).
+
+> **Refinamento (usuário, 2026-07-08):** o control-plane **não** é um projeto Supabase novo. Ele vive como um **schema separado dentro do Supabase atual** da Cranium (ex.: schema `control_plane`), isolado por permissões, distinto do schema `public` operacional. Ver revisão do ponto 1 da Decisão e do diagrama abaixo.
+>
+> **Guard-rail de produto:** a **instância/CRM da Cranium não é um tenant do SaaS** (ver [[../project/roadmap-saas]] § "Forma do produto SaaS"). O control-plane (schema `control_plane`) registra apenas os **corretores** (tenants do SaaS); a operação interna da Cranium roda no schema `public` do mesmo Supabase e nunca aparece na tabela `tenants`.
 
 ## Contexto
 
@@ -26,7 +30,7 @@ Se essas peças fossem para dentro do deploy de cada cliente, não haveria de on
 
 ## Decisão
 
-1. **Criar um plano de controle central (control-plane) como um projeto Supabase separado, dedicado.** Ele é o único componente que conhece **todos os tenants**. Não é o banco de nenhum cliente; é o banco da operação do SaaS (Cranium).
+1. **Criar um plano de controle central (control-plane) como um schema separado dentro do Supabase atual** (ex.: schema `control_plane`, ao lado do `public` operacional). Ele é o único componente que conhece **todos os tenants (corretores)**. Não é o dado operacional de nenhum cliente nem da própria Cranium; é o registro da operação do SaaS. Optou-se por schema separado (e não projeto Supabase novo) para reduzir custo/operação de mais um projeto, mantendo o isolamento por permissões de schema e por service-role dedicada. A instância/CRM da Cranium continua no schema `public` do mesmo projeto e **não** é um tenant.
 
 2. **O que vive no control-plane:**
    - **Registro de tenants (`tenants`):** a lista canônica de clientes, cada um com seus dados de deploy (URL do Supabase do cliente, URL do Vercel, instância Evolution, status geral).
@@ -48,13 +52,18 @@ Se essas peças fossem para dentro do deploy de cada cliente, não haveria de on
 
 ```mermaid
 flowchart TB
-    subgraph CP["Control-plane (Supabase dedicado - Cranium)"]
-        T[tenants]
-        B[plans / subscriptions / invoices]
-        SA[Painel super-admin 6.3]
-        WH[Webhook Asaas 6.1]
-        PROV[Orquestrador de provisionamento 6.2]
-        UM[Uso agregado por tenant]
+    subgraph SUP["Supabase atual da Cranium (1 projeto)"]
+        subgraph PUB["schema public (operacional interno da Cranium - NÃO é tenant)"]
+            CRM[CRM interno da Cranium: leads/conversas/... ]
+        end
+        subgraph CP["schema control_plane (control-plane do SaaS)"]
+            T[tenants = corretores]
+            B[plans / subscriptions / invoices]
+            SA[Painel super-admin 6.3]
+            WH[Webhook Asaas 6.1]
+            PROV[Orquestrador de provisionamento 6.2]
+            UM[Uso agregado por tenant]
+        end
     end
 
     ASAAS[(Asaas)] -->|webhook pagamento| WH
@@ -94,7 +103,7 @@ O control-plane é a **ponte natural** para o multi-tenant de banco compartilhad
 
 ## Trade-offs
 
-- **Mais um componente para operar** (o Supabase do control-plane) - aceito: é pequeno (poucas tabelas), mas é infra crítica; precisa de backup e monitoramento próprios.
+- **Schema a mais no mesmo Supabase** (o `control_plane`) - aceito: evita operar mais um projeto Supabase (custo/backup/monitoramento separados), ao custo de o control-plane e o operacional interno compartilharem o mesmo projeto. Mitigação: isolamento por schema + service-role dedicada por schema + RLS; o backup do projeto já cobre os dois schemas. Se o volume/risco justificar no futuro, extrair para projeto dedicado é uma migração de schema, não de conceito.
 - **Consistência eventual do uso agregado** - o uso cross-cliente é coletado por cron, então há defasagem. Aceitável para um painel de gestão (não precisa ser tempo real).
 - **O control-plane guarda credenciais dos data-planes** - superfície sensível; concentrar o risco de segurança em um lugar bem protegido é preferível a espalhá-lo, mas exige rigor (secrets server-side, acesso auditado).
 - **Acoplamento control-plane ↔ data-plane no provisionamento e na suspensão** - mitigado por contratos simples (flag de suspensão, rota de contadores) que sobrevivem à migração da Fase 5.

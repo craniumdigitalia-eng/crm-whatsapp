@@ -28,11 +28,11 @@ MOC raiz (Map of Content). Todo arquivo novo em `docs/smart-memory/` deve ser re
 - `docs/design/app-handoff/` — KV do **app mobile** (Claude Design): telas login/chat/leads/funil/perfil claro+escuro, tokens, `App Design System.dc.html`
 
 ## Stories
-- [[stories/BACKLOG]] — backlog (stories pendentes) · **Epics 6–10 = virar SaaS** (16 stories novas, ver [[project/roadmap-saas]])
+- [[stories/BACKLOG]] — backlog (stories pendentes) · **Epics 6–10 = virar SaaS** (17 stories, ver [[project/roadmap-saas]])
 - `stories/active/` — em desenvolvimento
 - `stories/in-review/` — aguardando QA · [[stories/in-review/5.7-modulo-agendamento]]
 - `stories/done/` — concluídas
-- Epics SaaS: **6** Fundação comercial · **7** Confiabilidade & escala · **8** Jurídico & compliance · **9** Produto self-serve · **10** Multi-tenant DB (futuro). 🔴 stories `blocked-canal` travadas pela DECISÃO 1 (ADR do canal WhatsApp).
+- Epics SaaS: **6** Fundação comercial · **7** Confiabilidade & escala · **8** Jurídico & compliance · **9** Produto self-serve · **10** Multi-tenant DB (futuro). **Forma do produto SaaS confirmada (2026-07-08):** plano único R$997/mês, BYOK OpenAI por tenant, Cranium não é tenant, protocolo de plano de saúde pré-carregado ([[stories/backlog/6.5-protocolo-plano-saude]]), wizard de 5 passos ([[stories/backlog/9.3-wizard-setup-in-app]]), control-plane em schema separado. Decisões de canal/gateway já resolvidas (ADRs 006/007/008/009).
 
 ## Decisões Arquiteturais (ADRs)
 - [[decisions/ADR-001-serverless-vercel]] — serverless na Vercel (funções `/api`)
@@ -42,7 +42,8 @@ MOC raiz (Map of Content). Todo arquivo novo em `docs/smart-memory/` deve ser re
 - [[decisions/ADR-005-ia-openai-vs-anthropic]] — IA do agente migrada de Claude para OpenAI (GPT)
 - [[decisions/ADR-006-canal-whatsapp-em-escala]] — manter Evolution com gatilho de migração (30 clientes ou 1º ban) para Cloud API; supersede parcial o ADR-004
 - [[decisions/ADR-007-gateway-pagamento-br]] — gateway de pagamento BR = Asaas (PIX/boleto fixo, NFS-e nativa, suspensão automática)
-- [[decisions/ADR-008-plano-de-controle-central]] — control-plane central (Supabase dedicado) para tenants/billing/super-admin; ponte para a Fase 5
+- [[decisions/ADR-008-plano-de-controle-central]] — control-plane central em **schema separado no Supabase atual** (não projeto novo) para tenants/billing/super-admin; ponte para a Fase 5
+- [[decisions/ADR-009-byok-openai-por-tenant]] — no SaaS, a chave OpenAI é por tenant (BYOK, fornecida pelo corretor); só OpenAI, complementa o ADR-005
 
 ## Operações
 - [[ops/setup-e-infra]] — setup, credenciais e infraestrutura

@@ -201,6 +201,14 @@ flowchart LR
 
 > Deriva de [[../project/roadmap-saas]] (Fases 1 a 5). O produto já está **completo e no ar**; estes épicos são o que falta para **vender em escala** (cobrança, onboarding self-service, confiabilidade, jurídico, self-serve, e a reforma de tenancy futura). Numeração: 1 épico por fase do roadmap.
 >
+> 🧩 **Forma do produto SaaS confirmada pelo usuário (2026-07-08)** — reflete nas stories do Epic 6 e 9 (ver [[../project/roadmap-saas]] § "Forma do produto SaaS"):
+> - **Dois sistemas separados:** o **CRM da Cranium** (instância atual, login do dono) **NÃO é tenant do SaaS** e fica intocado; o SaaS é uma instância à parte por corretor. Guard-rail registrado em 6.1/6.2/6.3/6.5/9.3 e no [[../decisions/ADR-008-plano-de-controle-central]].
+> - **Bring-your-own por tenant:** chave **OpenAI do corretor** (só OpenAI, sem Claude — [[../decisions/ADR-009-byok-openai-por-tenant]]), Meta Lead Ads, Google Calendar e Evolution dele.
+> - **Plano ÚNICO R$997/mês** (sem Starter/Pro) — ajusta 6.1 e 9.1.
+> - **Protocolo de plano de saúde pré-carregado** em todo tenant novo — nova story [[backlog/6.5-protocolo-plano-saude\|6.5]].
+> - **Wizard de onboarding é o coração** (5 passos: OpenAI, Evolution, Google Calendar, Meta Lead Ads, confirmar protocolo) — 6.2 é o fluxo até o wizard; [[backlog/9.3-wizard-setup-in-app\|9.3]] é o wizard em si.
+> - **Control-plane = schema separado no Supabase atual** (não projeto novo) — refinamento do [[../decisions/ADR-008-plano-de-controle-central]].
+>
 > ✅ **DECISÃO 1 (canal WhatsApp em escala)** resolvida em [[../decisions/ADR-006-canal-whatsapp-em-escala]] (manter Evolution no curto prazo, com gatilho de migração para Cloud API). Destravou 7.2, 8.3 (total) e o passo WhatsApp de 6.2 e 9.3 (parcial). **DECISÃO 2 (gateway BR)** resolvida em [[../decisions/ADR-007-gateway-pagamento-br]] (Asaas), destravando a integração de [[backlog/6.1-cobranca-assinatura\|6.1]]. O **plano de controle central** (onde vivem assinaturas/super-admin) está em [[../decisions/ADR-008-plano-de-controle-central]]. **DECISÃO 3** (tenancy longo prazo) segue sendo a própria [[backlog/10.1-multi-tenant-db-compartilhado\|10.1]].
 
 ## Epic 6 — Fundação comercial SaaS (Fase 1 🔴)
@@ -208,10 +216,11 @@ flowchart LR
 
 | Story | Título | Size | Prioridade | Bloqueio | Depende de | Status |
 |---|---|---|---|---|---|---|
-| [[backlog/6.1-cobranca-assinatura\|6.1]] | Cobrança e assinatura recorrente (gateway BR) | G | P0 | ✅ ADR-007 (Asaas) | — | backlog |
-| [[backlog/6.2-onboarding-self-service\|6.2]] | Onboarding self-service | G | P0 | ✅ passo WhatsApp por ADR-006 | 6.1 | backlog |
-| [[backlog/6.3-painel-super-admin\|6.3]] | Painel super-admin (visão cross-cliente) | M | P0 | — (ADR-008 control-plane) | 6.1 | backlog |
-| [[backlog/6.4-landing-pricing\|6.4]] | Landing + pricing + demo/trial | M | P1 | — | 6.1, 6.2 (integra), 5.3 | backlog |
+| [[backlog/6.1-cobranca-assinatura\|6.1]] | Cobrança e assinatura recorrente (**plano único R$997/mês**, gateway BR) | G | P0 | ✅ ADR-007 (Asaas) | — | backlog |
+| [[backlog/6.2-onboarding-self-service\|6.2]] | Onboarding self-service (fluxo cadastro→pagamento→provisiona→wizard) | G | P0 | ✅ passo WhatsApp por ADR-006 | 6.1, 6.5 | backlog |
+| [[backlog/6.3-painel-super-admin\|6.3]] | Painel super-admin (visão cross-cliente) | M | P0 | — (ADR-008 control-plane, schema separado) | 6.1 | backlog |
+| [[backlog/6.4-landing-pricing\|6.4]] | Landing + pricing (plano único) + demo/trial | M | P1 | — | 6.1, 6.2 (integra), 5.3 | backlog |
+| [[backlog/6.5-protocolo-plano-saude\|6.5]] | Protocolo de plano de saúde pré-carregado por tenant | M | P0 | — | — | backlog |
 
 ## Epic 7 — Confiabilidade & escala (Fase 2 🟡)
 > Pra rodar sério em produção.
@@ -237,9 +246,9 @@ flowchart LR
 
 | Story | Título | Size | Prioridade | Bloqueio | Depende de | Status |
 |---|---|---|---|---|---|---|
-| [[backlog/9.1-limites-por-plano\|9.1]] | Limites por plano (cotas) | M | P1 | — | 6.1 | backlog |
+| [[backlog/9.1-limites-por-plano\|9.1]] | Limites por plano (cotas do **plano único**) | M | P1 | — | 6.1 | backlog |
 | [[backlog/9.2-convite-usuarios\|9.2]] | Convite de usuários por cliente | P | P2 | — | 5.2, 9.1 | backlog |
-| [[backlog/9.3-wizard-setup-in-app\|9.3]] | Wizard de setup dentro do app | M | P1 | ✅ passo WhatsApp por ADR-006 | 6.2 | backlog |
+| [[backlog/9.3-wizard-setup-in-app\|9.3]] | Wizard de setup in-app (5 passos: OpenAI/Evolution/Calendar/Meta/protocolo) | M | P1 | ✅ passos por ADR-006/009 | 6.2, 6.5 | backlog |
 | [[backlog/9.4-central-de-ajuda\|9.4]] | Central de ajuda / suporte | M | P2 | — | 5.11 (base) | backlog |
 
 ## Epic 10 — Escala futura / multi-tenant DB (Fase 5 🟢)
@@ -260,10 +269,11 @@ flowchart TB
         D2[✅ ADR-007 gateway pagamento BR]
     end
     subgraph SW1["Wave S1 — Fundação comercial (Epic 6)"]
-        S61[6.1 cobrança*]
-        S62[6.2 onboarding**]
+        S61[6.1 cobrança* plano único]
+        S62[6.2 onboarding** wizard]
         S63[6.3 super-admin]
         S64[6.4 landing/pricing]
+        S65[6.5 protocolo plano saúde]
     end
     subgraph SW2["Wave S2 — Confiabilidade (Epic 7)"]
         S71[7.1 Vercel Pro]
@@ -292,9 +302,11 @@ flowchart TB
     D1 ==>|resolve passo WA| S93
     D1 ==>|resolve compliance| S83
     S61 --> S62
+    S65 --> S62
     S61 --> S63
     S61 --> S64
     S62 --> S64
+    S65 --> S93
     S61 --> S82
     S61 --> S91
     S71 --> S73
@@ -313,15 +325,16 @@ flowchart TB
 `*` integração desbloqueada por [[../decisions/ADR-007-gateway-pagamento-br]] (Asaas). `**` canal desbloqueado por [[../decisions/ADR-006-canal-whatsapp-em-escala]] (Evolution no curto prazo).
 
 **Sequência recomendada:**
-1. **Decisões resolvidas** - ADR-006 (canal), ADR-007 (gateway) e ADR-008 (control-plane) já saíram. 6.1(integração), 6.2, 7.2, 8.3 e 9.3 estão liberadas.
+1. **Decisões resolvidas** - ADR-006 (canal), ADR-007 (gateway), ADR-008 (control-plane, schema separado) e ADR-009 (BYOK OpenAI por tenant) já saíram. 6.1(integração), 6.2, 6.5, 7.2, 8.3 e 9.3 estão liberadas.
 2. **Wave S1 (Epic 6)** - cobrança + onboarding + super-admin + landing. É o que vira "vendável". Com os ADRs prontos, a integração Asaas (6.1) e o passo WhatsApp (6.2) podem avançar; billing e super-admin vivem no control-plane (ADR-008).
 3. **Wave S2 e S3 em paralelo** - infra (Epic 7: 7.1/7.3/7.4 livres; 7.2 liberada por ADR-006) + jurídico (Epic 8: 8.1/8.2 livres; 8.3 liberada por ADR-006).
 4. **Wave S4 (Epic 9)** - self-serve, conforme os primeiros pagantes trazem feedback (9.1/9.2/9.4 livres; 9.3 com o passo WhatsApp já liberado).
 5. **Wave S5 (Epic 10)** - só quando o volume pedir; o onboarding automático (6.2) pode ser o sinal.
 
 ## Resumo (Epics 6-10 - SaaS)
-- **16 stories** em 5 waves: S1 (4) · S2 (4) · S3 (3) · S4 (4) · S5 (1).
-- **Canal WhatsApp resolvido** ([[../decisions/ADR-006-canal-whatsapp-em-escala]]): 7.2 e 8.3 (total) e o passo WhatsApp de 6.2 e 9.3 (parcial) liberados. **Gateway resolvido** ([[../decisions/ADR-007-gateway-pagamento-br]] - Asaas): integração de 6.1 liberada. **Control-plane** definido ([[../decisions/ADR-008-plano-de-controle-central]]) para billing/super-admin.
-- **God-node stories** (`pre-flight`): 7.2, 7.4, 10.1 (+ 6.1/6.2/6.3/8.1/9.1 em pre-flight por raio de impacto/arquitetura).
-- Size (do roadmap): P(3) · M(6) · G(6) + 10.1(G/XL). Complexidade: S(2) · M(5) · L(5) · XL(4).
-- **ADRs produzidos:** [[../decisions/ADR-006-canal-whatsapp-em-escala]] (canal em escala, supersede parcial do ADR-004), [[../decisions/ADR-007-gateway-pagamento-br]] (gateway BR = Asaas), [[../decisions/ADR-008-plano-de-controle-central]] (plano de controle central, junto de 6.1/6.3). Falta o ADR de **tenancy** (DECISÃO 3, junto de 10.1) para quando o volume pedir.
+- **17 stories** em 5 waves: S1 (5) · S2 (4) · S3 (3) · S4 (4) · S5 (1). (Epic 6 passou a ter 5 stories com a nova [[backlog/6.5-protocolo-plano-saude\|6.5]].)
+- **Forma do produto SaaS** confirmada (2026-07-08): plano único R$997/mês, BYOK OpenAI por tenant, Cranium não é tenant, protocolo de plano de saúde pré-carregado, wizard de 5 passos, control-plane em schema separado. Ver nota no topo do Epic 6.
+- **Canal WhatsApp resolvido** ([[../decisions/ADR-006-canal-whatsapp-em-escala]]): 7.2 e 8.3 (total) e o passo WhatsApp de 6.2 e 9.3 (parcial) liberados. **Gateway resolvido** ([[../decisions/ADR-007-gateway-pagamento-br]] - Asaas): integração de 6.1 liberada. **Control-plane** definido ([[../decisions/ADR-008-plano-de-controle-central]], schema separado no Supabase atual) para billing/super-admin. **BYOK OpenAI por tenant** ([[../decisions/ADR-009-byok-openai-por-tenant]]).
+- **God-node stories** (`pre-flight`): 7.2, 7.4, 10.1 (+ 6.1/6.2/6.3/6.5/8.1/9.1 em pre-flight por raio de impacto/arquitetura).
+- Size (do roadmap + 6.5=M): P(3) · M(7) · G(6) + 10.1(G/XL). Complexidade: S(2) · M(6) · L(5) · XL(4).
+- **ADRs produzidos:** [[../decisions/ADR-006-canal-whatsapp-em-escala]] (canal em escala, supersede parcial do ADR-004), [[../decisions/ADR-007-gateway-pagamento-br]] (gateway BR = Asaas), [[../decisions/ADR-008-plano-de-controle-central]] (control-plane em **schema separado** no Supabase atual, junto de 6.1/6.3), [[../decisions/ADR-009-byok-openai-por-tenant]] (chave OpenAI por tenant, complementa o ADR-005). Falta o ADR de **tenancy** (DECISÃO 3, junto de 10.1) para quando o volume pedir.
