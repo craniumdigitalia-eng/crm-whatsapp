@@ -62,14 +62,35 @@ Guarde o e-mail/senha do admin: é com ele que o cliente entra no portal.
 
 ---
 
-## Atualizar um cliente já existente (quando você melhora o código)
-1. **Deploy**: no projeto Vercel do cliente, `vercel --prod` (ou push, se ligado ao git).
-2. **Migrations novas**: se você adicionou uma migration nova (ex.: `015-...sql`), rode ELA
-   no SQL Editor do Supabase daquele cliente. O `provisioning/schema.sql` é só pra clientes
-   NOVOS; nos existentes, aplique só a migration nova.
+## Atualizar TODOS os clientes de uma vez (mass-update)
+Quando você melhora o código, use o script pra subir pra todos os clientes:
 
-> Dica: mantenha uma planilha simples com cada cliente (URL Vercel, projeto Supabase,
-> número WhatsApp, última migration aplicada). Facilita o dia a dia.
+1. Copie `provisioning/clients.example.json` para **`provisioning/clients.json`** e
+   preencha um objeto por cliente (`vercelOrgId`, `vercelProjectId` de `.vercel/project.json`
+   ou do painel Vercel; `supabaseUrl`/`supabaseServiceKey` do painel Supabase).
+   `clients.json` **não vai pro git** (tem segredos).
+2. Gere um **VERCEL_TOKEN** em vercel.com/account/tokens.
+3. Rode (na raiz do repo):
+   ```
+   VERCEL_TOKEN=xxx node_modules/.bin/tsx provisioning/update-all.ts
+   ```
+   Isso faz o **deploy do código atual pra cada cliente**. Opções:
+   - `--only=NomeDoCliente` → só um cliente.
+   - `--no-deploy --verify-table=fin_clients` → só confere se a tabela existe em cada Supabase
+     (útil DEPOIS de aplicar uma migration nova, pra saber quem já rodou).
+
+### Migrations novas nos clientes existentes
+O deploy sobe o **código**. Se a atualização tem uma **migration nova** (ex.: `015-...sql`),
+ela precisa ser rodada no **SQL Editor de cada Supabase** (não dá pra automatizar sem a senha
+do Postgres de cada um). Fluxo recomendado:
+1. Rode a migration nova no SQL editor de cada cliente.
+2. Confirme com `... --no-deploy --verify-table=<tabela_nova>` (mostra ✅/❌ por cliente).
+3. Depois `update-all.ts` normal pra subir o código.
+
+O `provisioning/schema.sql` é só pra clientes **NOVOS**; nos existentes, aplique só a migration nova.
+
+> Dica: mantenha o `clients.json` como sua "planilha" central (cada cliente com projeto Vercel
+> e Supabase). É a fonte de verdade do mass-update.
 
 ## Checklist rápido (copiar por cliente)
 ```

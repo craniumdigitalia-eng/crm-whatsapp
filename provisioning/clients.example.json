@@ -1,0 +1,18 @@
+[
+  {
+    "_comentario": "Copie este arquivo para clients.json e preencha um objeto por cliente. clients.json NAO vai pro git (tem segredos).",
+    "_onde_achar": "vercelOrgId e vercelProjectId estao em .vercel/project.json (apos linkar o projeto) ou em Vercel > Settings > General. supabaseUrl/ServiceKey em Supabase > Settings > API.",
+    "name": "MODELO (apague este objeto)",
+    "vercelOrgId": "team_ou_user_id",
+    "vercelProjectId": "prj_xxxxxxxx",
+    "supabaseUrl": "https://xxxxxxxx.supabase.co",
+    "supabaseServiceKey": "eyJ... (service_role, so pra verificar tabela)"
+  },
+  {
+    "name": "Cranium",
+    "vercelOrgId": "team_xxx",
+    "vercelProjectId": "prj_xxx",
+    "supabaseUrl": "https://iiahpfvhrfuznszytbod.supabase.co",
+    "supabaseServiceKey": "COLE_A_SERVICE_ROLE_KEY"
+  }
+]

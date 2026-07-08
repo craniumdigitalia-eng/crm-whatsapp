@@ -10,3 +10,6 @@ data/
 .claude/agent-memory/
 *.tsbuildinfo
 .vercel
+
+# Registro de clientes do provisionamento (tem segredos)
+provisioning/clients.json
