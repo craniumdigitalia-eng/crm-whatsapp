@@ -6481,3 +6481,47 @@ legend.agent-card-title { margin-bottom: 4px; }
 :root[data-theme="dark"] img.asset-thumb,
 :root[data-theme="dark"] .grp-chat-body,
 :root[data-theme="dark"] .conv-chat-body { background: var(--surface-light); }
+
+/* ============================================================
+   TEMA ESCURO — selinhos/badges/pílulas com cor fixa.
+   Fundo sólido claro → tom escuro; texto colorido → tom mais claro.
+   ============================================================ */
+/* Pílulas de status do drawer (fundo translúcido, só clareia o texto) */
+:root[data-theme="dark"] .drawer-status-novo           { color: #93c5fd; }
+:root[data-theme="dark"] .drawer-status-em_atendimento { color: #fcd34d; }
+:root[data-theme="dark"] .drawer-status-qualificado    { color: #6ee7b7; }
+:root[data-theme="dark"] .drawer-status-fechado        { color: #6ee7b7; }
+:root[data-theme="dark"] .drawer-status-perdido        { color: #cbd5e1; }
+:root[data-theme="dark"] .drawer-status-humano         { color: #fca5a5; }
+
+/* Banners e badges de integração */
+:root[data-theme="dark"] .integ-banner--ok  { background: rgba(16,185,129,.14); color: #6ee7b7; border-color: rgba(16,185,129,.32); }
+:root[data-theme="dark"] .integ-banner--err { background: rgba(239,68,68,.14);  color: #fca5a5; border-color: rgba(239,68,68,.32); }
+:root[data-theme="dark"] .integ-badge--on   { background: rgba(16,185,129,.16); color: #6ee7b7; }
+
+/* Pílulas de e-mail e follow-up */
+:root[data-theme="dark"] .em-pill--draft,
+:root[data-theme="dark"] .fup-pill--cancelled { background: rgba(148,163,184,.16); color: #cbd5e1; border-color: rgba(148,163,184,.28); }
+:root[data-theme="dark"] .em-pill--sending    { background: rgba(245,158,11,.16); color: #fcd34d; border-color: rgba(245,158,11,.3); }
+:root[data-theme="dark"] .em-pill--sent,
+:root[data-theme="dark"] .fup-pill--sent      { background: rgba(16,185,129,.16); color: #6ee7b7; border-color: rgba(16,185,129,.3); }
+:root[data-theme="dark"] .em-pill--err,
+:root[data-theme="dark"] .fup-pill--err       { background: rgba(239,68,68,.14); color: #fca5a5; border-color: rgba(239,68,68,.3); }
+:root[data-theme="dark"] .fup-pill--pending   { background: rgba(124,58,237,.22); color: #c4b5fd; border-color: rgba(124,58,237,.38); }
+
+/* Seletor de status do financeiro */
+:root[data-theme="dark"] .fin-status-select.st-ativo     { background: rgba(16,185,129,.18); color: #6ee7b7; border-color: rgba(16,185,129,.35); }
+:root[data-theme="dark"] .fin-status-select.st-atrasado  { background: rgba(245,158,11,.18); color: #fcd34d; border-color: rgba(245,158,11,.35); }
+:root[data-theme="dark"] .fin-status-select.st-cancelado { background: rgba(239,68,68,.16); color: #fca5a5; border-color: rgba(239,68,68,.35); }
+
+/* Textos coloridos em card (verde/vermelho) */
+:root[data-theme="dark"] .integ-saved,
+:root[data-theme="dark"] .fin-dre-result.is-pos td,
+:root[data-theme="dark"] .meta-saved,
+:root[data-theme="dark"] .meta-up { color: #34d399; }
+:root[data-theme="dark"] .fin-dre-result.is-neg td,
+:root[data-theme="dark"] .meta-down { color: #f87171; }
+
+/* Link do Meet (Agenda) e resultado de import (Email) no tema escuro */
+:root[data-theme="dark"] .agd-meet-link { background: rgba(59,130,246,.14); border-color: rgba(59,130,246,.32); color: #93c5fd; }
+:root[data-theme="dark"] .em-import-result-added { color: #34d399; }
