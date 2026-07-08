@@ -1,7 +1,7 @@
 ---
 title: Smart Memory Index
 type: index
-updated: 2026-07-07
+updated: 2026-07-08
 tags: [index]
 ---
 

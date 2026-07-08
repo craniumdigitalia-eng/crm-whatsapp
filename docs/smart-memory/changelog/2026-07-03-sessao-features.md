@@ -1,8 +1,8 @@
 ---
-title: Changelog — Sessão de features (1-7 jul 2026)
+title: Changelog — Sessão de features (1-8 jul 2026)
 type: changelog
 created: 2026-07-03
-updated: 2026-07-07
+updated: 2026-07-08
 tags: [changelog, ia-openai, financeiro, metas, demandas, grupos, site-lead, email, evolution, incidente]
 related: ["[[../shared-context]]", "[[../decisions/ADR-005-ia-openai-vs-anthropic]]", "[[2026-06-29-sessao-features]]"]
 ---
@@ -110,3 +110,15 @@ Tudo abaixo foi construído, buildado, **publicado em produção** (`crm-cranium
 - Implementado por **inversão de tokens** em `:root[data-theme="dark"]`. Os **82 fundos `#fff`** viraram token `--card` (invertem juntos).
 - Correções de retrofit: o **inbox** (`conv-*`, usado por Conversas e Grupos) era **roxo-escuro fixo** e não seguia o tema → convertido pra tokens (claro E escuro). **Sidebar** mantém cores claras no escuro (é sempre roxo profundo; logo/texto usam `--off-white`). **Selinhos de etapa** com contraste por tema.
 - **Pendente/menor**: ~22 selinhos de status com cor fixa (drawer/integ/email/followup/finance) — badges pequenos, contraste aceitável; polir se incomodar.
+
+---
+
+# Continuação — 8 jul 2026 (SaaS / provisionamento)
+
+## 16. Modelo SaaS decidido + kit de provisionamento
+- **Decisão** (usuário): vender como SaaS usando **1 base de código, 1 deploy por cliente** (cada cliente com o PRÓPRIO Supabase + PRÓPRIO Vercel, código idêntico). Isolamento máximo dos dados, **zero refação** do código. Trade-off: gerenciar N Supabase/Vercel e aplicar updates/migrations em cada. A alternativa (multi-tenant de banco compartilhado + `org_id` + RLS) só compensa em centenas de clientes — fica pra depois.
+- **Kit** em `provisioning/`:
+  - `schema.sql` — schema consolidado (schema.sql + migrations 002-014) pra rodar de uma vez num Supabase novo (32 tabelas).
+  - `setup.ts` — cria buckets (`avatars`, `agent-assets`), valida tabelas e cria o usuário admin do cliente.
+  - `PROVISIONING.md` — guia passo a passo (Supabase → .env → setup → Vercel → WhatsApp → config → teste) + como ATUALIZAR clientes existentes + checklist por cliente.
+- Cada cliente = próprias env vars + próprio número WhatsApp (instância Evolution).
