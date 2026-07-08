@@ -2418,6 +2418,14 @@ body {
   margin-bottom: 24px;
 }
 
+.login-forgot {
+  margin-top: 16px;
+  margin-bottom: 0;
+  text-align: center;
+}
+.login-forgot a { color: var(--brand); text-decoration: none; }
+.login-forgot a:hover { text-decoration: underline; }
+
 .login-form { display: flex; flex-direction: column; gap: 16px; }
 
 .login-field { display: flex; flex-direction: column; gap: 6px; }

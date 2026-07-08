@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import NeuralBackground from '@/components/NeuralBackground';
 
@@ -104,6 +105,10 @@ export default function LoginPage() {
             {loading ? 'Entrando…' : 'Entrar'}
           </button>
         </form>
+
+        <p className="login-subtitle login-forgot">
+          <Link href="/reset-password">Esqueci minha senha</Link>
+        </p>
       </section>
     </main>
   );

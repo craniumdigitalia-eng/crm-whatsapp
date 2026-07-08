@@ -18,8 +18,9 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Casa tudo, EXCETO: /api/*, /login, os internos do Next (_next/static, _next/image),
-    // favicon e qualquer arquivo com extensao (estaticos do /public).
-    '/((?!api|login|_next/static|_next/image|favicon.ico|.*\\.).*)',
+    // Casa tudo, EXCETO: /api/*, /login, /reset-password (fluxo de recuperacao de senha,
+    // acessado sem sessao), os internos do Next (_next/static, _next/image), favicon e
+    // qualquer arquivo com extensao (estaticos do /public).
+    '/((?!api|login|reset-password|_next/static|_next/image|favicon.ico|.*\\.).*)',
   ],
 };
