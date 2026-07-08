@@ -40,6 +40,12 @@ export async function POST(req: Request) {
   const phone = normalizePhone((body.phone ?? body.telefone ?? body.whatsapp ?? '').toString());
   const interest =
     (body.interest ?? body.interesse ?? body.mensagem ?? body.message ?? '').toString().trim() || undefined;
+  // Segura o opener nesta chamada. O site captura o lead no "gate" (antes da conversa) com
+  // defer_opener=1 pra criar o lead SEM abrir; depois manda a conversa numa 2a chamada (sem
+  // defer) e AÍ o opener dispara, já com o resumo do que a pessoa fez/perguntou na IA do site.
+  const deferOpener = ['1', 'true', 'yes', 'sim'].includes(
+    (body.defer_opener ?? '').toString().trim().toLowerCase()
+  );
 
   if (!phone && !email) {
     return NextResponse.json({ error: 'informe ao menos telefone ou email' }, { status: 400 });
@@ -67,9 +73,11 @@ export async function POST(req: Request) {
     }
     await setLeadAttribution(lead.id, { source: 'site', form_data: formData });
 
-    // Novo lead com telefone valido -> IA abre a conversa no WhatsApp (opener).
-    if (created && phone) {
-      await iniciarAtendimento({ ...lead, phone }, formData).catch((e) =>
+    // Abre a conversa no WhatsApp (opener) quando NÃO for chamada deferida e houver telefone.
+    // iniciarAtendimento é idempotente por status (só abre lead ainda em estágio 'novo'), então
+    // a chamada do gate (deferida) segura, e a chamada da conversa dispara uma única vez.
+    if (phone && !deferOpener) {
+      await iniciarAtendimento({ ...lead, phone }, formData, 'site').catch((e) =>
         console.error('[site-lead] iniciarAtendimento:', e)
       );
     }
