@@ -9,14 +9,28 @@ on:
     - cron: '0 * * * *'   # toda hora cheia (UTC)
   workflow_dispatch:        # permite disparo manual pelo painel do GitHub
 
+# Nunca deixar dois disparos rodando juntos; se um novo comeca, o antigo e descartado.
+concurrency:
+  group: followup-cron
+  cancel-in-progress: true
+
 jobs:
   trigger:
     runs-on: ubuntu-latest
+    timeout-minutes: 5        # nunca ficar pendurado 15 min de novo
     steps:
       - name: Disparar follow-up/cadencia
         run: |
-          code=$(curl -sS -o /dev/null -w "%{http_code}" -X POST \
-            "https://crm-cranium.vercel.app/api/cron/followup" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
-          echo "HTTP $code"
-          test "$code" = "200"
+          url="https://crm-cranium.vercel.app/api/cron/followup"
+          for i in 1 2 3; do
+            code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 90 -X POST \
+              "$url" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" || echo "000")
+            echo "Tentativa $i: HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "Follow-up disparado com sucesso."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Follow-up nao respondeu 200 apos 3 tentativas."
+          exit 1
