@@ -78,9 +78,14 @@ export class GmailSmtpProvider implements EmailProvider {
     if (this.transport) return this.transport;
     const nodemailer = (await import("nodemailer")).default;
     // service:'gmail' já resolve host smtp.gmail.com / porta 465 (SSL).
+    // Timeouts explícitos: em serverless sem eles o nodemailer pode segurar a função
+    // até o maxDuration da Vercel sem retornar erro acionável.
     this.transport = nodemailer.createTransport({
       service: "gmail",
       auth: { user: this.user, pass: this.appPassword },
+      connectionTimeout: 10_000,  // tempo máximo para estabelecer a conexão TCP
+      greetingTimeout: 10_000,    // tempo máximo para receber o banner SMTP
+      socketTimeout: 10_000,      // tempo máximo de inatividade no socket durante o envio
     });
     return this.transport;
   }

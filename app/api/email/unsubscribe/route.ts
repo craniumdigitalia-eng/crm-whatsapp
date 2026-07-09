@@ -1,5 +1,10 @@
 import { suppressEmail, recordEvent } from '@/src/crm/email';
 import { verifyUnsub } from '@/src/crm/email-sign';
+import { throttle, clientIp } from '@/src/lib/rate-limit';
+
+// Rate limit de descadastro: 20/min por IP. Um usuario legitimo faz 1 request;
+// limitar evita que um atacante tente descadastrar emails em massa por forca bruta.
+const UNSUB_RATE_LIMIT = 20;
 
 // GET /api/email/unsubscribe?c=<campaignId>&e=<email>&sig=<hmac>
 // Descadastro público (QA E0) — SEM login (chamado do email do destinatário ou
@@ -48,6 +53,17 @@ async function processUnsub(c: string | null, e: string | null, sig: string | nu
 }
 
 export async function GET(req: Request) {
+  // Rate limit: evita varredura de descadastros em massa via link.
+  const ip = clientIp(req);
+  const rl = await throttle({ key: `unsub:${ip}`, limit: UNSUB_RATE_LIMIT, windowSec: 60 });
+  if (!rl.allowed) {
+    return page(
+      'Muitas tentativas',
+      'Aguarde alguns instantes antes de tentar novamente.',
+      429
+    );
+  }
+
   const { searchParams } = new URL(req.url);
   const result = await processUnsub(
     searchParams.get('c'),
@@ -82,6 +98,19 @@ export async function GET(req: Request) {
 // corpo (form-urlencoded ou JSON) por robustez. Mesma validação do GET; resposta
 // é só um status (não renderiza página).
 export async function POST(req: Request) {
+  // Cap de payload: corpo do one-click unsubscribe e minusculo (form-data ou JSON simples).
+  const contentLength = req.headers.get('content-length');
+  if (contentLength && parseInt(contentLength, 10) > 4096) {
+    return new Response('payload muito grande', { status: 413 });
+  }
+
+  // Rate limit compartilhado com o GET (mesma chave "unsub:ip").
+  const ip = clientIp(req);
+  const rl = await throttle({ key: `unsub:${ip}`, limit: UNSUB_RATE_LIMIT, windowSec: 60 });
+  if (!rl.allowed) {
+    return new Response('rate limit excedido', { status: 429 });
+  }
+
   const { searchParams } = new URL(req.url);
   let c = searchParams.get('c');
   let e = searchParams.get('e');

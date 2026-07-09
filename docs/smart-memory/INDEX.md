@@ -57,9 +57,11 @@ MOC raiz (Map of Content). Todo arquivo novo em `docs/smart-memory/` deve ser re
 - [[agents/data-engineer/migrations-log]] — log de migrations aplicadas e planejadas
 - [[agents/data-engineer/rls-ac3-validation]] — validação estática das migrations 005 e 009
 - [[agents/data-engineer/migration-apply-order]] — ordem canônica 006→005→009 (smoke-checks e rollback)
+- [[agents/data-engineer/rls-p0-apply-plan]] — plano de apply P0-2: veredicto, tabelas cobertas/faltantes, SQL pronto, migration 016
 - [[agents/qa/results]] — histórico de veredictos (inclui a leva de features 29-30/jun)
 - [[agents/qa/review-2026-06-26]] — review das features do portal (CRM, integrações, login)
 - [[agents/qa/review-5.2-ac5-e-config]] — matriz de gates por endpoint + AC5 + review config/dashboard
+- [[agents/qa/auditoria-robustez-2026-07-09]] — auditoria de robustez da plataforma inteira (P0×3, P1×6, P2×6; timeouts, RLS, rate limit)
 - [[agents/ux/components]] — specs de componentes
 - `agents/research/` — research reports
   - [[agents/research/saas-decisoes-canal-e-pagamento]] — Canal WhatsApp (Evolution vs Cloud API) e Gateway de Pagamento (Asaas vs Pagar.me vs Iugu) para escala SaaS

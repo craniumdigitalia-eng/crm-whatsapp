@@ -41,6 +41,8 @@ export interface MetaRawLead {
 }
 
 const GRAPH = "https://graph.facebook.com";
+// Timeout para chamadas a Meta Graph API: 10s.
+const META_TIMEOUT_MS = 10_000;
 
 // --- Parsing dos campos do formulario -------------------------------
 
@@ -248,7 +250,7 @@ async function graphGet<T>(path: string, params: Record<string, string>): Promis
   const url = `${GRAPH}/${path}?${qs}`;
   let res: Response;
   try {
-    res = await fetch(url);
+    res = await fetch(url, { signal: AbortSignal.timeout(META_TIMEOUT_MS) });
   } catch (e) {
     throw new MetaError(`falha de rede ao chamar a Graph API: ${(e as Error).message}`, 502);
   }

@@ -11,7 +11,20 @@ import { listActiveByCategory, assetsSummaryForPrompt } from "./assets";
 
 // Provedor de IA = OpenAI (GPT). Ferramentas via function calling do Chat Completions.
 // Fallback no apiKey evita o SDK lancar no build (env ausente); em runtime a env real e usada.
-const client = new OpenAI({ apiKey: config.openaiApiKey || "sk-missing-openai-key" });
+//
+// Conta dos 60s (maxDuration do webhook, pior caso):
+//   - timeout por chamada: 25s (cobre latencia normal da OpenAI, sem retry pelo SDK)
+//   - o loop agentic roda ate 5 iteracoes, mas o comum e 1-2 chamadas por turno
+//   - sendText (Evolution): +10s por envio (definido em evolution.ts)
+//   - Calendar + token: +10s cada (definido em calendar.ts)
+//   - Soma no pior caso real (~2 iteracoes OpenAI + 1 Evolution): ~60s
+//   maxRetries: 0 porque o webhook ja retorna 200 imediatamente; retry aqui
+//   causaria dupla-execucao do agente dentro da mesma invocacao serverless.
+const client = new OpenAI({
+  apiKey: config.openaiApiKey || "sk-missing-openai-key",
+  timeout: 25_000,
+  maxRetries: 0,
+});
 
 // Ferramentas (function calling da OpenAI). Mesmas capacidades de antes:
 // atualizar_lead / transferir_para_humano / agendar_reuniao.

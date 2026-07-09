@@ -57,6 +57,10 @@ export interface AgendaEvent {
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const CAL_API = "https://www.googleapis.com/calendar/v3";
 const DEFAULT_TZ = process.env.GOOGLE_CALENDAR_TZ ?? "America/Sao_Paulo";
+// Timeout para chamadas ao Google (renovacao de token e Calendar API): 10s.
+// No caminho do agente (webhook, maxDuration 60s), getAccessToken + createEvent
+// somam ate 20s — compativel com o orcamento de tempo disponivel.
+const GOOGLE_TIMEOUT_MS = 10_000;
 
 // Erro tipado para o chamador distinguir "nao conectado/configurado" de falha da API.
 export class CalendarError extends Error {
@@ -85,6 +89,7 @@ async function getAccessToken(cfg: GoogleConfig): Promise<string> {
         refresh_token: cfg.refreshToken,
         grant_type: "refresh_token",
       }),
+      signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     });
   } catch (e) {
     throw new CalendarError(`falha de rede ao renovar token Google: ${(e as Error).message}`, 502);
@@ -172,6 +177,7 @@ export async function createEvent(input: CalendarEventInput): Promise<CalendarEv
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(event),
+      signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     });
   } catch (e) {
     throw new CalendarError(`falha de rede ao criar evento: ${(e as Error).message}`, 502);
@@ -271,6 +277,7 @@ export async function listEvents(params: ListEventsParams): Promise<AgendaEvent[
   try {
     res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     });
   } catch (e) {
     throw new CalendarError(`falha de rede ao listar eventos: ${(e as Error).message}`, 502);
@@ -342,6 +349,7 @@ export async function updateEvent(id: string, patch: AgendaEventPatch): Promise<
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     });
   } catch (e) {
     throw new CalendarError(`falha de rede ao atualizar evento: ${(e as Error).message}`, 502);
@@ -371,6 +379,7 @@ export async function deleteEvent(id: string): Promise<void> {
     res = await fetch(url, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     });
   } catch (e) {
     throw new CalendarError(`falha de rede ao remover evento: ${(e as Error).message}`, 502);

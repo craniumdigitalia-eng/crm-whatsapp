@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { recordEvent } from '@/src/crm/email';
 import { verifyClick } from '@/src/crm/email-sign';
+import { throttle, clientIp } from '@/src/lib/rate-limit';
 
 // GET /api/email/track/click?c=<campaignId>&e=<email>&u=<urlOriginal>&sig=<hmac>
 // NÃO exige login — é o link clicado no email do destinatário. Grava o evento
@@ -9,9 +10,21 @@ import { verifyClick } from '@/src/crm/email-sign';
 // ANTI OPEN-REDIRECT (QA E3): a URL de destino `u` é assinada (HMAC sobre c|e|u)
 // no momento do envio. Aqui RECUSAMOS qualquer destino cuja assinatura não bata —
 // assim o portal nunca vira redirecionador aberto para phishing.
+//
+// Rate limit: 60/min por IP. Um usuario humano nunca clica mais que isso.
 export const dynamic = 'force-dynamic';
 
+const CLICK_RATE_LIMIT = 60;
+
 export async function GET(req: Request) {
+  // Rate limit: bloqueia varredura de links (scanner/bot). Redireciona para raiz
+  // sem gravar o clique — comportamento ja identico ao de assinatura invalida.
+  const ip = clientIp(req);
+  const rl = await throttle({ key: `email-click:${ip}`, limit: CLICK_RATE_LIMIT, windowSec: 60 });
+  if (!rl.allowed) {
+    return NextResponse.redirect(new URL('/', req.url), { status: 302 });
+  }
+
   const { searchParams } = new URL(req.url);
   const c = searchParams.get('c');
   const e = searchParams.get('e');

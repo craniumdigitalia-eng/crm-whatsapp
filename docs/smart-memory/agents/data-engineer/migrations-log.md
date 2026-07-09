@@ -119,6 +119,15 @@ psql $DATABASE_URL -f supabase/migrations/015-control-plane.sql
 psql $DATABASE_URL -f supabase/migrations/015-control-plane.rollback.sql
 ```
 
+## Migration 016 — RLS email + follow_up_schedule (criada 2026-07-09)
+
+| # | Arquivo | Status | Descricao | Dependencia |
+|---|---------|--------|-----------|-------------|
+| 016 | `016-rls-email-followup.sql` | **PENDENTE** | Enable RLS (sem policies) em email_lists, email_contacts, email_templates, email_campaigns, email_events, email_unsubscribes, follow_up_schedule. Complementa a 005 fechando a brecha da anon key nas tabelas de email e agenda. | migrations 007 e 008 aplicadas |
+| 016 | `016-rls-email-followup.rollback.sql` | — | Desabilita RLS nas 7 tabelas acima. | — |
+
+Ordem recomendada para fechar P0-2 completo: 006 (se pendente) -> 005 -> 016 -> 009 (se pendente).
+
 ## Proximas migrations planejadas
 
 | Prioridade | Descricao | Motivo | Story |

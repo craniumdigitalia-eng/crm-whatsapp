@@ -12,6 +12,12 @@ import {
   MetaError,
 } from '@/src/crm/meta';
 import { iniciarAtendimento } from '@/src/handler';
+import { throttle, clientIp } from '@/src/lib/rate-limit';
+
+// Cap de payload para o leadgen (bytes). Payloads do Make/Meta nao chegam perto disso.
+const LEADGEN_PAYLOAD_CAP = 64 * 1024; // 64 KB
+// Requests por minuto por IP. O Make manda um POST por lead gerado — 30/min e generoso.
+const LEADGEN_RATE_LIMIT = 30;
 
 // Ingresso de leads do Facebook/Instagram Lead Ads. Endpoint de MAQUINA — protegido
 // por secret/assinatura, nunca por sessao (e o middleware ja exclui /api/*).
@@ -60,6 +66,19 @@ function secretMatches(provided: string, expected: string): boolean {
 }
 
 export async function POST(req: Request) {
+  // --- Cap de payload -------------------------------------------------------
+  const contentLength = req.headers.get('content-length');
+  if (contentLength && parseInt(contentLength, 10) > LEADGEN_PAYLOAD_CAP) {
+    return NextResponse.json({ error: 'payload muito grande' }, { status: 413 });
+  }
+
+  // --- Rate limit por IP ----------------------------------------------------
+  const ip = clientIp(req);
+  const rl = await throttle({ key: `leadgen:${ip}`, limit: LEADGEN_RATE_LIMIT, windowSec: 60 });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'rate limit excedido' }, { status: 429 });
+  }
+
   const rawBody = await req.text();
   const signature = req.headers.get('x-hub-signature-256');
 

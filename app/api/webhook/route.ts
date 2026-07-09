@@ -4,6 +4,7 @@ import { getEvolutionConfig } from '@/src/crm/integrations';
 import { handleInbound } from '@/src/handler';
 import { handleGroupMessage } from '@/src/crm/demands';
 import { storeGroupMessage, ensureGroupCached } from '@/src/crm/groupchat';
+import { throttle, clientIp } from '@/src/lib/rate-limit';
 
 // POST /api/webhook — ingresso de mensagens do WhatsApp via Evolution API (ADR-004).
 // A Evolution chama esta URL no evento `messages.upsert`. O payload e normalizado
@@ -21,9 +22,35 @@ import { storeGroupMessage, ensureGroupCached } from '@/src/crm/groupchat';
 //
 // Idempotencia: handleInbound chama addMessage com external_id (key.id da Evolution);
 // reentregas recebem 200 idempotente, sem duplicar resposta.
+//
+// Hardening (P0-3):
+//   - Cap de payload: 64 KB (mensagem WhatsApp nunca chega nem perto disso).
+//   - Rate limit: 60 requests/minuto por IP (janela fixa via Supabase).
+//     60 rpm = 1 msg/s, suficiente para uso real. Ataques de loop ou DDoS sao bloqueados.
 export const maxDuration = 60;
 
+// Cap de payload para o webhook (bytes). Mensagens WhatsApp sao muito menores que isso.
+const WEBHOOK_PAYLOAD_CAP = 64 * 1024; // 64 KB
+// Requests por minuto por IP permitidas neste endpoint.
+const WEBHOOK_RATE_LIMIT = 60;
+
 export async function POST(req: Request) {
+  // --- Cap de payload -------------------------------------------------------
+  // Verifica antes de chamar req.json() para evitar alocar memoria com payload gigante.
+  const contentLength = req.headers.get('content-length');
+  if (contentLength && parseInt(contentLength, 10) > WEBHOOK_PAYLOAD_CAP) {
+    return NextResponse.json({ error: 'payload muito grande' }, { status: 413 });
+  }
+
+  // --- Rate limit por IP ----------------------------------------------------
+  // Prioridade maxima: cada POST aciona o agente Claude (custo). 60 rpm por IP
+  // cobre qualquer uso legítimo da Evolution; bloqueia loops maliciosos.
+  const ip = clientIp(req);
+  const rl = await throttle({ key: `webhook:${ip}`, limit: WEBHOOK_RATE_LIMIT, windowSec: 60 });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'rate limit excedido' }, { status: 429 });
+  }
+
   // --- Validacao de origem -------------------------------------------------
   // A Evolution nao manda a apikey nos webhooks por padrao; protegemos com um
   // token que o usuario cola na URL do webhook (?token=...) ou envia no header

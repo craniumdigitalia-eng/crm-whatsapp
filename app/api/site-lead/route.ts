@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server';
 import { config } from '@/src/config';
 import { getOrCreateLead, findLeadByPhone, updateLeadFields, setLeadAttribution } from '@/src/crm/leads';
 import { iniciarAtendimento } from '@/src/handler';
+import { throttle, clientIp } from '@/src/lib/rate-limit';
+
+// Cap de payload para o site-lead (bytes). Formularios do site sao muito menores.
+const SITE_LEAD_PAYLOAD_CAP = 8 * 1024; // 8 KB
+// Requests por minuto por IP. Site-lead e menos autenticado (secret no backend do site);
+// 10/min e suficiente para qualquer submit de formulario legítimo.
+const SITE_LEAD_RATE_LIMIT = 10;
 
 // POST /api/site-lead — ingresso de leads do FORMULARIO DO SITE (quem testou a IA
 // e deixou os dados). Cria o lead no CRM (origem 'site'), salva e-mail (entra na
@@ -22,6 +29,21 @@ function normalizePhone(raw: string): string {
 }
 
 export async function POST(req: Request) {
+  // --- Cap de payload -------------------------------------------------------
+  const contentLength = req.headers.get('content-length');
+  if (contentLength && parseInt(contentLength, 10) > SITE_LEAD_PAYLOAD_CAP) {
+    return NextResponse.json({ error: 'payload muito grande' }, { status: 413 });
+  }
+
+  // --- Rate limit por IP ----------------------------------------------------
+  // site-lead e o menos autenticado (secret no backend do site que pode ter vazado).
+  // 10 rpm e amplo para qualquer uso real; bloqueia inundacao.
+  const ip = clientIp(req);
+  const rl = await throttle({ key: `site-lead:${ip}`, limit: SITE_LEAD_RATE_LIMIT, windowSec: 60 });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'rate limit excedido' }, { status: 429 });
+  }
+
   const url = new URL(req.url);
   const provided = req.headers.get('x-site-secret') ?? url.searchParams.get('token') ?? '';
   const isProd = process.env.NODE_ENV === 'production';

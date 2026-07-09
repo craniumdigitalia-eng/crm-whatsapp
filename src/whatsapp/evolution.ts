@@ -37,6 +37,11 @@ function hashExternalId(phone: string, text: string, epochMs: number): string {
 // direto com a Evolution API (ADR-004).
 // delayMs: se > 0, a Evolution mostra "digitando..." por esse tempo antes de
 // entregar a mensagem (presença composing). Deixa a IA parecer gente digitando.
+// Timeout padrao para chamadas a Evolution/Make: 10s.
+// Somado ao timeout do cliente OpenAI (25s x 2 iteracoes comuns = 50s),
+// cabe dentro do maxDuration de 60s do webhook.
+const EVO_TIMEOUT_MS = 10_000;
+
 export async function sendText(phone: string, text: string, delayMs = 0): Promise<string | null> {
   if (config.makeSendUrl) {
     // Branch Make: POST {MAKE_SEND_URL} com { phone, text }
@@ -44,6 +49,7 @@ export async function sendText(phone: string, text: string, delayMs = 0): Promis
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone, text }),
+      signal: AbortSignal.timeout(EVO_TIMEOUT_MS),
     });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
@@ -64,6 +70,7 @@ export async function sendText(phone: string, text: string, delayMs = 0): Promis
     body: JSON.stringify(
       delayMs > 0 ? { number: phone, text, delay: delayMs } : { number: phone, text }
     ),
+    signal: AbortSignal.timeout(EVO_TIMEOUT_MS),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -76,7 +83,7 @@ export async function sendText(phone: string, text: string, delayMs = 0): Promis
 }
 
 // Busca a URL da foto de perfil do WhatsApp de um contato via Evolution.
-// Tolerante: qualquer falha (rede, !res.ok, contato sem foto) retorna null, nunca lanca.
+// Tolerante: qualquer falha (rede, !res.ok, timeout, contato sem foto) retorna null, nunca lanca.
 // Branch Make (config.makeSendUrl): sem suporte — retorna null.
 export async function fetchProfilePictureUrl(phone: string): Promise<string | null> {
   if (config.makeSendUrl) return null;
@@ -90,6 +97,7 @@ export async function fetchProfilePictureUrl(phone: string): Promise<string | nu
         apikey: evo.apiKey,
       },
       body: JSON.stringify({ number: phone }),
+      signal: AbortSignal.timeout(EVO_TIMEOUT_MS),
     });
     if (!res.ok) return null;
     const json = await res.json().catch(() => null);
@@ -100,13 +108,14 @@ export async function fetchProfilePictureUrl(phone: string): Promise<string | nu
 }
 
 // Estado da conexao da instancia: 'open' (conectado), 'connecting', 'close'
-// (desconectado) ou 'unreachable' (servidor fora/erro). Base do alerta de queda.
+// (desconectado) ou 'unreachable' (servidor fora/erro/timeout). Base do alerta de queda.
 export async function getEvolutionState(): Promise<string> {
   if (config.makeSendUrl) return "open"; // canal Make, sem instancia Evolution
   try {
     const evo = await getEvolutionConfig();
     const res = await fetch(`${evo.url}/instance/connectionState/${evo.instance}`, {
       headers: { apikey: evo.apiKey },
+      signal: AbortSignal.timeout(EVO_TIMEOUT_MS),
     });
     if (!res.ok) return "unreachable";
     const json = await res.json().catch(() => null);
@@ -123,13 +132,16 @@ export interface EvoGroup {
   pictureUrl?: string | null;
 }
 
-// Lista TODOS os grupos em que o numero (instancia) participa. Best-effort: [] em erro.
+// Lista TODOS os grupos em que o numero (instancia) participa. Best-effort: [] em erro/timeout.
 export async function fetchAllGroups(): Promise<EvoGroup[]> {
   if (config.makeSendUrl) return [];
   try {
     const evo = await getEvolutionConfig();
     const url = `${evo.url}/group/fetchAllGroups/${evo.instance}?getParticipants=false`;
-    const res = await fetch(url, { headers: { apikey: evo.apiKey } });
+    const res = await fetch(url, {
+      headers: { apikey: evo.apiKey },
+      signal: AbortSignal.timeout(EVO_TIMEOUT_MS),
+    });
     if (!res.ok) return [];
     const json = await res.json().catch(() => null);
     const arr = Array.isArray(json) ? json : Array.isArray(json?.groups) ? json.groups : [];
@@ -146,13 +158,16 @@ export async function fetchAllGroups(): Promise<EvoGroup[]> {
   }
 }
 
-// Busca o nome/assunto de um grupo pela Evolution (best-effort; undefined se falhar).
+// Busca o nome/assunto de um grupo pela Evolution (best-effort; undefined se falhar/timeout).
 export async function fetchGroupSubject(groupJid: string): Promise<string | undefined> {
   if (config.makeSendUrl) return undefined;
   try {
     const evo = await getEvolutionConfig();
     const url = `${evo.url}/group/findGroupInfos/${evo.instance}?groupJid=${encodeURIComponent(groupJid)}`;
-    const res = await fetch(url, { headers: { apikey: evo.apiKey } });
+    const res = await fetch(url, {
+      headers: { apikey: evo.apiKey },
+      signal: AbortSignal.timeout(EVO_TIMEOUT_MS),
+    });
     if (!res.ok) return undefined;
     const json = await res.json().catch(() => null);
     const subject = json?.subject ?? (Array.isArray(json) ? json[0]?.subject : undefined);
@@ -165,7 +180,7 @@ export async function fetchGroupSubject(groupJid: string): Promise<string | unde
 // Normaliza o payload do webhook da Evolution (evento messages.upsert).
 // A Evolution pode mandar um objeto ou uma lista em body.data.
 // Envia uma imagem (por URL) ao número/grupo pela Evolution. Best-effort: loga e
-// segue em erro (não quebra o atendimento). Usada pelo agente para provas/prints.
+// segue em erro/timeout (não quebra o atendimento). Usada pelo agente para provas/prints.
 export async function sendMedia(phone: string, media: string, caption?: string): Promise<void> {
   if (config.makeSendUrl) return; // canal Make não trata mídia aqui
   try {
@@ -174,6 +189,7 @@ export async function sendMedia(phone: string, media: string, caption?: string):
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: evo.apiKey },
       body: JSON.stringify({ number: phone, mediatype: "image", media, caption: caption || undefined }),
+      signal: AbortSignal.timeout(EVO_TIMEOUT_MS),
     });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
