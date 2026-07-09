@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import NeuralBackground from '@/components/NeuralBackground';
+import BrandBackgroundVideo from '@/components/BrandBackgroundVideo';
 
 /* ============================================================
    Login (Story 5.2)
@@ -42,7 +42,7 @@ export default function LoginPage() {
 
   return (
     <main className="login-screen">
-      <NeuralBackground />
+      <BrandBackgroundVideo />
 
       {/* Cerebro da marca em destaque: glow roxo pulsante + float suave */}
       <div className="login-hero">

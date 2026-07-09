@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import NeuralBackground from '@/components/NeuralBackground';
+import BrandBackgroundVideo from '@/components/BrandBackgroundVideo';
 
 /* ============================================================
    Recuperacao de senha (Story 5.2 / feedback do usuario)
@@ -36,10 +36,12 @@ export default function ResetPasswordPage() {
 
     async function init() {
       const url = new URL(window.location.href);
+      const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
       const code = url.searchParams.get('code');
       const errDesc =
-        url.searchParams.get('error_description') ||
-        new URLSearchParams(url.hash.replace(/^#/, '')).get('error_description');
+        url.searchParams.get('error_description') || hashParams.get('error_description');
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
 
       if (errDesc) {
         setLinkErro('O link de recuperação é inválido ou expirou. Peça um novo abaixo.');
@@ -47,19 +49,38 @@ export default function ResetPasswordPage() {
         return;
       }
 
+      // Fluxo implicito (padrao do e-mail de recuperacao): tokens vem no hash da URL.
+      // Trata explicitamente com setSession para nao depender do auto-detect.
+      if (accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (error) {
+          setLinkErro('O link de recuperação é inválido ou expirou. Peça um novo abaixo.');
+          setModo('pedir');
+          return;
+        }
+        // Limpa os tokens da barra de endereco.
+        window.history.replaceState(null, '', url.pathname);
+        setModo('trocar');
+        return;
+      }
+
+      // Fluxo PKCE: troca o codigo por uma sessao de recuperacao.
       if (code) {
-        // Fluxo PKCE: troca o codigo por uma sessao de recuperacao.
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
           setLinkErro('O link de recuperação é inválido ou expirou. Peça um novo abaixo.');
           setModo('pedir');
           return;
         }
+        window.history.replaceState(null, '', url.pathname);
         setModo('trocar');
         return;
       }
 
-      // Fluxo implicito (hash): o cliente ja pode ter criado a sessao sozinho.
+      // Sem token/codigo na URL: talvez ja exista sessao; senao, pedir o link.
       const { data } = await supabase.auth.getSession();
       setModo(data.session ? 'trocar' : 'pedir');
     }
@@ -126,7 +147,7 @@ export default function ResetPasswordPage() {
 
   return (
     <main className="login-screen">
-      <NeuralBackground />
+      <BrandBackgroundVideo />
 
       <div className="login-hero">
         <div className="login-hero__brain" role="img" aria-label="Cranium Digital">
