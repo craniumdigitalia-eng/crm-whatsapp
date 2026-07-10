@@ -2499,6 +2499,126 @@ body {
 
 .login-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
+/* ============================================================
+   Login glass escuro — identidade do portal.craniumdigital.com.br
+   ============================================================ */
+.login-card--glass {
+  max-width: 400px;
+  background: rgba(26, 10, 46, 0.55);
+  -webkit-backdrop-filter: blur(24px);
+          backdrop-filter: blur(24px);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  border-radius: 28px;
+  box-shadow: 0 30px 80px rgba(10, 4, 24, 0.55), 0 0 0 1px rgba(167, 139, 250, 0.06);
+  padding: 34px 32px 32px;
+  text-align: center;
+}
+
+/* Cerebro da marca num quadrado arredondado, no topo do card. */
+.login-brain-box {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: rgba(45, 20, 74, 0.85);
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  box-shadow: 0 0 32px rgba(124, 58, 237, 0.35);
+}
+.login-brain-box img { width: 38px; height: 38px; display: block; }
+
+.login-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #C4B5FD;
+  text-transform: uppercase;
+  margin: 0 0 8px;
+}
+
+.login-title--xl {
+  font-size: 40px;
+  line-height: 1.05;
+  color: #FFFFFF;
+  margin-bottom: 10px;
+}
+
+/* Dentro do card glass: textos e campos no tom escuro/claro. */
+.login-card--glass .login-subtitle { color: rgba(226, 220, 246, 0.72); margin-bottom: 26px; }
+.login-card--glass .login-form { gap: 18px; text-align: left; }
+.login-card--glass .login-field label { color: #C4B5FD; font-size: 12px; letter-spacing: 0.02em; }
+
+/* Campo com icone a esquerda (e olho a direita na senha). */
+.login-input { position: relative; display: flex; align-items: center; }
+.login-input__icon {
+  position: absolute;
+  left: 14px;
+  display: flex;
+  color: rgba(196, 181, 253, 0.7);
+  pointer-events: none;
+}
+.login-card--glass .login-input input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 14px;
+  color: #F3F0FF;
+  background: rgba(15, 8, 30, 0.6);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  border-radius: 14px;
+  padding: 13px 14px 13px 42px;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.login-card--glass .login-input input::placeholder { color: rgba(196, 181, 253, 0.4); }
+.login-card--glass .login-input input:focus {
+  outline: none;
+  border-color: rgba(167, 139, 250, 0.7);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+}
+.login-input input.has-eye { padding-right: 44px; }
+
+.login-input__eye {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(196, 181, 253, 0.75);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.login-input__eye:hover { color: #E9E4FF; background: rgba(167, 139, 250, 0.12); }
+
+.login-forgot-link {
+  align-self: flex-end;
+  font-size: 13px;
+  font-weight: 500;
+  color: #C4B5FD;
+  text-decoration: none;
+  margin-top: -4px;
+}
+.login-forgot-link:hover { color: #E9E4FF; text-decoration: underline; }
+
+.login-card--glass .login-submit {
+  margin-top: 6px;
+  padding: 14px 16px;
+  font-size: 15px;
+  border-radius: 14px;
+}
+.login-card--glass .login-error {
+  color: #FCA5A5;
+  background: rgba(127, 29, 29, 0.35);
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
 /* A11y: respeita usuarios que pediram menos movimento — desliga float/glow.
    (O canvas tambem detecta isso e renderiza um frame estatico.) */
 @media (prefers-reduced-motion: reduce) {
