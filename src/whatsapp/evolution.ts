@@ -200,6 +200,74 @@ export async function sendMedia(phone: string, media: string, caption?: string):
   }
 }
 
+// Apaga uma mensagem de grupo para todos (fromMe=true) via Evolution API.
+// Limite do WhatsApp: so e possivel apagar-para-todos mensagens enviadas pelo PROPRIO
+// numero (direction='out'), dentro da janela de tempo permitida (~60h). Mensagens
+// recebidas (direction='in') nao podem ser apagadas do WhatsApp dos outros.
+// Best-effort: retorna { ok, error } sem lancar excecao — a UI decide como avisar.
+// Endpoint: POST /chat/deleteMessageForEveryone/{instance}
+//   body: { id: string, remoteJid: string, fromMe: boolean, participant?: string }
+export async function deleteGroupMessageForEveryone(
+  groupJid: string,
+  messageId: string,
+  fromMe: boolean,
+  participant?: string
+): Promise<{ ok: boolean; error?: string }> {
+  if (config.makeSendUrl) return { ok: false, error: "canal Make nao suporta delecao" };
+  try {
+    const evo = await getEvolutionConfig();
+    const url = `${evo.url}/chat/deleteMessageForEveryone/${evo.instance}`;
+    const bodyPayload: Record<string, unknown> = { id: messageId, remoteJid: groupJid, fromMe };
+    if (participant) bodyPayload.participant = participant;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: evo.apiKey },
+      body: JSON.stringify(bodyPayload),
+      signal: AbortSignal.timeout(EVO_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      return { ok: false, error: `Evolution ${res.status}: ${txt.slice(0, 200)}` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+// Extrai eventos de REVOGACAO de mensagem de grupo de um payload da Evolution.
+// A Evolution pode sinalizar revogacao de formas diferentes dependendo da versao:
+//   - messages.update com messageStubType = 'REVOKE' ou key.messageStubType
+//   - messages.delete com key do grupo
+// Retorna lista de { groupJid, externalId } para remocao do historico (best-effort).
+export interface GroupRevoke { groupJid: string; externalId: string }
+export function parseGroupRevoke(body: any): GroupRevoke[] {
+  const out: GroupRevoke[] = [];
+  // Suporte a messages.update (array ou objeto em body.data)
+  const items = Array.isArray(body?.data) ? body.data : [body?.data];
+  for (const item of items) {
+    if (!item) continue;
+    const key = item.key ?? {};
+    const remoteJid: string = key.remoteJid ?? "";
+    if (!remoteJid.endsWith("@g.us")) continue;
+
+    const externalId: string = key.id ?? "";
+    if (!externalId) continue;
+
+    // Detecta revogacao: messageStubType presente com valor REVOKE, ou evento = messages.delete
+    const stubType: string | undefined =
+      item.messageStubType ?? item.message?.messageStubType ?? body?.event;
+    const isRevoke =
+      stubType === "REVOKE" ||
+      stubType === "messages.delete" ||
+      (typeof stubType === "string" && stubType.toLowerCase().includes("revok"));
+    if (!isRevoke) continue;
+
+    out.push({ groupJid: remoteJid, externalId });
+  }
+  return out;
+}
+
 export function parseWebhook(body: any): InboundMessage[] {
   const out: InboundMessage[] = [];
   const items = Array.isArray(body?.data) ? body.data : [body?.data];

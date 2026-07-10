@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { parseWebhook, parseGroupWebhook } from '@/src/whatsapp/evolution';
+import { parseWebhook, parseGroupWebhook, parseGroupRevoke } from '@/src/whatsapp/evolution';
 import { getEvolutionConfig } from '@/src/crm/integrations';
 import { handleInbound } from '@/src/handler';
 import { handleGroupMessage } from '@/src/crm/demands';
-import { storeGroupMessage, ensureGroupCached } from '@/src/crm/groupchat';
+import { storeGroupMessage, ensureGroupCached, deleteGroupMessageByExternalId } from '@/src/crm/groupchat';
 import { throttle, clientIp } from '@/src/lib/rate-limit';
 
 // POST /api/webhook — ingresso de mensagens do WhatsApp via Evolution API (ADR-004).
@@ -102,6 +102,14 @@ export async function POST(req: Request) {
       });
       await handleGroupMessage(gm);
     }
+
+    // Revogacoes de mensagens de grupo (messages.update com REVOKE ou messages.delete).
+    // Best-effort: falha nao retorna erro — a mensagem ja pode ter sido apagada antes.
+    const revocations = parseGroupRevoke(body);
+    for (const rev of revocations) {
+      await deleteGroupMessageByExternalId(rev.groupJid, rev.externalId).catch(() => {});
+    }
+
     // 200 sempre que a origem foi validada (mesmo com 0 mensagens uteis) —
     // evita reentregas em massa da Evolution.
     return NextResponse.json({ ok: true });

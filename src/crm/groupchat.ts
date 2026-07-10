@@ -10,7 +10,7 @@ import { fetchAllGroups, type EvoGroup } from "../whatsapp/evolution";
 // =====================================================================
 const GROUPS_CACHE_KEY = "groups_cache";
 
-export interface CachedGroup { jid: string; name: string; size: number }
+export interface CachedGroup { jid: string; name: string; size: number; pictureUrl?: string | null }
 
 export async function getCachedGroups(): Promise<CachedGroup[]> {
   try {
@@ -37,18 +37,27 @@ async function setCachedGroups(groups: CachedGroup[]): Promise<void> {
 // Atualiza o cache buscando na Evolution (LENTO). Use sob demanda.
 export async function refreshGroupsCache(): Promise<number> {
   const groups: EvoGroup[] = await fetchAllGroups();
-  if (groups.length === 0) return 0; // não sobrescreve o cache com vazio (falha/timeout)
-  const clean = groups.map((g) => ({ jid: g.jid, name: g.name, size: g.size }));
+  if (groups.length === 0) return 0; // nao sobrescreve o cache com vazio (falha/timeout)
+  const clean = groups.map((g) => ({ jid: g.jid, name: g.name, size: g.size, pictureUrl: g.pictureUrl ?? null }));
   await setCachedGroups(clean);
   return clean.length;
 }
 
 // Garante que um grupo (visto numa mensagem) esteja no cache, sem chamar a Evolution.
-export async function ensureGroupCached(jid: string, name?: string): Promise<void> {
+// pictureUrl opcional: quando disponivel (ex: evento de atualizacao), persiste no cache.
+export async function ensureGroupCached(jid: string, name?: string, pictureUrl?: string | null): Promise<void> {
   try {
     const cur = await getCachedGroups();
-    if (cur.some((g) => g.jid === jid)) return;
-    cur.push({ jid, name: name?.trim() || "Grupo", size: 0 });
+    const existing = cur.find((g) => g.jid === jid);
+    if (existing) {
+      // Atualiza pictureUrl se fornecida e diferente do que esta no cache.
+      if (pictureUrl !== undefined && existing.pictureUrl !== pictureUrl) {
+        existing.pictureUrl = pictureUrl;
+        await setCachedGroups(cur);
+      }
+      return;
+    }
+    cur.push({ jid, name: name?.trim() || "Grupo", size: 0, pictureUrl: pictureUrl ?? null });
     await setCachedGroups(cur);
   } catch { /* best-effort */ }
 }
@@ -122,6 +131,44 @@ export async function listGroupMessages(groupJid: string, limit = 200): Promise<
     return ((data ?? []) as GroupChatMessage[]).reverse();
   } catch {
     return [];
+  }
+}
+
+// Remove uma mensagem pelo id da linha (UUID). Retorna os dados da linha para que o
+// chamador decida se tambem precisa apagar no WhatsApp (direction='out' + external_id).
+export async function deleteGroupMessage(rowId: string): Promise<{
+  found: boolean;
+  direction?: string;
+  group_jid?: string;
+  external_id?: string | null;
+}> {
+  try {
+    const { data } = await supabase
+      .from("group_messages")
+      .select("direction,group_jid,external_id")
+      .eq("id", rowId)
+      .maybeSingle();
+    if (!data) return { found: false };
+    await supabase.from("group_messages").delete().eq("id", rowId);
+    return { found: true, direction: data.direction, group_jid: data.group_jid, external_id: data.external_id };
+  } catch (e) {
+    console.warn("[groupchat] deleteGroupMessage:", e);
+    return { found: false };
+  }
+}
+
+// Remove mensagem de grupo pelo external_id (key.id do WhatsApp). Usada no webhook de
+// revogacao: quando o WhatsApp notifica que uma mensagem foi apagada, buscamos pelo
+// external_id e removemos do historico (best-effort, sem lancar excecao).
+export async function deleteGroupMessageByExternalId(groupJid: string, externalId: string): Promise<void> {
+  try {
+    await supabase
+      .from("group_messages")
+      .delete()
+      .eq("group_jid", groupJid)
+      .eq("external_id", externalId);
+  } catch (e) {
+    console.warn("[groupchat] deleteGroupMessageByExternalId:", e);
   }
 }
 

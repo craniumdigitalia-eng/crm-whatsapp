@@ -23,6 +23,7 @@ export async function GET() {
       const last = lastByGroup[g.jid];
       return {
         ...g,
+        pictureUrl: g.pictureUrl ?? null,
         demandsOpen: counts[g.jid]?.aberta ?? 0,
         demandsTotal: counts[g.jid]?.total ?? 0,
         lastBody: last?.body ?? null,
