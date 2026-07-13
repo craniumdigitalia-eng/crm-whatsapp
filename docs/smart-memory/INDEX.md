@@ -14,7 +14,8 @@ MOC raiz (Map of Content). Todo arquivo novo em `docs/smart-memory/` deve ser re
 ## 🧭 Comece por aqui
 - [[shared-context]] — **status board do projeto (estado real, sempre atualizado)**
 - [[project/visao-e-requisitos]] — visão, requisitos e preferências (segundo cérebro)
-- [[changelog/2026-07-03-sessao-features]] — **sessão mais recente (1-3/jul)**: IA OpenAI, Financeiro, Metas, Demandas, Grupos, site-lead, incidente Evolution
+- [[changelog/2026-07-13-sessao-hardening-design]] — **sessão mais recente (8-13/jul)**: 3 P0 de robustez (timeouts, RLS, rate-limit), fundação SaaS (control_plane 015), ADRs 006-009, domínio (interno/crm/subdomínio), esqueci-senha + SMTP + templates, conta admin, grupos (foto+sync), login/design igual ao portal
+- [[changelog/2026-07-03-sessao-features]] — sessão de 1-3/jul: IA OpenAI, Financeiro, Metas, Demandas, Grupos, site-lead, incidente Evolution
 - [[changelog/2026-06-29-sessao-features]] — o que foi construído na sessão de 29-30/jun
 
 ## Projeto
