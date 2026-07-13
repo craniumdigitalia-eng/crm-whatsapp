@@ -8,9 +8,13 @@ import { createEvent, CalendarError } from "../crm/calendar";
 import { sendMeetingConfirmation } from "../crm/meeting-email";
 import { sendMedia } from "../whatsapp/evolution";
 import { listActiveByCategory, assetsSummaryForPrompt } from "./assets";
+import { getOpenAiApiKey } from "../crm/integrations";
 
 // Provedor de IA = OpenAI (GPT). Ferramentas via function calling do Chat Completions.
-// Fallback no apiKey evita o SDK lancar no build (env ausente); em runtime a env real e usada.
+//
+// A chave e resolvida em RUNTIME (nao no load do modulo) para permitir BYOK: a aba
+// Integracoes pode salvar a chave na tabela integrations_config (openai_api_key), que
+// sobrepos o env OPENAI_API_KEY. getOpenAiApiKey() faz DB ?? env.
 //
 // Conta dos 60s (maxDuration do webhook, pior caso):
 //   - timeout por chamada: 25s (cobre latencia normal da OpenAI, sem retry pelo SDK)
@@ -20,11 +24,13 @@ import { listActiveByCategory, assetsSummaryForPrompt } from "./assets";
 //   - Soma no pior caso real (~2 iteracoes OpenAI + 1 Evolution): ~60s
 //   maxRetries: 0 porque o webhook ja retorna 200 imediatamente; retry aqui
 //   causaria dupla-execucao do agente dentro da mesma invocacao serverless.
-const client = new OpenAI({
-  apiKey: config.openaiApiKey || "sk-missing-openai-key",
-  timeout: 25_000,
-  maxRetries: 0,
-});
+async function getOpenAiClient(): Promise<OpenAI> {
+  return new OpenAI({
+    apiKey: (await getOpenAiApiKey()) || "sk-missing-openai-key",
+    timeout: 25_000,
+    maxRetries: 0,
+  });
+}
 
 // Ferramentas (function calling da OpenAI). Mesmas capacidades de antes:
 // atualizar_lead / transferir_para_humano / agendar_reuniao.
@@ -365,6 +371,9 @@ export async function generateReply(
     ...historyToMessages(history),
   ];
   let handoff = false;
+
+  // Resolve o cliente em runtime para respeitar o BYOK (chave do DB ?? env).
+  const client = await getOpenAiClient();
 
   // Loop agentic: executa ferramentas ate o modelo dar a resposta final.
   for (let i = 0; i < 5; i++) {

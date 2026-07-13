@@ -19,6 +19,11 @@ interface MetaStatus {
   formId: string;
 }
 
+interface OpenAiStatus {
+  hasKey: boolean;
+  source: 'db' | 'env' | 'none';
+}
+
 interface EvoStatus {
   configured: boolean;
   state: 'connected' | 'connecting' | 'disconnected' | 'unreachable';
@@ -72,11 +77,14 @@ export default function IntegracoesPage() {
   const [meta, setMeta] = useState<MetaStatus | null>(null);
   const [evo, setEvo] = useState<EvoStatus | null>(null);
   const [google, setGoogle] = useState<GoogleStatus | null>(null);
+  const [openai, setOpenai] = useState<OpenAiStatus | null>(null);
 
   const [makeSecret, setMakeSecret] = useState('');
   const [webhookUrl, setWebhookUrl] = useState('/api/leadgen');
+  const [openaiKey, setOpenaiKey] = useState('');
 
   const [saving, setSaving] = useState(false);
+  const [savingOpenai, setSavingOpenai] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   const loadMeta = useCallback(async () => {
@@ -99,7 +107,15 @@ export default function IntegracoesPage() {
     try {
       setGoogle(await apiCall<GoogleStatus>('/api/integrations/google/status'));
     } catch {
-      // silencia — card mostra "Não conectado".
+      // silencia — card mostra "Nao conectado".
+    }
+  }, []);
+
+  const loadOpenai = useCallback(async () => {
+    try {
+      setOpenai(await apiCall<OpenAiStatus>('/api/integrations/openai/config'));
+    } catch {
+      // silencia — card mostra "Nao configurada".
     }
   }, []);
 
@@ -107,16 +123,18 @@ export default function IntegracoesPage() {
     void loadMeta();
     void loadEvo();
     void loadGoogle();
+    void loadOpenai();
     // URL pública do webhook que o Make vai chamar.
     setWebhookUrl(`${window.location.origin}/api/leadgen`);
     // Banner do retorno do OAuth Google (?google=...).
     const params = new URLSearchParams(window.location.search);
+
     const g = params.get('google');
     if (g && GOOGLE_MSGS[g]) {
       setMsg(GOOGLE_MSGS[g]);
       window.history.replaceState({}, '', '/integracoes');
     }
-  }, [loadMeta, loadEvo, loadGoogle]);
+  }, [loadMeta, loadEvo, loadGoogle, loadOpenai]);
 
   const copy = async (text: string) => {
     try {
@@ -148,6 +166,30 @@ export default function IntegracoesPage() {
       setMsg({ kind: 'err', text: `Erro ao salvar: ${(e as Error).message}` });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveOpenai = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!openaiKey.trim()) {
+      setMsg({ kind: 'err', text: 'Cole a chave antes de salvar.' });
+      return;
+    }
+    setSavingOpenai(true);
+    setMsg(null);
+    try {
+      await apiCall('/api/integrations/openai/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: openaiKey.trim() }),
+      });
+      setOpenaiKey('');
+      setMsg({ kind: 'ok', text: 'Chave OpenAI salva. O agente ja usa a nova chave.' });
+      await loadOpenai();
+    } catch (e) {
+      setMsg({ kind: 'err', text: `Erro ao salvar: ${(e as Error).message}` });
+    } finally {
+      setSavingOpenai(false);
     }
   };
 
@@ -320,6 +362,69 @@ export default function IntegracoesPage() {
               <li>Ative o cenário. Cada novo lead cria o contato no CRM e dispara a mensagem de abertura.</li>
             </ol>
           </div>
+        </article>
+
+        {/* ---- IA (OpenAI) BYOK ---- */}
+        <article className="integ-card">
+          <div className="integ-card-head">
+            <div className="integ-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 8v4l3 3"/>
+              </svg>
+            </div>
+            <div className="integ-card-titles">
+              <h2 className="integ-card-name">IA (OpenAI)</h2>
+              <span className={`integ-badge ${openai?.hasKey ? 'integ-badge--on' : 'integ-badge--off'}`}>
+                {openai?.source === 'db'
+                  ? 'Usando chave propria (salva)'
+                  : openai?.source === 'env'
+                    ? 'Usando chave do ambiente'
+                    : 'Nao configurada'}
+              </span>
+            </div>
+          </div>
+          <p className="integ-card-desc">
+            Chave de API da OpenAI usada pelo agente. Se salva aqui (BYOK), substitui a variavel
+            de ambiente <code>OPENAI_API_KEY</code> sem precisar reeditar o deploy.
+          </p>
+
+          <form className="integ-form" onSubmit={(e) => void handleSaveOpenai(e)}>
+            <div className="integ-field integ-field--full">
+              <label htmlFor="openai-api-key">
+                Chave da API (sk-...)
+                {openai?.source === 'db' && <span className="integ-saved">• salva</span>}
+              </label>
+              <input
+                id="openai-api-key"
+                type="password"
+                value={openaiKey}
+                onChange={(e) => setOpenaiKey(e.target.value)}
+                placeholder={
+                  openai?.source === 'db'
+                    ? 'Cole aqui para substituir a chave salva'
+                    : openai?.source === 'env'
+                      ? 'Cole aqui para sobrepor a chave do ambiente'
+                      : 'sk-...'
+                }
+                autoComplete="off"
+              />
+              <span className="integ-hint">
+                A chave nao e exibida apos salvar. Campo vazio nao apaga uma chave ja salva.
+              </span>
+            </div>
+
+            <div className="integ-card-actions">
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={savingOpenai || !openaiKey.trim()}
+              >
+                {savingOpenai ? 'Salvando...' : 'Salvar chave'}
+              </button>
+            </div>
+          </form>
         </article>
 
       </div>

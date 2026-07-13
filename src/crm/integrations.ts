@@ -36,7 +36,10 @@ export type IntegrationKey =
   | "email_app_password"
   // ===== Landing de corretores (email transacional de agendamento) =====
   // URL da pagina de corretores linkada no email de confirmacao de reuniao.
-  | "corretor_landing_url";
+  | "corretor_landing_url"
+  // ===== IA / OpenAI (BYOK) =====
+  // Chave de API da OpenAI definida pela aba Integracoes (sobrepos o env OPENAI_API_KEY).
+  | "openai_api_key";
 
 // Le um valor da tabela integrations_config. Tolerante: se a tabela ainda
 // nao existe (migration 003 nao aplicada), retorna undefined sem quebrar.
@@ -251,6 +254,30 @@ export async function getEmailConfig(): Promise<EmailConfig> {
 // reuniao. Editavel pela aba Integracoes (corretor_landing_url); default Cranium.
 export async function getCorretorLandingUrl(): Promise<string> {
   return (await getConfigValue("corretor_landing_url")) ?? "https://craniumdigital.com.br";
+}
+
+// =====================================================================
+// IA / OpenAI (BYOK — Bring Your Own Key). Permite que a aba Integracoes
+// defina a chave da OpenAI sem precisar reeditar o env. Mesma estrategia
+// das demais integracoes: DB primeiro, env como fallback. A chave NUNCA
+// e retornada ao browser — so o status (hasKey + source) e exposto.
+// =====================================================================
+
+// Resolve a chave efetiva da OpenAI: tabela sobrescreve o env quando preenchida.
+export async function getOpenAiApiKey(): Promise<string> {
+  return (await getConfigValue("openai_api_key")) ?? config.openaiApiKey;
+}
+
+// Status "seguro" para a UI: informa SE existe uma chave e de onde ela vem.
+// 'db' = salva pela aba Integracoes; 'env' = so a variavel de ambiente; 'none' = ausente.
+export async function getOpenAiStatus(): Promise<{
+  hasKey: boolean;
+  source: "db" | "env" | "none";
+}> {
+  const fromDb = await getConfigValue("openai_api_key");
+  if (fromDb) return { hasKey: true, source: "db" };
+  if (config.openaiApiKey) return { hasKey: true, source: "env" };
+  return { hasKey: false, source: "none" };
 }
 
 // Status "seguro" para a UI: o provider e o remetente nao sao segredos;
