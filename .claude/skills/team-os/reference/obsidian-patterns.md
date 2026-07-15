@@ -1,109 +1,83 @@
-# Padrões Obsidian para smart-memory
+# Obsidian Patterns — padrão da smart-memory
 
-Todo arquivo em `docs/smart-memory/` segue esses padrões. Eles são a base de navegação — sem eles o smart-memory vira um amontoado de markdown solto.
+Toda escrita em `docs/smart-memory/` segue este padrão. É a referência canônica usada pelos
+agentes (architect, researcher, data, ux, qa) ao gravar conhecimento. Espelha o schema completo
+em `team-os-creator/reference/smart-memory-integration.md`.
 
-## Frontmatter obrigatório
+## 1. Frontmatter obrigatório
 
 Todo `.md` em `docs/smart-memory/` começa com YAML:
 
 ```yaml
 ---
-title: "Nome descritivo"      # obrigatório
-type: overview | story | decision | research | qa-result | schema | task-log | backlog | status-board | index  # obrigatório
-status: active | backlog | done | deprecated | proposed | accepted  # quando aplicável
-agent: dev-architect          # quem é responsável por esse arquivo
-created: 2026-04-22           # ISO date, obrigatório
-updated: 2026-04-22           # ISO date, obrigatório
-tags: [architecture, auth]    # array — vide lista canônica abaixo
-related: ["[[../stories/1.1-auth]]", "[[ADR-003]]"]  # wikilinks de contexto
+title: "..."
+type: overview | story | decision | research | qa-result | schema | task-log | backlog | status-board | index | component-spec
+status: active | backlog | done | deprecated | proposed | accepted   # quando aplicável
+agent: <nome-do-agente>
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+tags: [...]
+related: ["[[...]]", "[[...]]"]
 ---
 ```
 
-## Tags canônicas
+## 2. Wikilinks
 
-Use só essas — não invente novas sem atualizar esse arquivo e o INDEX.
+- Navegação SEMPRE por wikilink `[[arquivo]]` — nunca link relativo cru no corpo.
+- Atualizar `docs/smart-memory/INDEX.md` (MOC raiz) ao criar arquivo novo.
 
-| Tag | Uso |
-|---|---|
-| `#project` | overview, tech-stack, conventions |
-| `#architecture` | modules, architecture, ADRs |
-| `#story` | stories (backlog, active, done) |
-| `#decision` | ADRs |
-| `#research` | research reports |
-| `#qa` | QA results, verdictos |
-| `#database` | schema, migrations |
-| `#ux` | component specs, design decisions |
-| `#security` | auth, permissions, CVEs |
-| `#performance` | otimizações, benchmarks |
-| `#task-log` | delegation-log, migrations-log, teams-log |
+## 3. Tags canônicas (não inventar)
 
-## Wikilinks
+`#project` · `#architecture` · `#story` · `#decision` · `#research` · `#qa` · `#database` · `#ux` · `#security` · `#performance` · `#task-log`
 
-Navegação entre arquivos é sempre via wikilink `[[...]]`, nunca via path relativo direto no corpo.
+## 4. Datas
 
-Formas:
+ISO 8601 (`YYYY-MM-DD`) — nunca relativas ("ontem", "semana passada").
 
-```markdown
-[[overview]]                  → resolve pra overview.md no mesmo dir ou anywhere em smart-memory
-[[../stories/BACKLOG]]        → path relativo (use só quando necessário para desambiguar)
-[[ADR-003|decisão de cache]]  → wikilink com alias display
+## 5. Diagramas
+
+Mermaid no corpo, em bloco ```mermaid```. Usado em ADRs (arquitetura) e user flows (UX).
+
+```mermaid
+flowchart TD
+  A[Início] --> B{Decisão?}
+  B -->|Sim| C[Caminho 1]
+  B -->|Não| D[Caminho 2]
 ```
 
-**Regra:** Ao criar arquivo novo, sempre adicionar wikilinks saindo dele (no frontmatter `related` e no corpo) E uma entrada em `INDEX.md` ou em algum MOC existente.
+## 6. Frontmatter por tipo (exemplos)
 
-## Maps of Content (MOCs)
-
-Hubs que agregam wikilinks por tema. Ficam em `docs/smart-memory/INDEX.md` (o MOC raiz) e em arquivos `{tema}-MOC.md` quando um tema ganhar volume.
-
-Exemplo de MOC por tema:
-
-```markdown
+### ADR (`type: decision`)
+```yaml
 ---
-title: Auth MOC
-type: index
-updated: 2026-04-22
-tags: [security, auth]
+title: "ADR-{N}: {Título}"
+type: decision
+status: proposed | accepted | deprecated
+agent: {architect}
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+tags: [architecture, {domínio}]
+related: ["[[../agents/research/{tema}]]"]
 ---
-
-# Auth — Map of Content
-
-## Decisões
-- [[../decisions/ADR-003-jwt-strategy]]
-- [[../decisions/ADR-007-rbac-model]]
-
-## Stories
-- [[../stories/done/1.1-basic-auth]]
-- [[../stories/active/2.3-oauth-google]]
-
-## Research
-- [[../agents/research/jwt-vs-session]]
-- [[../agents/research/oauth-providers-comparison]]
 ```
 
-## Dev Agent Record (dentro de stories)
-
-Toda story ativa tem essa tabela — teammates atualizam conforme trabalham:
-
-```markdown
-## Dev Agent Record
-
-| Campo      | Valor |
-|---         |---|
-| Agente     | {nome-teammate} |
-| Iniciado   | {ISO date} |
-| Concluído  | {ISO date ou —} |
-| Branch     | feature/{N}-{M}-{slug} |
+### Research report (`type: research`)
+```yaml
+---
+title: "Research: {tema}"
+type: research
+agent: {researcher}
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+tags: [research, {domínio}]
+related: ["[[../../decisions/ADR-{N}]]"]
+---
 ```
 
-Auditoria de `*audit` verifica: se Iniciado preenchido mas Concluído vazio há > 2h, flaga como possível travamento.
+### Story → ver `team-os/templates/story.md`.
 
-## Linha "Related" no frontmatter vs body
+## 7. Anti-patterns
 
-- **`related:` no frontmatter**: wikilinks críticos pra resolver dependências (ex: story → ADR que motivou, ADR → research).
-- **Wikilinks no corpo**: uso descritivo, navegação natural.
-
-Use os dois. Ferramenta de grafo do Obsidian lê ambos.
-
-## Datas
-
-Sempre ISO 8601 (`YYYY-MM-DD`). Se precisar de timestamp: `YYYY-MM-DD HH:MM`. Nunca relativas ("ontem", "semana passada") — não sobrevivem a leituras futuras.
+- Não misturar responsabilidades de escrita (ex.: architect não escreve `tech-stack.md` — é do analyst/researcher).
+- Não deixar arquivo órfão: sempre referenciar no `INDEX.md`.
+- Não escrever conhecimento canônico fora de `docs/smart-memory/`.

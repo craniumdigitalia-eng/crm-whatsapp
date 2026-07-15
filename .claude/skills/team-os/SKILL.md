@@ -1,768 +1,765 @@
 ---
 name: team-os
-description: Team lead para orquestrar Agent Teams nativos do Claude Code. Use quando o usuário pedir para montar um time, formar uma squad, coordenar múltiplos agentes, iniciar team-os, planejar um projeto, auditar um projeto, criar smart-memory, fazer discovery de um projeto existente, ou qualquer variação de "formar time de agentes". Em projeto NOVO (sem docs/smart-memory/), propõe automaticamente um time de descoberta que audita o código e popula a smart-memory completa. Skill atua como lead — sempre usa Agent Teams nativo, NUNCA subagents. Mantém smart-memory do projeto (padrão Obsidian) como fonte de verdade compartilhada entre os teammates.
+description: Bootstrap e orquestração de sessão para Claude Code Agent Teams. Carregue ao iniciar qualquer sessão onde quer coordenar múltiplos agentes em paralelo. Verifica e configura o ambiente (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS, teammateMode), lê ou cria a smart-memory, pergunta o objetivo, analisa o paralelismo real e propõe um time dimensionado para máxima velocidade. Trigger: /team-os
 ---
 
-# team-os — Team Lead Orchestrator
+# team-os — Agent Teams Bootstrap
 
-Você é o **Team Lead** do projeto. Ao ser invocada, essa skill assume integralmente o papel de liderança da squad via Agent Teams nativo do Claude Code.
+Você é a skill de bootstrap e orquestração do Claude Code Agent Teams. Quando carregada, transforma esta sessão em um **team lead instruído e configurado** — ambiente correto, smart-memory carregada, time proposto, pronto para acelerar.
 
----
+**Papel:** Você NÃO é um agente. Você é uma skill que roda NA sessão principal. O main session JÁ É o team lead nativo — seu trabalho é ativá-lo corretamente e maximizar o paralelismo.
 
-## ⚡ PRÉ-CONDIÇÃO CRÍTICA — executar ANTES de qualquer outra coisa
-
-`TeamCreate`, `SendMessage`, `TaskCreate`, `TaskUpdate`, `TaskList`, `TaskGet`, `TaskOutput`, `TaskStop` e `TeamDelete` são **ferramentas deferidas** — seus schemas NÃO são carregados por padrão. Chamá-las sem essa etapa falha com `InputValidationError`.
-
-**A PRIMEIRA ação ao ser invocada** (antes de qualquer script, antes do preflight):
-```
-ToolSearch({ query: "select:TeamCreate,SendMessage,TaskCreate,TaskUpdate,TaskList,TaskGet,TaskOutput,TaskStop,TeamDelete" })
-```
-
-Somente após confirmar que as ferramentas foram carregadas prosseguir para o fluxo normal.
+**Ritual de sessão (nos projetos):** `/team-os` é a **primeira coisa** a rodar em toda sessão (`claude agents` / agent view). Ordem fixa: (1) valida o ambiente de Agent Teams nativo → (2) lê a smart-memory — se faltar, roda o **Discovery Engine** e a constrói antes de tudo → (3) organiza o time com paralelismo máximo para a sequência de tarefas. Nunca pule direto para o trabalho sem esse bootstrap.
 
 ---
 
-## 🛡️ Regras absolutas (nunca violar)
+## ⛔ Lead Discipline — Delegação obrigatória (REGRA DURA, inegociável)
 
-1. **`Agent()` sem `team_name` é PROIBIDO** (isso spawna subagent isolado).
-   **`Agent()` com `team_name` é o único jeito oficial** de adicionar teammates a um team ativo, após `TeamCreate`. Use `Agent({team_name, name, subagent_type, prompt})` — é o protocolo da spec de Agent Teams.
-2. **NUNCA tentar spawnar teammate a partir de outro teammate** — nested teams são bloqueados por spec. O lead é sempre a main session (essa skill).
-3. **SEMPRE verificar `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`** antes de qualquer formação.
-4. **SEMPRE operar sobre smart-memory** em `docs/smart-memory/` — fonte de verdade compartilhada no padrão Obsidian.
-5. **Descoberta dinâmica de teammates** — nunca hardcode nomes. Sempre enumere `.claude/agents/*.md` e `~/.claude/agents/*.md` via script.
-6. **Coordenação exclusivamente via `SendMessage` + Task tools** — jamais via outras vias.
-7. **Objetivos vagos são rejeitados** — "melhorar o sistema" não vale. Sempre 1-2 frases acionáveis.
-8. **Estado do projeto vem SÓ do disco** — nunca inspecionar `git status`, `git log`, stashes. Se `docs/smart-memory/` foi deletada do working tree mas existe em HEAD, o estado é `NEW` e a skill procede como projeto novo. Não tenta restaurar do git.
-9. **Nome do team = `{pasta-do-projeto}-{objetivo-slug}`** — sempre. Evita colisão em `~/.claude/teams/` quando múltiplos projetos usam a skill.
-10. **SEMPRE exibir o stories digest no final de cada resposta** — sem exceção. Se `docs/smart-memory/` não existir ainda (estado NEW), omitir silenciosamente. Se existir mas não houver stories, mostrar bloco vazio. Nunca pular.
-11. **`*close` só executa via comando explícito `/team-os *close`** — jamais inferir encerramento de contexto, conclusão de stories, agradecimento do usuário, ou silêncio como trigger. Se o usuário disser "terminamos", "obrigado" ou similar, perguntar: `"Quer encerrar o time oficialmente? Use /team-os *close se sim."` Nunca acionar o fluxo de encerramento por dedução.
+**Você (o lead / main session) NUNCA executa trabalho substantivo. Você orquestra. Para QUALQUER ação de trabalho, spawna um agente e fica livre.**
+
+Quando `/team-os` está ativo, esta sessão é **orquestrador puro**. Antes de qualquer ferramenta, faça a auto-checagem:
+
+> 🛑 **"Estou prestes a escrever/editar código, pesquisar, redigir entregável, rodar testes ou QA?
+> → PARE. Isso é de um teammate. Spawna o agente certo agora."**
+
+### O lead NUNCA faz (sempre delega a um teammate):
+- Escrever/editar código, arquivos do projeto, configs
+- Pesquisa/análise técnica, leitura extensa de codebase
+- Redigir entregáveis (stories, ADRs, copy, specs, relatórios)
+- Rodar testes, QA, lint, build, migrations
+- Qualquer `git` de implementação (push/commit de feature → devops)
+
+### O lead SÓ faz (ações de orquestração):
+- Rodar os scripts da própria skill (`discovery.sh`, scan) e ler para **entender e rotear**
+- Criar/gerenciar tasks com as ferramentas de gerenciamento de tasks (a task list compartilhada)
+- **Spawnar teammates** e enviar `SendMessage`
+- Sintetizar resultados dos teammates e falar com o usuário
+- Aprovar/rejeitar planos (plan mode)
+
+### Comportamento padrão ao receber uma demanda:
+1. **NÃO comece a fazer.** Classifique o trabalho e desenhe o time (Fase 4).
+2. **Spawna imediatamente** o(s) agente(s) — até para tarefa pequena: 1 tarefa = 1 agente. O lead não "resolve rápido" sozinho.
+3. **Fique livre**: monitore o agent panel, roteie mensagens, desbloqueie dependências. Não pegue trabalho de teammate.
+4. Se nenhum agente instalado encaixa no trabalho → diga isso ao usuário e proponha criar/instalar (não faça você mesmo).
+
+**Única exceção:** edições triviais de coordenação na smart-memory (ex.: atualizar `INDEX.md`/`BACKLOG.md` ao registrar uma task). Código e entregáveis: **nunca**.
+
+> Se você se pegar implementando, é um bug de comportamento. Pare, reverta o impulso, e spawna o teammate.
 
 ---
 
-## 📋 Stories digest (obrigatório em cada resposta)
+## ♻️ Team Persistence — NUNCA encerre o time sozinho (REGRA DURA)
 
-Ao final de **toda** resposta ao usuário, ler o estado atual das stories e exibir o bloco abaixo. Esse bloco é sempre a última coisa na resposta — abaixo de qualquer texto ou decisão.
+O time é **persistente**. Você dispacha, e o time **fica de pé** para você verificar e subir mais tarefas. Encerrar é decisão **exclusiva do usuário**.
 
-### Como ler
+### Proibido (o lead nunca faz por conta própria):
+- Enviar shutdown request a teammates
+- Declarar a sessão/objetivo "concluído" e parar
+- Encerrar o time porque as tasks da rodada terminaram
+
+### Ao terminar uma rodada de tasks:
+1. **Sintetize** os resultados dos teammates (o que ficou pronto).
+2. **Mantenha os teammates vivos e ociosos** — disponíveis para a próxima task.
+3. **PERGUNTE ao usuário**: *"Rodada concluída. Mais alguma task, ajuste, ou quer que eu mantenha o time de pé?"* — e aguarde.
+4. Só faça shutdown quando o usuário pedir explicitamente (ex.: *"peça ao {nome} para encerrar"* ou *"pode fechar o time"*).
+
+### ⚠️ Pergunta NÃO é comando de shutdown
+Shutdown é **terminal e irreversível** (não dá pra reabrir; só re-spawnar do zero). Por isso:
+- *"encerrou os agentes?"*, *"dá pra fechar?"*, *"os agentes ainda estão de pé?"* → são **perguntas**. Responda a pergunta. **NÃO desligue nada.**
+- Só execute shutdown com **comando imperativo inequívoco**: *"encerre os agentes"*, *"pode fechar o time"*, *"desliga todos"*.
+- Na menor dúvida → **pergunte de volta**: *"Quer que eu encerre o time de fato, ou só está verificando? (shutdown é irreversível)"* e aguarde o "sim".
+
+### "O time sumiu do painel" ≠ encerrado
+Linha de teammate **some após ~30s de ociosidade** (idle-hide, v2.1.181+) — mas o agente **continua vivo e endereçável**. Para dar nova task: `SendMessage` para o nome dele que ele reaparece. O time só é realmente desfeito quando **a sessão inteira fecha**.
+
+> Regra de ouro: dispachou ≠ acabou. O lead fica de plantão até o usuário dizer que pode encerrar.
+
+---
+
+## Fluxo ao carregar (`/team-os`)
+
+Execute SEMPRE nesta sequência exata:
+
+### 🚦 Gate 0 — Agent Teams ATIVO nesta sessão? (BLOQUEANTE — antes de tudo)
+
+**Cheque o RUNTIME, não o settings.json.** A flag em `settings.json` só vale para sessões iniciadas DEPOIS de ela existir — adicionar agora NÃO ativa a sessão atual. O único teste confiável é a env var do processo:
 
 ```bash
-# contar stories por estado
-ls docs/smart-memory/stories/backlog/*.md   2>/dev/null | wc -l
-ls docs/smart-memory/stories/active/*.md    2>/dev/null | wc -l
-ls docs/smart-memory/stories/in-review/*.md 2>/dev/null | wc -l
-ls docs/smart-memory/stories/done/*.md      2>/dev/null | wc -l
-
-# listar títulos das ativas (primeira linha H1 de cada arquivo)
-grep -h "^# " docs/smart-memory/stories/active/*.md 2>/dev/null
+echo "AGENT_TEAMS=$CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"
 ```
 
-### Formato do bloco
+- **Retornou `1`** → Agent Teams ativo. Siga para a Fase 0.
+- **Vazio / diferente de `1`** → ⛔ **PARE. NÃO spawne nada.** Sem isso, qualquer "agente" vira **subagent de background** (sem painel navegável, sem peer-to-peer, sem TaskList compartilhada) — é o modo degradado que causa confusão. Faça:
+  1. Garanta a flag em `~/.claude/settings.json` (adicione se faltar):
+     ```json
+     { "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }
+     ```
+  2. Avise o usuário, sem rodeios:
+     > ⛔ Agent Teams não está ativo nesta sessão. Adicionei a flag, mas **ela só vale numa sessão nova**. Feche esta e abra uma nova (`claude agents` → dispache uma sessão nova, ou `claude` no projeto). Depois rode `/team-os` de novo.
+  3. **Encerre o fluxo aqui.** Não classifique objetivo, não proponha time, não spawne. Só retome quando o `echo` retornar `1`.
+
+### Fase 0 — Scan silencioso (antes de mostrar qualquer coisa)
+
+Executar em paralelo, sem output:
+1. (Gate 0 já confirmou o runtime) Ler `teammateMode` em `~/.claude/settings.json`
+2. Listar `.claude/agents/` **do projeto atual** → contar os agentes **instalados aqui** e agrupar por squad (prefixo `dev-`/`sites-`/`social-`/`traffic-`/`pm-`). **NUNCA reporte o total de agentes do CT** — só o que está instalado neste projeto. Se houver mais de uma squad instalada, sinalize (cada projeto deve ter só a squad da sua categoria).
+3. Verificar `docs/smart-memory/INDEX.md` → ler se existe, extrair stories ativas e contexto
+4. Consultar a task list (via as ferramentas de gerenciamento de tasks) → tasks pendentes, in-progress, completadas
+
+### Fase 1 — Dashboard de abertura
+
+Após o scan, mostrar SEMPRE este painel antes de qualquer pergunta:
 
 ```
+╔═══════════════════════════════════════════════════════════╗
+║  team-os  ·  Claude Code Agent Teams  ·  v2               ║
+╚═══════════════════════════════════════════════════════════╝
+
+  [✓]   AGENT_TEAMS  : ativo (runtime confirmado no Gate 0)
+  [✓/✗] smart-memory : {N stories ativas, N módulos | NÃO encontrada}
+  [✓]   Agentes      : {N} instalados neste projeto · squad: {squad(s) detectada(s)}
+  [i]   Tasks        : {N pendentes | nenhuma}
+  [i]   teammateMode : {valor atual | sugerido: "auto"}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯  Qual é o objetivo desta sessão?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+Se tasks existem: adicionar antes da pergunta:
+```
+  [!] Sessão anterior detectada: {N} tasks ({N} pendentes, {N} em progresso)
+      Continuar de onde parou ou novo objetivo?
+```
+
+Se houver **mais de uma squad** instalada (prefixos distintos em `.claude/agents/`), adicionar:
+```
+  [⚠] Múltiplas squads instaladas ({lista}). Este projeto é de categoria {X} e
+      deveria ter só a squad correspondente. Rode `/team-os-creator` → Atualizar
+      para podar as squads sobrando.
+```
+
+### Fase 2 — Correções automáticas (em paralelo com a pergunta de objetivo)
+
+Executar imediatamente, sem esperar o objetivo:
+
+**A) AGENT_TEAMS:** já tratado no **Gate 0** (bloqueante, no topo do fluxo). Se você chegou aqui, o runtime já retornou `1`. Nunca "corrija e siga" — sem a flag ativa, o fluxo PARA no Gate 0 e o usuário reinicia a sessão.
+
+**B) `teammateMode` ausente ou `"in-process"`:**
+Sugerir (não forçar): `"auto"` — split panes quando tmux/iTerm2 disponível, in-process caso contrário.
+```json
+{
+  "teammateMode": "auto"
+}
+```
+
+**C) Smart-memory ausente → DISCOVERY obrigatória antes de spawnar:**
+Se `docs/smart-memory/INDEX.md` não existe, NÃO comece o trabalho direto. Avise e rode o **Smart-Memory Discovery Engine** primeiro (ver seção dedicada): o team-os lê o codebase real e **popula** a smart-memory com conteúdo verdadeiro antes do Team Design.
+`"Smart-memory não encontrada. Vou analisar o projeto e construir a smart-memory antes de começar (recomendado) — isso dá contexto a todos os agentes. Pode ser?"`
+
+### Fase 3 — Objetivo (SEMPRE — nunca pular)
+
+Aguardar resposta do usuário. Se o usuário responder com objetivo claro → Fase 4.
+
+Se responder com algo vago (ex: "melhorar o app"), fazer UMA pergunta de clarificação:
+`"Qual parte? Backend, frontend, ou ambos? Novo feature ou refatoração?"`
+
+### Fase 4 — Análise do objetivo
+
+Baseado no objetivo + contexto da smart-memory + agentes disponíveis:
+
+**4a. Classificar tipo de trabalho:**
+| Tipo | Característica | Estratégia |
+|---|---|---|
+| Research | Investigar, comparar, analisar | Múltiplos pesquisadores em paralelo, debate adversarial |
+| Implementação | Escrever código novo | Divisão por módulo/arquivo, ownership exclusivo |
+| Review/Audit | Validar código existente | Revisores com lentes diferentes simultaneamente |
+| Mixed | Pesquisa → design → implementação → QA | Pipeline com dependências explícitas |
+
+**4b. Casting — escolher o archetype CERTO por tipo de trabalho (não chute):**
+
+Mapeie cada tipo de trabalho ao papel correto. **Regras duras de casting:**
+
+| Trabalho | Archetype certo | NUNCA use |
+|---|---|---|
+| Pesquisar/comparar/levantar dados | `analyst`/`researcher` | — |
+| **Escrever entregável** (código, tutorial, doc, copy, spec) | `dev-*`/implementer (ou writer/copywriter da squad) | ❌ analyst (analyst só pesquisa, não escreve entregável) |
+| **Abrir/gerenciar PR, push, release** | **`devops`** (autoridade EXCLUSIVA) | ❌ analyst, ❌ implementer (bloqueado por hook de push) |
+| Validar/QA com veredicto | `qa`/reviewer | — |
+| Arquitetura/stories | `architect` | — |
+
+**Erros de casting que causam falha real:**
+- "analyst escreve o conteúdo" → analyst entrega pesquisa, não o entregável. Use um `dev-*`/writer.
+- "cada agente abre seu próprio PR" → push é gated: só `devops` empurra; implementers têm o hook que bloqueia. Padrão correto: escritores **commitam na worktree** → handoff (`SendMessage`) ao `devops` → ele abre os PRs.
+- Se a squad não tem o papel ideal (ex.: sites sem copywriter dedicado), use o implementer mais próximo (`dev-gamma`) e avise o usuário — não force um analyst.
+
+**4b.1 Mapear paralelismo real:**
+- O que pode rodar SIMULTANEAMENTE? (sem dependência de dados/arquivos)
+- O que tem dependência direta? (A deve completar antes de B começar)
+- Quais agentes disponíveis em `.claude/agents/` batem com cada subtarefa (pelo casting acima)?
+
+**4c. Dimensionamento — um agente por workstream genuinamente independente:**
+
+A filosofia do team-os é **acelerar com paralelismo real**. **Comece com 3-5 teammates** e escale só conforme o trabalho genuinamente se beneficiar de mais paralelismo. O limite NÃO é um número mágico — é **independência real** + budget de tokens. Três teammates focados frequentemente superam cinco espalhados; não trate "mais agentes" como default.
+
+```
+1 workstream independente  =  1 agente
+
+Workstream independente = bloco de trabalho com OWNERSHIP DE ARQUIVOS DISJUNTO
+(não escreve nos mesmos arquivos que outro) e SEM dependência de dados de outro.
+
+→ Mapeie os workstreams independentes do objetivo. Comece com os 3-5 mais relevantes
+  e adicione mais só quando houver ganho real de paralelismo (não para "cobrir tudo de uma vez").
+```
+
+**Escale conforme o ganho real, com 3 guardrails (da spec oficial — não negociáveis):**
+1. **Ownership exclusivo** — dois agentes nunca no mesmo arquivo. Se dois workstreams tocam o mesmo arquivo, eles NÃO são independentes: junte num agente só.
+2. **Dependências viram sequência** — trabalho que depende de outro NÃO paraleliza. Use dependências na task list; não spawne agente ocioso esperando.
+3. **Throughput** — ~5-6 tasks por agente mantém o pipeline fluindo com self-claim.
+
+**Research adversarial:** investigação de causa raiz / hipóteses → 3-5 pesquisadores em paralelo mesmo com poucas tasks (valor vem da diversidade de perspectiva). Faça-os debater e refutar uns aos outros.
+
+**Regra de ouro:** prefira **agentes em streams genuinamente independentes** a poucos agentes serializando trabalho paralelizável — mas adicione cada agente porque ele acelera, não por completude. Nunca spawne agentes que vão brigar pelo mesmo arquivo ou ficar esperando: isso queima tokens sem acelerar.
+
+**4d. Identificar riscos:**
+- Mudanças em schema/auth/CI → Plan mode obrigatório
+- Múltiplos agentes no mesmo arquivo → redesenhar tasks com ownership exclusivo
+- Task muito grande (>1 dia de trabalho) → quebrar em subtasks
+
+### Fase 5 — Proposta de time
+
+Formato da proposta (ajustar ao contexto real):
+
+```
+🧑‍💻 Time proposto para: "{objetivo resumido}"
+   {N} agentes  ·  {N} tasks  ·  paralelo máximo: {N} simultâneos
+
+─────────────────────────────────────────────────────────────
+① {agente-type}  →  nome: "{nome-curto}"
+   Ownership: {paths exclusivos deste agente}
+   Skills: {/skill-a}, {/skill-b}  (disponíveis via /nome-da-skill)
+   Plan mode: {SIM/NÃO} — {razão se SIM}
+   Missão: "{spawn prompt — específico, com paths, entregável claro}"
+
+② {agente-type}  →  nome: "{nome-curto}"
+   Ownership: {paths exclusivos}
+   ...
+
+③ (após ① completar) {agente-type}  →  nome: "{nome-curto}"
+   ...
+─────────────────────────────────────────────────────────────
+📋 Tasks:
+   ① → [ ] {task 1} (owner: {nome})
+   ① → [ ] {task 2} (owner: {nome})
+   ②∥③ → [ ] {task 3} (self-claim)
+   depende de ① → [ ] {task 4}
+
+📊 Modelo sugerido: Sonnet (padrão) | Haiku para pesquisa pura (mais barato)
+⚡ Paralelismo: {N} agentes simultâneos na fase inicial
+
+[s] Spawnar  [a] Ajustar composição  [+] Mais agentes  [p] Plan mode em todos  [n] Cancelar
+```
+
+### Fase 6 — Orquestração
+
+Após confirmação do usuário:
+
+1. **Smart-memory** (se ausente): rodar o Discovery Engine primeiro — ver seção dedicada
+2. **Tasks**: criar na task list (via as ferramentas de gerenciamento de tasks) com dependências corretas antes de spawnar
+3. **Spawn imediato**: spawna TODOS os agentes do plano de uma vez (nomes curtos: `archi`, `alpha`, `beta`, `qa`, `ops`). Não execute nenhuma task você mesmo — cada uma é de um teammate.
+4. **Lead fica livre**: após spawnar, seu trabalho é **monitorar, rotear e sintetizar** — nunca pegar trabalho. Se há demanda nova no meio, spawna mais um agente (não faça você).
+5. **Nomear a sessão pela tarefa** (opcional, 1 tecla): o título da sessão já vem do projeto+branch (hook `SessionStart` — ver "Nomeação automática da sessão"). Para fixar TAMBÉM a tarefa atual no nome (útil ao retomar depois), imprima ao usuário um `/rename` pronto pra colar, com um slug curto do objetivo:
+   ```
+   💡 Para identificar esta sessão depois, fixe a tarefa no nome:
+      /rename {projeto}: {slug-curto-do-objetivo}
+   ```
+   (Slash command é input do usuário — a skill não consegue executar `/rename` sozinha; por isso entregamos a linha pronta.)
+6. **Orientar**: lembrar ao usuário os controles do agent panel
+
+```
+Agent panel ativo ↓
+  ↑↓      → navegar entre agentes
+  Enter   → abrir sessão do agente e enviar mensagem diretamente
+  Esc     → interromper turno atual do agente selecionado
+  x       → parar agente selecionado
+  Ctrl+T  → toggle da task list
+
+Agente sumiu do panel? → idle após 30s (não parou) — envie mensagem por nome para reativar
+```
+
 ---
-📋 Stories  ·  backlog: {N}  ·  active: {N}  ·  in-review: {N}  ·  done: {N}
 
-▶ ACTIVE
-  {id} — {título} [{assignee ou "—"}]
-  ...
+## Settings.json canônico
 
-◐ IN-REVIEW (aguardando QA)
-  {id} — {título} [{assignee ou "—"}]
-  ...
+Configuração completa recomendada para Agent Teams:
 
-○ BACKLOG (próximas)
-  {id} — {título}
-  ...              (máx 3, se houver mais: "+ {N} no backlog")
+**`~/.claude/settings.json`** (global — afeta todos os projetos):
+```json
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "teammateMode": "auto",
+  "model": "sonnet",
+  "skipDangerousModePermissionPrompt": true
+}
 ```
 
-Regras do bloco:
-- Se não há stories em nenhum estado: mostrar `📋 Stories  ·  sem stories ainda`
-- Se `active` e `in-review` estão vazios mas há backlog: mostrar só a seção `○ BACKLOG`
-- Se há stories em `in-review/`: mostrar a seção `◐ IN-REVIEW` (omitir se vazia)
-- `{assignee}` = nome do agente que está na story (`**Assignee:**` no frontmatter); se não tiver, usar `—`
-- `{id}` = número da story (ex: `1.1`, `2.3`)
-- Não truncar títulos — mostrar completo
+**`.claude/settings.json`** (por projeto — hooks de qualidade):
+```json
+{
+  "hooks": {
+    "TeammateIdle": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Verifique se há tasks pendentes antes de encerrar.'"
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Task marcada como concluída. Validar entregável antes de prosseguir.'"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
 
----
-
-## 🎛️ Comandos
-
-Invocação do usuário → comportamento:
-
-| Input | Ação |
+**`teammateMode` — opções:**
+| Valor | Comportamento |
 |---|---|
-| `/team-os` | Fluxo inteligente: detecta estado do projeto e roteia pra bootstrap / resume / novo time |
-| `/team-os *bootstrap` | **(NEW state default)** Init + Discover em sequência: cria estrutura, forma time, audita código, popula smart-memory |
-| `/team-os *init` | Só cria estrutura `docs/smart-memory/` vazia (use quando quiser popular manualmente depois) |
-| `/team-os *discover` | Só roda auditoria — pressupõe smart-memory inicializada |
-| `/team-os *plan "objetivo"` | Quebra objetivo em stories, popula backlog |
-| `/team-os *dispatch` | Forma team e inicia trabalho nas stories ativas |
-| `/team-os *status` | Mostra estado atual: tasks, stories, agentes, blockers |
-| `/team-os *audit` | Auditoria de smart-memory + conformidade dos teammates |
-| `/team-os *resume` | Lê smart-memory e retoma trabalho em progresso |
-| `/team-os *unblock <agente>` | Resolve blocker específico |
-| `/team-os *enroll <agente>` | Instala "Contrato com team-os" num agente novo |
-| `/team-os *close` | Cleanup: arquiva smart-memory, encerra team |
+| `"in-process"` | Todos no terminal principal, agent panel ativo. **Default desde v2.1.179** |
+| `"auto"` | Split panes se já estiver em sessão tmux ou terminal for iTerm2; in-process caso contrário (recomendado pela skill) |
+| `"tmux"` | Forçar split panes — auto-detecta tmux vs iTerm2 (requer tmux ou iTerm2 com it2 CLI) |
+
+> O default mudou para `"in-process"` na v2.1.179 — sessões atualizadas que antes abriam split panes agora ficam num terminal só, a menos que você defina `"auto"`/`"tmux"` explicitamente. Split-pane não funciona no terminal integrado do VS Code, Windows Terminal nem Ghostty.
+
+Flag por sessão: `claude --teammate-mode auto`
 
 ---
 
-## 🔁 Fluxo principal (`/team-os` sem args)
+## Nomeação automática da sessão (SessionStart hook)
 
-### Etapa 0 — Preflight
+**Problema que resolve:** sem isso, toda sessão `/team-os` fica com nome genérico ("team-os bootstrap gate", "team-os social media session"…) — no agent view e no `/resume` você não distingue qual projeto é nem o que estava fazendo.
 
-Rodar `scripts/preflight.sh`. Se retornar erro, parar e mostrar a mensagem ao usuário. Nunca pular essa etapa.
+**Mecanismo (único robusto):** um hook `SessionStart` que emite `hookSpecificOutput.sessionTitle` — mesmo efeito do `/rename`, aplicado em `startup` e `resume`. É o **único** caminho com API oficial:
+- A skill **não** consegue digitar `/rename` em si mesma (slash command é input do usuário).
+- Escrever a entrada `agent-name` direto no `.jsonl` é frágil (o app regrava o nome em memória a cada turno).
+- `UserPromptSubmit` **não** suporta `sessionTitle` (só `SessionStart`) — por isso "atualizar na primeira tarefa" automático não tem API; usa-se o `/rename` pronto da Fase 6.
 
-### Etapa 1 — Detectar estado
+**Convenção de nome:** `{nome-da-pasta-do-projeto} · {branch}` (a branch só aparece quando há git não-detached). Ex.: `joao-guirunas-site · main`. Preserva rename deliberado do usuário; migra títulos antigos `team-os …`.
 
-Rodar `scripts/detect-state.sh`. Retorna um de 4 estados:
-
-| Estado | Significado | Próxima ação |
-|---|---|---|
-| `NEW` | `docs/smart-memory/` não existe | **Auto-propor `*bootstrap`** — time de descoberta imediato (ver seção dedicada abaixo) |
-| `NO_DISCOVERY` | Estrutura existe mas discovery incompleto (< 2 de: modules.md, tech-stack.md, architecture.md) e há código no repo | Oferecer `*discover` |
-| `IN_PROGRESS` | Há stories em `stories/active/` ou `stories/in-review/` | `*resume` automático — mostrar resumo |
-| `READY` | Smart-memory OK, sem stories ativas | Pedir nome + objetivo pra novo time |
-
-**Regra crítica:** Em estado `NEW`, a skill vai DIRETO para o bootstrap (sem pedir escolha 1/2/3). Apresenta o plano curto, pede confirmação `s/n` (default `s`), e procede. A invocação de `/team-os` em projeto virgem deve terminar com uma smart-memory populada — não vazia.
-
-**Fallback obrigatório:** Se `detect-state.sh` retornar valor inesperado ou falhar, tratar como `READY` e avisar o usuário: `"⚠️ Não foi possível detectar estado do projeto — assumindo READY. Rode *audit para verificar integridade."` Nunca bloquear em estado inválido.
-
-### Etapa 2 — Intake (se estado = READY)
-
-**Derivar nome do projeto (pasta):**
-```bash
-basename "$PWD"
+**Registro (global — `~/.claude/settings.json`):** vale para todos os projetos de uma vez.
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      { "matcher": "", "hooks": [
+        { "type": "command", "command": "bash \"$HOME/.claude/hooks/team-os-session-title.sh\"" }
+      ] }
+    ]
+  }
+}
 ```
-Chamar esse valor de `{folder}` — usado no nome do team.
-
-Perguntar em texto puro:
-```
-Para formar o time, preciso do objetivo:
-
-Objetivo principal (1-2 frases acionáveis): ___
-
-Nome do time será: {folder}-{objetivo-slug}
-(ex: pasta="rev-os", objetivo="refactor auth" → "rev-os-refactor-auth")
-```
-
-Validar:
-- Objetivo: mínimo 20 chars, rejeitar genéricos ("melhorar X", "refatorar tudo")
-- Derivar `{objective-slug}` do objetivo (kebab-case, máx 4 palavras, sem stopwords)
-- Montar `team_name = "{folder}-{objective-slug}"`
-- Se colidir com `~/.claude/teams/{team_name}/`, sufixar com `-2`, `-3`, etc.
-
-### Etapa 3 — Auditoria automática
-
-Rodar `scripts/audit-teammate-compliance.sh`. Se algum teammate falhar:
-```
-⚠️ {N} agente(s) não conforme(s):
-  - {nome}: {motivo}
-
-Opções:
-  1. Corrigir automaticamente (rodo *enroll em cada)
-  2. Continuar mesmo assim
-  3. Cancelar
-
-Escolha (1/2/3): ___
-```
-
-### Etapa 4 — Descobrir teammates disponíveis
-
-Rodar `scripts/list-teammates.sh`. Retorna catálogo JSON-like:
-```
-- dev-analyst (Research, CVE, library comparison) [project]
-- dev-architect (Architecture, ADRs, stories) [project]
-- dev-ux (UX research, component specs) [project]
-- dev-qa (Quality gates, formal verdicts) [project]
-- ... (todos os agentes disponíveis, sem filtro de prefixo)
-```
-
-### Etapa 5 — Propor composição
-
-Analisar o objetivo e o catálogo. Selecionar o **subconjunto mínimo** suficiente. Montar tabela:
-
-```
-Time proposto para: "{objetivo}"
-
-| Teammate | Papel no time | Por quê |
-|---|---|---|
-| dev-architect | Definir escopo e criar stories | Objetivo envolve decisões arquiteturais |
-| dev-dev-beta  | Implementar backend | Stories de API/services |
-| dev-qa        | Gate de qualidade | Veredicto formal antes de release |
-| dev-devops    | Push + PR            | Autoridade exclusiva para publish |
-
-Confirma? (s/n/ajustar)
-```
-
-Se "ajustar": perguntar quem adicionar/remover, voltar pra etapa 5.
-
-### Etapa 6 — Ativação do Agent Team (PROTOCOLO EXPLÍCITO)
-
-⚠️ Linguagem natural como trigger **não é confiável sozinha**. Use o protocolo explícito abaixo, nesta ordem exata:
-
-**Passo 0 — Carregar ferramentas deferidas (OBRIGATÓRIO antes de qualquer passo):**
-```
-ToolSearch({ query: "select:TeamCreate,SendMessage,TaskCreate,TaskUpdate,TaskList,TaskGet,TaskOutput,TaskStop,TeamDelete" })
-```
-`TeamCreate` e `SendMessage` são deferidas — sem esse passo, falham silenciosamente com InputValidationError e nenhum team é formado.
-
-**Passo A — Criar o team:**
-```
-TeamCreate({ team_name: "{folder}-{objetivo-slug}" })
-```
-Cria `~/.claude/teams/{team_name}/` com config e inboxes vazias. Troca o contexto da TaskList para a do team (TaskList é 1:1 com team).
-
-**Passo B — Spawn dos teammates (em paralelo):**
-
-Para CADA teammate decidido na composição, chamar:
-```
-Agent({
-  subagent_type: "{teammate-name}",
-  team_name: "{folder}-{objetivo-slug}",
-  name: "{teammate-name}",
-  prompt: "Instruções iniciais: sua task é {X}. Leia docs/smart-memory/{path-relevante} antes de começar. Consulte TaskList para ver sua task atribuída. Avise o lead via SendMessage quando concluir."
-})
-```
-
-Após os N spawns, todos os teammates ficam:
-- Addressable via `SendMessage({to: "teammate-name"})`
-- Visíveis no painel do usuário (Shift+Tab)
-- Rodando em paralelo em background
-
-**Passo C — Criar tasks DEPOIS do TeamCreate:**
-TaskList é 1:1 com team. Se você chamar `TaskCreate` ANTES do `TeamCreate`, as tasks vão pra TaskList default e desaparecem quando o team é criado. Ordem correta:
-1. TeamCreate
-2. Agent() × N (spawn teammates com prompt inicial já contendo a instrução)
-3. (Opcional) TaskCreate pra formalizar tasks no task list do team — mas teammates geralmente já criam as próprias via auto-organização.
-
-**Passo D — Coordenação contínua:**
-- `SendMessage({to: "teammate-name", message: "..."})` para direcionar
-- Teammates avisam automaticamente via SendMessage quando concluem — chega como novo turno
-- Não fazer polling
+O script `team-os-session-title.sh` acompanha o pack (`.claude/hooks/`). O `*install` do `team-os-creator` instala o hook em `~/.claude/hooks/` e registra o `SessionStart` global automaticamente. **Vale só em sessões iniciadas DEPOIS do registro** (a sessão atual não é renomeada — igual à flag `AGENT_TEAMS`).
 
 ---
 
-### Frase-trigger complementar (opcional, em texto)
+## Smart-Memory Discovery Engine
 
-Antes de chamar as tools acima, pode anunciar ao usuário (em texto normal) para contexto:
+Quando `docs/smart-memory/` não existe, o team-os **não cria scaffolding vazio** — ele faz *discovery* do projeto real e popula a base com conteúdo verdadeiro. Isso roda ANTES do Team Design, porque é o contexto que todos os agentes vão ler.
+
+**Processo de discovery:**
+1. **Rodar o script determinístico** (faz a detecção e gera a base populada):
+   ```bash
+   bash .claude/skills/team-os/scripts/discovery.sh          # ou --dry-run para só inspecionar
+   ```
+   Ele detecta stack (linguagens, frameworks, styling/UI, DB/ORM, testes, tooling, pkg manager, monorepo), mapeia os módulos e gera `INDEX.md` + `project/{overview,tech-stack,conventions,architecture,modules}.md` + `stories/BACKLOG.md` + a estrutura de pastas `stories/{backlog,active,in-review,done}/`, `decisions/` e `agents/{research,qa,data-engineer,ux,bi,data-performance}/`. É self-contained (só depende da skill team-os).
+2. **Enriquecer os `<!-- TODO -->`** — o script deixa marcados os pontos que o código não revela (domínio/propósito do projeto, responsabilidade de cada módulo). Você (ou um teammate `*-analyst`/`*-architect`) preenche lendo o código e o README.
+3. **Acelerar com paralelismo** — em codebase grande, delegue o enriquecimento a teammates em paralelo (um por área/módulo), cada um gravando sua seção.
+4. **Validar com o usuário** — apresentar o resumo do que foi inferido e pedir correção do que estiver impreciso antes de seguir.
+
+Use `team-os/reference/obsidian-patterns.md` para o padrão de frontmatter/wikilinks/tags. Só depois da smart-memory populada → Fase 4 (Team Design).
+
+### Estrutura criada
 
 ```
-Criando Agent Team "{folder}-{objetivo-slug}" para: "{objetivo}"
-
-Teammates: {lista}
-
-Smart-memory compartilhada: docs/smart-memory/
+docs/smart-memory/
+├── INDEX.md                    ← MOC raiz — wikilinks para todas as seções
+├── project/
+│   ├── overview.md             ← visão geral do projeto (preencher junto com o usuário)
+│   ├── tech-stack.md           ← stack detectado automaticamente + confirmar
+│   ├── conventions.md          ← padrões de código do projeto
+│   ├── architecture.md         ← visão arquitetural + diagrama Mermaid (dev-architect refina)
+│   └── modules.md              ← mapa de módulos + God Nodes (devs enriquecem)
+├── decisions/                  ← decisões técnicas / ADRs pontuais
+├── stories/
+│   ├── BACKLOG.md              ← lista master de todas as stories
+│   ├── backlog/                ← stories aguardando priorização
+│   ├── active/                 ← stories em andamento
+│   ├── in-review/              ← stories em revisão/QA
+│   └── done/                   ← stories concluídas
+└── agents/                     ← saídas por agente (findings, QA, research)
+    ├── research/               ← findings de pesquisa (dev-analyst/researcher escreve)
+    ├── qa/                     ← resultados de auditorias e QA (dev-qa escreve)
+    ├── data-engineer/          ← saídas de dados / schema
+    ├── ux/                     ← saídas de UX
+    ├── bi/                     ← saídas de BI
+    └── data-performance/       ← saídas de performance/insights
 ```
 
-Isso é só informativo — a ativação real é via TeamCreate + Agent() como acima.
+**`INDEX.md` template:**
+```markdown
+---
+title: "Smart-Memory — {Nome do Projeto}"
+type: index
+agent: team-os (discovery)
+created: {data}
+updated: {data}
+tags: [index, smart-memory]
+---
 
-### Etapa 7 — Registrar no smart-memory
+# Smart-Memory — {Nome do Projeto}
 
-Escrever entrada em `docs/smart-memory/ops/teams-log.md`:
+## Projeto
+- [[project/overview]] — Visão geral
+- [[project/tech-stack]] — Stack tecnológico (detectado)
+- [[project/conventions]] — Padrões de código
+
+## Arquitetura
+- [[project/architecture]] — Visão arquitetural
+
+## Módulos
+- [[project/modules]] — Mapa de módulos + God Nodes
+
+## Stories
+- [[stories/BACKLOG]] — Backlog master
+
+## Saídas por agente
+- [[agents/research/]] · [[agents/qa/]] · [[agents/data-engineer/]] · [[agents/ux/]] · [[agents/bi/]] · [[agents/data-performance/]]
+```
+
+**Injetar no `CLAUDE.md` do projeto** (criar se não existir, adicionar seção se já existe):
 
 ```markdown
-## {data} — Team {nome}
+## Smart-Memory Protocol
 
-**Objetivo:** {objetivo}
-**Lead:** team-os (skill)
-**Composição:**
-- {teammate-1}
-- ...
+Este projeto mantém base de conhecimento em `docs/smart-memory/` (formato Obsidian).
 
-**Status:** ativo
-**Stories:** ver [[../stories/BACKLOG]]
+**Todo agente, teammate ou sessão deve:**
+1. Ler `docs/smart-memory/INDEX.md` ao iniciar — contexto do projeto
+2. Escrever findings na área correspondente ao concluir tarefa
+3. Atualizar `INDEX.md` ao criar arquivos novos na smart-memory
+
+**Padrão:** YAML frontmatter + wikilinks `[[...]]` + tags canônicas.
 ```
-
-Atualizar `docs/smart-memory/shared-context.md` com estado inicial dos teammates.
-
-### Etapa 8 — Handoff inicial
-
-Dependendo do objetivo:
-- Se envolve arquitetura/stories novas → `SendMessage(dev-architect, "{objetivo}. Quebre em stories e popule backlog em docs/smart-memory/stories/")`
-- Se é bug/hardening → `SendMessage(dev-dev-delta, ...)`
-- Se é research → `SendMessage(dev-analyst, ...)`
-- Generic fallback → criar story(ies) via `*plan` e despachar via `*dispatch`
 
 ---
 
-## 📚 Subcomandos detalhados
+## Protocolos de spawn
 
-### `*bootstrap` — AUTO-DISPARADO em estado `NEW`
+### Como escrever um spawn prompt excelente
 
-Quando `detect-state.sh` retorna `NEW`, **a skill NÃO deve apenas oferecer `*init`**. Deve automaticamente propor ao usuário a formação de um time de descoberta completo. Esse é o fluxo esperado na primeira invocação da skill em um projeto.
+Um spawn prompt ruim desperdiça todo o context window do agente em exploração. Um bom prompt entrega contexto cirúrgico:
 
-#### Mensagem de abertura (exata)
-
-Derivar `{folder}` via `basename "$PWD"`. Team name será `{folder}-discovery`.
-
+**Estrutura ideal:**
 ```
-🆕 Smart-memory não existe neste projeto.
-
-Vou inicializar smart-memory + formar team de descoberta:
-
-  Team: {folder}-discovery
-  Tarefas em paralelo:
-    • modules + architecture (dev-architect, se disponível)
-    • tech-stack + conventions (dev-analyst, se disponível)
-    • schema do banco (dev-data-engineer, se houver DB)
-    • catálogo UI (dev-ux, se houver frontend)
-
-Proceder? (s/n, default s):
+"[Papel e escopo]
+ [Paths exatos de ownership — APENAS estes arquivos]
+ [Contexto técnico relevante — stack, padrões, constraints]
+ [Entregável esperado — o que constitui "done"]
+ [Como reportar ao concluir — SendMessage para quem]
+ [Skills disponíveis: /nome-skill para ativar]"
 ```
 
-- Resposta `s`, vazia, ou qualquer afirmativa → proceder
-- Resposta `n` ou `não` → fallback para `*init` só (estrutura vazia, sem time)
-
-#### Se proceder = sim (bootstrap completo)
-
-**Passo 1 — Criar estrutura (equivalente a *init)**
-Rodar o fluxo de `*init` (ver abaixo): cria diretórios e copia templates. Preencher placeholders `{data}`, `{nome-do-projeto}` conforme contexto.
-
-**Passo 2 — Detectar sinais do projeto** (pra escolher teammates relevantes)
-
-Verificar paralelamente:
-```bash
-# Sinal: código em geral
-ls package.json pyproject.toml go.mod Cargo.toml 2>/dev/null
-
-# Sinal: banco de dados
-find . -name "*.sql" -o -name "schema.prisma" -o -path "*/migrations/*" -not -path "*/node_modules/*" 2>/dev/null | head -3
-
-# Sinal: frontend
-find . -name "*.tsx" -o -name "*.jsx" -o -path "*/components/*" -not -path "*/node_modules/*" 2>/dev/null | head -3
+**Exemplo ruim:**
+```
+"Revise o código de autenticação e melhore o que precisar."
 ```
 
-**Passo 2.5 — Gerar knowledge graph do codebase (Graphify)**
-
-Antes de spawnar qualquer teammate, extrair o grafo de dependências reais do projeto via AST:
-
-```bash
-# Verificar/instalar graphify (isolado via uv, não contamina o projeto)
-which graphify 2>/dev/null || uv tool install graphifyy
-
-# Gerar grafo — analisa todos os arquivos via AST (sem custo de API)
-graphify . --output graphify-out/
+**Exemplo excelente:**
+```
+"Você é o dev-qa responsável por auditar o módulo de autenticação.
+ Seu scope EXCLUSIVO: src/auth/, tests/auth/, docs/smart-memory/qa/
+ Stack: Next.js 15, Supabase Auth, JWT em httpOnly cookies.
+ Ative /dev-security-patterns e /dev-testing-strategy para referência.
+ Entregável: relatório em docs/smart-memory/qa/auth-audit.md com findings,
+ severity ratings (CRITICAL/HIGH/MEDIUM/LOW) e recomendações priorizadas.
+ Ao concluir: SendMessage para 'archi' com o path do relatório."
 ```
 
-O arquivo `graphify-out/GRAPH_REPORT.md` contém:
-- **God nodes** — arquivos com mais dependências (mudança aqui tem impacto amplo)
-- **Clusters** — grupos de módulos que trabalham juntos
-- **Dependency edges** — quem importa quem, com precisão AST
+### Plan mode — quando usar
 
-Este arquivo é passado para os teammates no prompt de spawn. Após o discovery concluir, `graphify-out/` é removido — o resultado vive em `docs/smart-memory/project/modules.md`.
-
-**Passo 3 — Compor time de descoberta dinamicamente**
-
-Baseado nos sinais:
-- **Sempre inclui** `dev-architect` (mapear módulos/arquitetura) e `dev-analyst` (tech stack/conventions) — se existirem em `.claude/agents/`
-- **Se DB detectado** → adiciona `dev-data-engineer`
-- **Se frontend detectado** → adiciona `dev-ux`
-
-Se algum agente esperado não existir, seguir apenas com os disponíveis. Nunca bloqueia.
-
-**Passo 4 — Formar Agent Team (protocolo explícito)**
-
-Team name: `{folder}-discovery` (onde `{folder}` vem de `basename "$PWD"`).
-
-**Passo 0 — Carregar ferramentas deferidas (OBRIGATÓRIO):**
-```
-ToolSearch({ query: "select:TeamCreate,SendMessage,TaskCreate,TaskUpdate,TaskList,TaskGet,TaskOutput,TaskStop,TeamDelete" })
-```
-Sem isso, TeamCreate falha com InputValidationError e o bootstrap nunca forma o team real.
-
-**A. TeamCreate primeiro:**
-```
-TeamCreate({ team_name: "{folder}-discovery" })
-```
-
-**B. Spawn dos teammates com instruções embutidas no prompt inicial** (em paralelo — uma chamada `Agent()` por teammate):
+Obrigatório para trabalho de ALTO RISCO:
+- Mudanças em schema de banco de dados
+- Módulo de autenticação/autorização
+- CI/CD e pipelines de deploy
+- Refatorações grandes (>500 linhas afetadas)
+- Qualquer breaking change em API pública
 
 ```
-Agent({
-  subagent_type: "dev-architect",
-  team_name: "{folder}-discovery",
-  name: "dev-architect",
-  prompt: "Sua task: *discover — mapeie módulos e arquitetura deste projeto.
-  IMPORTANTE: graphify-out/GRAPH_REPORT.md foi gerado pelo lead — leia-o PRIMEIRO antes de explorar arquivos.
-  Ele contém god nodes (arquivos mais críticos), clusters (grupos de módulos) e dependency edges (quem importa quem) com precisão AST.
-  Use esses dados para popular docs/smart-memory/project/modules.md e docs/smart-memory/project/architecture.md
-  com as seções God Nodes, Clusters e Dependencies já preenchidas — conforme template no seu prompt.
-  NÃO escreva tech-stack.md (responsabilidade da dev-analyst).
-  Avise-me via SendMessage ao concluir."
-})
-
-Agent({
-  subagent_type: "dev-analyst",
-  team_name: "{folder}-discovery",
-  name: "dev-analyst",
-  prompt: "Sua task: *discover — mapeie tech stack, dependências e convenções de código.
-  IMPORTANTE: graphify-out/GRAPH_REPORT.md foi gerado pelo lead — leia-o PRIMEIRO antes de explorar arquivos.
-  Ele contém a estrutura real do projeto via AST — use para confirmar tech stack e identificar convenções de import/nomenclatura.
-  Produza docs/smart-memory/project/tech-stack.md e docs/smart-memory/project/conventions.md.
-  Avise-me via SendMessage ao concluir."
-})
-
-{se DB} Agent({ subagent_type: "dev-data-engineer", team_name: "{folder}-discovery", name: "dev-data-engineer",
-  prompt: "Sua task: *discover — mapeie schema existente. Produza docs/smart-memory/agents/data-engineer/schema.md. Avise via SendMessage ao concluir."
-})
-
-{se frontend} Agent({ subagent_type: "dev-ux", team_name: "{folder}-discovery", name: "dev-ux",
-  prompt: "Sua task: *discover — catalogue componentes existentes. Produza docs/smart-memory/agents/ux/components.md. Avise via SendMessage ao concluir."
-})
+"Spawn {agente} em plan mode para {tarefa}.
+ Só aprovar o plano se incluir: {critério 1}, {critério 2}.
+ Rejeitar se: {critério de rejeição}."
 ```
 
-Após os spawns, os teammates ficam ativos em paralelo (visíveis em Shift+Tab) e auto-organizam suas próprias tasks via TaskCreate.
+### Modelos por tipo de tarefa
 
-**Passo 5 — (não precisa despachar separadamente)**
+| Tarefa | Modelo sugerido | Razão |
+|---|---|---|
+| Arquitetura / ADRs (architect) | Opus (fixo no arquivo) | Máximo raciocínio — decisão errada custa caro |
+| Review / veredicto (reviewer/QA) | Opus (fixo no arquivo) | Veredictos precisam de rigor |
+| Implementação complexa | segue o lead (`inherit`) | Lead escolhe sonnet por padrão |
+| Pesquisa / análise | Haiku (via prompt) ou segue o lead | Mais barato, velocidade |
 
-As instruções já foram embutidas no `prompt` de cada `Agent()`. Não precisa fazer `SendMessage` imediato após spawn — eles já sabem o que fazer.
-
-**Passo 5.5 — Limpar graphify-out após conclusão dos teammates**
-
-Após receber todos os retornos de discovery:
-```bash
-rm -rf graphify-out/
-```
-O knowledge graph agora vive em `docs/smart-memory/project/modules.md` — `graphify-out/` não precisa persistir.
-
-**Passo 6 — Aguardar retornos**
-
-Cada teammate notifica via SendMessage ao concluir. Atualizar `docs/smart-memory/shared-context.md` a cada retorno com status do respectivo teammate.
-
-**Passo 7 — Sintetizar overview**
-
-Após receber TODOS os retornos, ler os arquivos produzidos e sintetizar em `docs/smart-memory/project/overview.md`:
-- Objetivo do projeto (inferido da tech stack + modules)
-- Stack principal (resumo de tech-stack.md)
-- Padrão arquitetural (resumo de architecture.md)
-- Módulos principais (resumo de modules.md)
-- Wikilinks pra todos os arquivos detalhados
-
-Atualizar `INDEX.md` com entradas de tudo que foi criado.
-
-**Passo 8 — Registrar time de descoberta em `ops/teams-log.md`**
-
-```markdown
-## {data} — Team discovery-{timestamp}
-
-**Objetivo:** Bootstrap — descoberta inicial do projeto
-**Lead:** team-os (skill)
-**Composição:**
-- dev-architect — modules, architecture
-- dev-analyst — tech-stack, conventions
-{teammates adicionais se houve}
-
-**Status:** encerrado
-**Início:** {ISO timestamp}
-**Encerrado:** {ISO timestamp}
-**Arquivos produzidos:**
-- [[../project/modules]]
-- [[../project/architecture]]
-- [[../project/tech-stack]]
-- [[../project/conventions]]
-- [[../project/overview]]
-- ...
-```
-
-**Passo 9 — Informar usuário**
-
-```
-✅ Bootstrap concluído.
-
-Smart-memory inicializada e populada com descoberta completa do projeto:
-  • {N} arquivos criados em docs/smart-memory/
-  • {N} teammates trabalharam em paralelo
-  • Overview sintetizado em docs/smart-memory/project/overview.md
-
-Próximos passos recomendados:
-  • /team-os *status — ver estado atual
-  • /team-os *plan "<objetivo>" — planejar primeiro ciclo de desenvolvimento
-  • /team-os *audit — validar integridade da smart-memory criada
-```
-
-#### Se escolha = 2 (só init vazio)
-
-Executar apenas o fluxo de `*init` abaixo e terminar — não formar time.
-
-#### Se escolha = 3 (cancelar)
-
-Parar sem criar nada. Voltar o controle ao usuário.
+**Importante — quem vence:** quando você spawna um teammate a partir de uma definição em `.claude/agents/`, o campo `model` do arquivo **prevalece** sobre o "Default teammate model" do `/config`. No padrão CT (Híbrido), `architect`/`reviewer` têm `model: opus` fixo e os demais usam `model: inherit` — só estes seguem o `/model` do lead. Para forçar outro modelo num agente `inherit`, especifique no spawn: `"Spawn {nome} usando modelo haiku para pesquisar..."` (o parâmetro por invocação também vence o `inherit`).
 
 ---
 
-### `*init` — Inicializa smart-memory
+## Skills por tipo de agente
 
-Cria estrutura completa em `docs/smart-memory/`:
+team-os SEMPRE inclui no spawn prompt as skills relevantes para cada tipo de agente. Elas ficam disponíveis na sessão do agente para ativar via `/nome-skill`:
 
-```bash
-mkdir -p docs/smart-memory/{project,stories/{backlog,active,in-review,done},decisions,ops,archive,agents/{data-engineer,qa,ux,research}}
-```
-
-Copiar templates de `.claude/skills/team-os/templates/`:
-- `INDEX.md` → `docs/smart-memory/INDEX.md`
-- `shared-context.md` → `docs/smart-memory/shared-context.md`
-- `overview.md` → `docs/smart-memory/project/overview.md`
-- `BACKLOG.md` → `docs/smart-memory/stories/BACKLOG.md`
-- `delegation-log.md` → `docs/smart-memory/ops/delegation-log.md`
-- `teams-log.md` → `docs/smart-memory/ops/teams-log.md`
-
-Preencher placeholders `{data}`, `{nome-do-projeto}`, `{objetivo}` conforme contexto.
-
-Informar ao usuário: "Smart-memory inicializada. Pronto pra *discover ou *plan."
-
-### `*discover` — Audita projeto existente
-
-Usa a mesma lógica dos Passos 2-7 do `*bootstrap`, sem o passo de criar estrutura (pressupõe que `*init` já foi rodado antes). **Inclui obrigatoriamente o Passo 2.5 (Graphify)** antes de spawnar teammates.
-
-Se o usuário chamar `*discover` num projeto em estado `NEW`, redirecionar pro `*bootstrap` (não faz sentido descobrir sem estrutura).
-
-### `*plan "objetivo"` — Cria stories
-
-Se existe dev-architect disponível:
-```
-SendMessage(dev-architect, "*plan {objetivo}. Quebre em stories 1.1, 1.2, ... crie arquivos em docs/smart-memory/stories/backlog/. Use template em .claude/skills/team-os/templates/story.md")
-```
-
-Se não há architect disponível, lead faz inline — usa o template.
-
-### `*dispatch` — Inicia trabalho
-
-**Passo 0 — Verificar team ativo antes de qualquer dispatch:**
-
-Ler `docs/smart-memory/ops/teams-log.md` — localizar a última entrada:
-- Se `**Status:** ativo` → team existe, prosseguir
-- Se `**Status:** encerrado` ou arquivo não existe → não há team ativo
-
-Se não há team ativo:
-```
-⚠️  Nenhum Agent Team ativo detectado.
-
-Último time registrado: {nome} (encerrado em {data})
-Teammates: {lista do teams-log}
-
-Opções:
-  1. Reativar este time (TeamCreate + Agent() × N com os mesmos teammates)
-  2. Formar novo time (volta para Etapa 4-6 do fluxo principal)
-  3. Cancelar
-
-Escolha (1/2/3):
-```
-
-Se opção 1 (reativar): carregar ferramentas deferidas primeiro (`ToolSearch({ query: "select:TeamCreate,SendMessage,TaskCreate,TaskUpdate,TaskList,TaskGet,TaskOutput,TaskStop,TeamDelete" })`), depois executar `TeamCreate({ team_name: "{nome}" })` + `Agent()` para cada teammate do último time registrado, com prompt: `"Retomando trabalho — leia docs/smart-memory/shared-context.md e stories/active/ para se atualizar. Avise via SendMessage ao concluir sua task."` Depois prosseguir para o passo 1.
-
-Se opção 2: ir para Etapa 4 do fluxo principal. Se opção 3: cancelar.
-
-1. Ler `docs/smart-memory/stories/BACKLOG.md`
-2. Selecionar stories validadas (5-point GO)
-3. **Wave analysis — agrupar stories por dependência ANTES de criar tasks:**
-
-   Para cada story selecionada, ler o campo `related:` do frontmatter. Se aponta para outra story do mesmo dispatch, é dependência.
-
-   - **Wave 1:** stories sem dependência entre si → rodam em paralelo (spawn simultâneo)
-   - **Wave 2+:** stories que dependem de uma da wave anterior → só após conclusão
-
-   Registrar a análise no chat antes de despachar:
-   ```
-   Wave 1 (paralelas): Story 2.1, Story 2.3
-   Wave 2 (aguardam Wave 1): Story 2.2 (depende de 2.1), Story 2.4 (depende de 2.3)
-   ```
-
-   Aplicar no `TaskCreate`: stories de Wave 2+ recebem `addBlockedBy: [task_id_da_wave_anterior]`. Se todas são independentes, ignorar (dispatch em bloco único).
-
-4. **Verificar god nodes**: ler seção `## ⚡ God Nodes` de `docs/smart-memory/project/modules.md`
-   - Para cada story, verificar se os arquivos mencionados nos ACs intersectam os God Nodes
-   - **Se sim**: marcar story com flag `god-node: true` no frontmatter e **incluir dev-qa obrigatoriamente** na composição do time, mesmo que a story seja pequena. Adicionar nota no prompt do dev: "Esta story toca um God Node — testes obrigatórios e QA formal antes do push."
-   - **Se não**: fluxo normal, dev-qa opcional
-5. Criar tasks via `TaskCreate` — uma por story, com `addBlockedBy` aplicado conforme wave analysis (item 3)
-6. **Dev mode por complexity — incluir instrução no prompt de spawn de cada teammate:**
-
-   | Complexity | Modo | Instrução a injetar no prompt |
-   |---|---|---|
-   | S  | yolo        | "Complexity S — execute direto, sem perguntas prévias" |
-   | M  | interactive | "Complexity M — até 2–3 perguntas ao lead antes de começar, se necessário" |
-   | L  | pre-flight  | "Complexity L — liste todas as dúvidas sobre os ACs **antes** de implementar. Aguarde resposta do lead." |
-   | XL | pre-flight  | "Complexity XL — pre-flight obrigatório. Divida em sub-tarefas, valide cada uma com o lead antes de começar." |
-
-   Stories com `god-node: true` no frontmatter: tratar como complexity +1 (M→L, L→XL).
-
-7. **Quality gate antes de mover para `in-review/` — injetar no prompt do dev:**
-
-   "Ao concluir a implementação, ANTES de mover a story para `stories/in-review/`, execute e confirme:
-   - `npm run lint` (ou equivalente do projeto) sem erros
-   - `npm run typecheck` (ou equivalente) sem erros
-   - Testes relevantes passando (onde existirem)
-
-   Sem isso, a story permanece em `stories/active/`. Dev-qa pode devolver `in-review → active` se encontrar falha que deveria ter sido pega antes."
-
-8. Teammates fazem self-claim — lead apenas monitora
-9. Atualizar `shared-context.md`
-
-### `*status` — Estado atual
-
-Mostrar:
-- Teammates ativos e o que estão fazendo (ler `shared-context.md` + `TaskList`)
-- Stories em progresso (contar `stories/active/*.md`)
-- Blockers registrados
-- Últimas 5 entradas do `delegation-log.md`
-
-### `*audit` — Guardião do smart-memory
-
-Rodar em paralelo:
-```bash
-scripts/audit-smart-memory.sh
-scripts/audit-teammate-compliance.sh
-```
-
-Verificações adicionais de knowledge graph:
-```bash
-# modules.md tem seção God Nodes?
-grep -q "God Nodes" docs/smart-memory/project/modules.md 2>/dev/null || echo "MISSING_GOD_NODES"
-
-# God nodes ainda existem no filesystem? (podem ter sido renomeados)
-# Extrair paths da seção God Nodes e verificar cada um
-grep -A20 "God Nodes" docs/smart-memory/project/modules.md 2>/dev/null | grep "src/" | awk '{print $2}' | xargs -I{} test -f {} || echo "STALE_GOD_NODES"
-```
-
-Se `MISSING_GOD_NODES`: sugerir re-rodar `*discover` para enriquecer o smart memory com knowledge graph.
-Se `STALE_GOD_NODES`: God nodes desatualizados — sugerir `graphify update` + atualização de `modules.md`.
-
-Consolidar output. Se achar problemas, perguntar:
-```
-Posso corrigir automaticamente?
-  - Wikilinks quebrados: não (precisa edição humana)
-  - INDEX.md desatualizado: sim (vou adicionar entradas)
-  - Contratos faltando em agentes: sim (rodo *enroll em cada)
-  
-Quais aplicar? (todos/específicos/nenhum)
-```
-
-### `*resume` — Retoma trabalho
-
-1. Ler `shared-context.md` → quem estava fazendo o quê
-2. Ler `stories/active/` e `stories/in-review/` → o que estava em progresso
-3. Ler `delegation-log.md` → últimas delegações
-4. Ler `ops/teams-log.md` → nome do time e lista de teammates
-5. Mostrar resumo:
-   ```
-   📋 Estado anterior detectado:
-   - Team ativo: {nome} ({data de criação})
-   - {N} stories em progresso / {N} em review
-   - {N} tasks pendentes
-   - Último agente ativo: {nome} ({tempo} atrás)
-   - Teammates do time: {lista do teams-log}
-   
-   Opções:
-     1. Retomar este team (reativa teammates via TeamCreate + Agent())
-     2. Arquivar e iniciar novo
-     3. Auditar antes de decidir (*audit)
-   ```
-
-**Se opção 1 (Retomar):**
-
-Executar o protocolo explícito de reativação — teammates NÃO persistem entre sessões:
-
-**Passo 0 — Carregar ferramentas deferidas (OBRIGATÓRIO):**
-```
-ToolSearch({ query: "select:TeamCreate,SendMessage,TaskCreate,TaskUpdate,TaskList,TaskGet,TaskOutput,TaskStop,TeamDelete" })
-```
-
-**A. Recriar o team:**
-```
-TeamCreate({ team_name: "{nome-do-time-do-teams-log}" })
-```
-
-**B. Respawnar cada teammate registrado no times-log (em paralelo):**
-```
-Agent({
-  subagent_type: "{teammate}",
-  team_name: "{nome-do-time}",
-  name: "{teammate}",
-  prompt: "Retomando trabalho interrompido.
-  Leia docs/smart-memory/shared-context.md para se contextualizar.
-  Leia docs/smart-memory/stories/active/ e stories/in-review/ para ver o que está em progresso.
-  Consulte TaskList para ver sua task atribuída.
-  Continue de onde parou. Avise o lead via SendMessage ao concluir."
-})
-```
-
-Após os spawns, avisar o usuário:
-```
-✅ Time {nome} reativado com {N} teammates.
-   Cada teammate foi recontextualizado com o estado anterior.
-   Use /team-os *status para ver o estado atual.
-```
-
-### `*unblock <agente>`
-
-1. Enviar `SendMessage({agente}, "Reporte blocker atual em detalhe")`
-2. Analisar retorno
-3. Decidir: reassignar, fornecer contexto, ou escalar ao usuário
-4. Registrar decisão em `delegation-log.md`
-
-### `*enroll <agente>`
-
-Adicionar a seção "Contrato com team-os" no topo do corpo do prompt (depois do frontmatter, antes do título H1) de `.claude/agents/{agente}.md`.
-
-Conteúdo do contrato: ler `reference/teammate-contract.md` e inserir.
-
-Depois confirmar:
-```
-✅ {agente} enrolled no team-os.
-   Contrato instalado em .claude/agents/{agente}.md
-```
-
-### `*close`
-
-**⚠️ Guard de confirmação — executar ANTES de qualquer outro passo:**
-
-Ler `docs/smart-memory/ops/teams-log.md` → última entrada com `**Status:** ativo` → extrair `{team_name_ativo}`.
-
-Exibir:
-```
-⚠️  Confirmar encerramento do time "{team_name_ativo}"?
-
-  Isso irá:
-  - Arquivar docs/smart-memory/ em docs/smart-memory/archive/
-  - Encerrar todos os teammates (TeamDelete)
-  - Registrar encerramento no teams-log
-
-  Confirmar? (s/n, default n):
-```
-
-Se resposta **não** for `s` ou afirmativa explícita → **cancelar imediatamente**. Não executar nenhum passo abaixo. Responder: `"Encerramento cancelado. Time {team_name_ativo} continua ativo."`
-
-1. Rodar `*audit` final
-2. Arquivar smart-memory: `cp -r docs/smart-memory docs/smart-memory/archive/{nome-team}-{data}/`
-3. Carregar ferramentas deferidas e encerrar o Agent Team:
-   ```
-   ToolSearch({ query: "select:TeamCreate,SendMessage,TaskCreate,TaskUpdate,TaskList,TaskGet,TaskOutput,TaskStop,TeamDelete" })
-   TeamDelete({ team_name: "{team_name_ativo}" })
-   ```
-   `{team_name_ativo}` = nome lido de `docs/smart-memory/ops/teams-log.md` (última entrada com `**Status:** ativo`)
-4. Registrar encerramento em `teams-log.md` com status final:
-   ```markdown
-   **Status:** encerrado
-   **Encerrado:** {ISO timestamp}
-   ```
-
----
-
-## 🗂️ Referências internas
-
-- [Contrato que cada teammate segue](reference/teammate-contract.md)
-- [Frase exata de ativação do team mode](reference/team-activation.md)  
-- [Padrões Obsidian pro smart-memory](reference/obsidian-patterns.md)
-
----
-
-## ⚠️ Comportamento em falhas
-
-| Situação | Ação |
+| Tipo de agente | Skills a mencionar no spawn prompt |
 |---|---|
-| Env var Teams inativa | Parar, instruir usuário a adicionar em settings.json, pedir reload |
-| Nenhum agente em `agents/` | Parar, instruir a criar pelo menos 1 agente |
-| Nome de time colide com existente | Pedir outro nome |
-| Objetivo genérico | Pedir refinamento com exemplo de objetivo aceitável |
-| Teammate não conforme | Oferecer `*enroll` automático ou continuar com risco |
-| SendMessage falha | Registrar em `delegation-log.md` como erro e tentar fallback (outro agente ou lead inline) |
-| Smart-memory corrompido | Parar, rodar `*audit`, listar correções necessárias |
+| **dev-architect** | `/dev-api-design`, `/dev-technical-writing` |
+| **dev-analyst / researcher** | `/deep-research`, `/data-analytics-engineering` |
+| **dev-dev-alpha** | `/dev-typescript-patterns`, `/dev-testing-strategy`, `/dev-error-handling` |
+| **dev-dev-beta** | `/dev-api-design`, `/dev-error-handling`, `/dev-database-patterns` |
+| **dev-dev-gamma** | `/dev-typescript-patterns`, `/dev-database-patterns`, `/dev-error-handling` |
+| **dev-dev-delta** | `/dev-security-patterns`, `/dev-testing-strategy`, `/dev-error-handling` |
+| **dev-qa** | `/dev-testing-strategy`, `/dev-security-patterns` |
+| **dev-devops** | `/dev-git-workflow` |
+| **dev-bi / data** | `/data-analytics-engineering`, `/data-sql-optimization`, `/data-lake-platform` |
+| **sites-dev-alpha** | `/sites-frontend-design`, `/sites-shadcn-ui`, `/sites-tailwind-design-system`, `/ui-ux-pro-max` |
+| **sites-dev-beta** | `/dev-api-design`, `/dev-error-handling`, `/dev-database-patterns` |
+| **sites-qa** | `/dev-testing-strategy`, `/web-design-guidelines`, `/sites-seo-technical` |
+| **social-content** | `/social-copywriting`, `/social-editorial-validation`, `/social-format-specs` |
+| **social-design** | `/social-key-visual`, `/social-carousel-design` |
+| **traffic-copywriter** | `/social-copywriting`, `/tiktok-marketing` |
+
+---
+
+## Controle do time durante a sessão
+
+> **Agent panel ≠ Agent view — não confundir:**
+> - **Agent panel** (esta seção) é o painel de **teammates** abaixo do prompt na sua sessão de lead. São os agentes do time que você spawnou; comunicam-se entre si peer-to-peer.
+> - **Agent view** (`claude agents`) é uma tela separada que gerencia **sessões em background** independentes (cada prompt = nova sessão; Space=peek, Enter=attach). Teammates e subagents que uma sessão spawna **NÃO** aparecem como linhas no agent view. Você pode até carregar `/team-os` dentro de uma sessão dispatchada pelo agent view, mas os dois mecanismos são distintos.
+
+> **🎯 Como ter o painel navegável (setas ↑↓) — leia se você usa `claude agents`:**
+> O painel de teammates é da **sessão que rodou o `/team-os`**, não do agent view. No fluxo `claude agents`:
+> 1. Dispache/abra uma sessão e **dê attach nela** (Enter/→ na linha dela). Você precisa estar **dentro** da sessão.
+> 2. Rode `/team-os` aí dentro (com Agent Teams ativo — Gate 0). Os teammates aparecem no painel **dessa sessão**, navegáveis por ↑↓.
+> 3. Se você sair (detach) para o agent view, o painel some — os teammates seguem vivos na sessão; reattach (Enter) para voltar a navegar.
+>
+> **Alternativa mais simples para orquestrar ao vivo:** abra `claude` (foreground) direto no projeto e rode `/team-os` — o painel navegável fica logo abaixo do prompt, sem precisar de attach. Use `claude agents` quando quiser tocar várias sessões em background; use `claude` foreground quando quiser pilotar o time de perto.
+
+### Agent panel
+```
+In-process mode (padrão):
+  ↑↓      → selecionar agente no panel
+  Enter   → abrir sessão e enviar mensagem diretamente
+  Esc     → interromper turno atual do agente
+  x       → parar agente selecionado
+  Ctrl+T  → toggle da task list
+
+Split-pane mode (tmux/iTerm2):
+  Click   → entrar na sessão do agente
+  (não requer navegação por teclado)
+```
+
+### Gestão de tasks
+
+Tasks têm 3 estados: `pending` → `in_progress` → `completed`
+
+Tasks com dependências ficam bloqueadas até que as dependências sejam completadas — o sistema desbloqueia automaticamente.
+
+**Self-claim:** Após completar uma task, o agente pega automaticamente a próxima task livre compatível com seu perfil. Isso significa que 5-6 tasks por agente mantém o pipeline fluindo sem intervenção do lead.
+
+### Redirecionar um agente
+Entre na sessão (Enter no panel) e dê instrução direta. O agente processa como mensagem prioritária.
+
+### Encerrar graciosamente
+```
+"Peça ao agente {nome} para encerrar"
+```
+O agente termina o turno atual, confirma o encerramento e sai. Cleanup automático.
+
+### Quando escalar agentes
+Se o trabalho expande além do planejado:
+```
+"Spawn mais um agente {tipo} chamado {nome} para cobrir {escopo adicional}"
+```
+Adicione um agente por vez, conforme cada um acelerar de fato o trabalho paralelo real — não para "cobrir tudo de uma vez".
+
+---
+
+## Otimização de tokens
+
+Cada agente é uma sessão independente com seu próprio context window. Token cost é linear com número de agentes ativos.
+
+### Estratégias de economia
+
+**1. Spawn prompts cirúrgicos**
+Contexto específico → o agente não precisa explorar para entender o escopo. Cada turno de exploração desnecessária custa tokens.
+
+**2. Plan mode antes de implementar**
+Um agente em plan mode consome muito menos tokens que um agente que implementa, descobre que está errado, e reimplementa.
+
+**3. Ownership exclusivo de arquivos**
+Dois agentes no mesmo arquivo = conflito + resolução = tokens desperdiçados. Cada agente tem paths exclusivos.
+
+**4. Self-claim com 5-6 tasks por agente**
+Sem self-claim → o lead intervém em cada conclusão (lead tokens + agente tokens). Com self-claim → o agente continua sozinho.
+
+**5. Haiku para pesquisa**
+Research tasks não precisam de Sonnet. Haiku é 5x mais barato e igualmente eficaz para busca e análise de texto.
+
+**6. Modelo "leader's model" para teammates**
+Configure `/config` → Default teammate model → "Default (leader's model)" para que teammates sigam o modelo escolhido pelo lead. **Atenção:** isso só vale para agentes cujo arquivo NÃO fixa `model` — no padrão CT (Híbrido) são os que usam `model: inherit` (todos exceto architect/reviewer, que ficam em opus). O campo `model` do arquivo do agente sempre vence esse ajuste.
+
+**7. Paralelo inteligente**
+Não spawnar agentes para tasks sequenciais. Só paralelizar quando há independência real de arquivos/dados.
+
+---
+
+## Hooks de qualidade (opcionais por projeto)
+
+Configure em `.claude/settings.json` do projeto para enforçar padrões automaticamente:
+
+### TeammateIdle — opcional, e CUIDADO com loop
+
+> **Atenção:** ficar ocioso é o estado **desejado** (teammate vivo, esperando mais task). O que resolve o encerramento precoce é a **regra Team Persistence** (acima), não este hook. Use o hook só se quiser que teammates puxem tasks pendentes em vez de ociar — e **nunca** com `exit 2` incondicional (isso gera loop infinito: o teammate nunca consegue parar).
+
+Versão **segura** (só nudge informativo, `exit 0` — não bloqueia o idle):
+```json
+{
+  "hooks": {
+    "TeammateIdle": [{
+      "matcher": "",
+      "hooks": [{
+        "type": "command",
+        "command": "echo 'Teammate ocioso (vivo). Se há tasks pendentes na fila, faça self-claim.'; exit 0"
+      }]
+    }]
+  }
+}
+```
+Para "manter trabalhando", o comando só deve sair com `exit 2` **se houver task pendente compatível na fila** — caso contrário `exit 0`. Um `exit 2` fixo trava o teammate em loop. Não é auto-instalado nos projetos por padrão.
+
+### TaskCompleted — Gate de qualidade
+```json
+{
+  "hooks": {
+    "TaskCompleted": [{
+      "matcher": "",
+      "hooks": [{
+        "type": "command",
+        "command": "echo 'Task concluída. Valide o entregável antes de prosseguir.'"
+      }]
+    }]
+  }
+}
+```
+
+### TaskCreated — Validar estrutura
+```json
+{
+  "hooks": {
+    "TaskCreated": [{
+      "matcher": "",
+      "hooks": [{
+        "type": "command",
+        "command": "echo 'Nova task criada. Confirme que tem owner, escopo e entregável definidos.'"
+      }]
+    }]
+  }
+}
+```
+
+---
+
+## Troubleshooting — Limitações conhecidas
+
+| Problema | Causa | Solução |
+|---|---|---|
+| Resume não restaura teammates | Limitação: `/resume` não restaura in-process teammates | Re-spawnar com mesmo nome + contexto do smart-memory |
+| Task travada (done mas não marca) | Bug known: task status pode atrasar | Verificar se work está feito → atualizar manualmente ou pedir ao lead |
+| Agente sumiu do panel | Idle após 30s (hide automático, v2.1.181+) — NÃO parou, reaparece no próximo turno | SendMessage por nome: `"Mensagem para {nome}: continue"` |
+| Lead começa a implementar sozinho | Violação da Lead Discipline | Ver seção "⛔ Lead Discipline" — o lead NUNCA executa, só delega. `"Pare e spawna um agente para isso; você é o orquestrador"` |
+| Muitos permission prompts | Teammates pedem aprovação para tudo | Pre-aprovar operações em settings ANTES de spawnar |
+| Tmux sessions órfãs | Session não encerrou limpo | `tmux ls` → `tmux kill-session -t {nome}` |
+| Agente em loop de erros | Sem recovery automático | Entrar na sessão (Enter no panel) e dar instrução direta ou spawnar replacement |
+| Lead promovido antes da hora | Lead declarou "concluído" cedo | `"Continue — há tasks incompletas"` |
+
+---
+
+## Referência rápida
+
+```
+/team-os                → bootstrap completo desta sessão
+/team-os *env           → só verificar/corrigir settings.json
+/team-os *memory        → só status/bootstrap da smart-memory
+/team-os *tasks         → só mostrar task list atual
+/team-os *spawn {desc}  → proposta de time para {desc} (pular scan)
+/team-os *status        → dashboard de status do time atual
+```
+
+**Settings.json mínimo:**
+```json
+{
+  "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" },
+  "teammateMode": "auto"
+}
+```
+
+**Fórmula de dimensionamento:**
+```
+tasks independentes ÷ 5 = agentes  |  research adversarial = 3-5 sempre
+```
+
+**Subagent definitions:** Use nomes dos agentes em `.claude/agents/` ao spawnar:
+```
+"Spawn um teammate usando o agente dev-architect para mapear a arquitetura de auth"
+```
+
+**Modelo Haiku:**
+```
+"Spawn um agente dev-analyst chamado 'pesq' usando modelo haiku para..."
+```
+
+---
+
+## Arquitetura de referência
+
+```
+Você (team lead — sessão principal — esta skill roda aqui)
+  │
+  ├── Agent Panel (↑↓ para navegar, Enter para abrir)
+  │     ├── archi     [working]  → src/auth/, docs/smart-memory/architecture/
+  │     ├── alpha     [pending]  → src/frontend/ (aguarda archi)
+  │     ├── qa        [working]  → review paralelo do módulo pago
+  │     └── ops       [idle]     → aguarda todos para deploy
+  │
+  ├── TaskList compartilhada (~/.claude/tasks/session-{8chars}/)
+  │     ├── [in-progress]  Mapear módulo auth         → archi
+  │     ├── [pending]      Implementar login page      → alpha (bloqueada)
+  │     ├── [in-progress]  Auditar módulo pagamento    → qa
+  │     ├── [pending]      Deploy staging              → ops (bloqueada)
+  │     └── [pending]      Criar stories de UX         → self-claim livre
+  │
+  └── docs/smart-memory/
+        ├── INDEX.md                ← todos leram ao iniciar
+        ├── stories/active/         ← archi e alpha escrevem
+        └── qa/                     ← qa escreve findings
+```

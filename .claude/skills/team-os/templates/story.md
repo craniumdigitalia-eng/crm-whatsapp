@@ -1,49 +1,71 @@
 ---
 title: "Story {N}.{M}: {Título}"
 type: story
-status: backlog  # backlog | active | in-review | done
+status: backlog
 epic: {N}
 complexity: S | M | L | XL
-mode: yolo | interactive | pre-flight
-agent: dev-architect
-created: {data}
-updated: {data}
+agent: {quem-assumiu — preenchido pelo implementer}
+created: {YYYY-MM-DD}
+updated: {YYYY-MM-DD}
 tags: [story, {domínio}]
-related: []
+related: ["[[../../decisions/ADR-{N}]]"]
 ---
 
 # Story {N}.{M}: {Título}
 
-## Objetivo
-{Uma frase: o que esta story entrega}
+> Template canônico de story do team-os. Criado e validado pelo **architect** (autoridade exclusiva).
+> O implementer só atualiza **Dev Agent Record**, **checkboxes de AC** e **File List** — nunca título, AC, escopo ou QA Results.
+
+## Contexto
+
+{Por que esta story existe. Qual problema do usuário/negócio ela resolve. 2-4 linhas.}
 
 ## Acceptance Criteria
-- [ ] AC1: {critério testável e mensurável}
-- [ ] AC2:
-- [ ] AC3:
+
+Critérios **testáveis e mensuráveis** (cada um vira teste):
+
+- [ ] AC1 — {comportamento observável e verificável}
+- [ ] AC2 — {…}
+- [ ] AC3 — {…}
 
 ## Escopo
 
-**IN:**
--
+**IN (faz parte):**
+- {item}
 
-**OUT:**
--
+**OUT (explicitamente fora):**
+- {item}
 
-## Contexto Técnico
-{Módulos afetados, dependências, constraints}
+## Notas técnicas
+
+{Stack, constraints, padrões a seguir, arquivos/módulos prováveis. Links: [[../../project/tech-stack]], [[../../project/conventions]].}
+
+## Dependências
+
+- Depende de: {Story {N}.{M} | nenhuma}
+- Bloqueia: {Story {N}.{M} | nenhuma}
+
+---
 
 ## Dev Agent Record
 
-| Campo      | Valor |
-|---         |---|
-| Agente     | — |
-| Iniciado   | — |
-| Concluído  | — |
-| Branch     | — |
+| Campo | Valor |
+|---|---|
+| Agente | {persona} ({nome}) |
+| Iniciado | {YYYY-MM-DD} |
+| Concluído | {YYYY-MM-DD} |
+| Branch | feature/{N}-{M}-{slug} |
 
-## File List
-<!-- Dev preenche ao concluir -->
+### File List
+{Arquivos criados/alterados — preenchido ao concluir.}
+
+---
 
 ## QA Results
-<!-- QA preenche ao revisar -->
+
+> Preenchido **apenas** pelo reviewer (QA). Veredicto formal.
+
+**Veredicto:** PASS | CONCERNS | FAIL | WAIVED
+**Data:** {YYYY-MM-DD} · **Checklist:** {n}/8
+
+{Findings com severidade e arquivo:linha quando houver.}
